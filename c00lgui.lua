@@ -140,14 +140,14 @@ ModeButton.Text = "Mode: DEFAULT"
 Instance.new("UICorner",ModeButton).CornerRadius = UDim.new(0,8)
 
 --=====================
--- MODE FLY / INFJUMP LOGIC MOBILE
+-- MODE LOGIC FULL
 --=====================
 local mode = 1
 local flying = false
 local infjump = false
 
 local BodyGyro, BodyVelocity, flyLoop = nil, nil, nil
-local flySpeed = 55 -- chỉnh tốc độ bay
+local flySpeed = 55 -- chỉnh nếu muốn nhanh/chậm
 
 -- TRY TO LOAD PLAYERMODULE CONTROLS (robust)
 local ControlsModule, ControlsOK
@@ -164,9 +164,7 @@ local function tryGetControls()
         local ok, controls = pcall(function() return ControlsModule:GetControls() end)
         if ok and controls then return controls end
     end
-    if ControlsModule.moveVector then
-        return ControlsModule
-    end
+    if ControlsModule.moveVector then return ControlsModule end
     return nil
 end
 
@@ -174,10 +172,10 @@ local function getMoveVector(hum)
     local controls = tryGetControls()
     if controls then
         local mv = controls.moveVector or controls.MoveVector or controls.Move
-        if mv then
-            local x = mv.X or mv.x or 0
-            local y = mv.Y or mv.y or 0
-            return Vector3.new(x,0,y)
+        if mv then return Vector3.new(mv.X or mv.x or 0,0,mv.Y or mv.y or 0) end
+        if typeof(controls.GetMoveVector) == "function" then
+            local ok,v = pcall(function() return controls:GetMoveVector() end)
+            if ok and v then return Vector3.new(v.X or v.x or 0,0,v.Y or v.y or 0) end
         end
     end
     if hum and hum.MoveDirection then
@@ -187,7 +185,6 @@ local function getMoveVector(hum)
     return Vector3.new(0,0,0)
 end
 
--- tạo forces cho fly
 local function applyFlyForces(char)
     local hrp = char:WaitForChild("HumanoidRootPart")
     local hum = char:WaitForChild("Humanoid")
@@ -208,10 +205,10 @@ local function applyFlyForces(char)
     BodyVelocity.Parent = hrp
 end
 
--- bật fly mobile nghiêng
 local function enableFly()
     if flying then return end
     flying = true
+
     local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
     applyFlyForces(char)
 
@@ -223,29 +220,27 @@ local function enableFly()
         local hum = char:FindFirstChild("Humanoid")
         if not hrp or not hum then return end
 
-        local move = getMoveVector(hum) -- joystick input
         local cam = workspace.CurrentCamera
-        local look = cam.CFrame.LookVector
+        local move = getMoveVector(hum)
 
-        -- tính hướng bay theo camera + move vector
-        local right = cam.CFrame.RightVector
-        local forward = Vector3.new(look.X, look.Y, look.Z)
+        local camC = cam.CFrame
+        local right = camC.RightVector
+        local look = camC.LookVector
+        local dir = (right * move.X) + (look * move.Z)
 
-        -- di chuyển theo trục nghiêng camera
-        local dir = (right * move.X) + (forward * move.Z)
+        local vertical = 0
+        if UIS:IsKeyDown(Enum.KeyCode.Space) then vertical = vertical + 1 end
+        if UIS:IsKeyDown(Enum.KeyCode.LeftControl) or UIS:IsKeyDown(Enum.KeyCode.LeftShift) then vertical = vertical - 1 end
+        if vertical == 0 then vertical = look.Y end
+        dir = dir + Vector3.new(0, vertical * 0.6, 0)
 
-        -- nếu joystick đứng yên, vẫn bay theo nghiêng camera (look.Y)
-        if move.Magnitude < 0.05 then
-            dir = Vector3.new(0, look.Y, 0)
+        if dir.Magnitude < 0.05 then
+            BodyVelocity.Velocity = Vector3.new(0,0,0)
+        else
+            BodyVelocity.Velocity = dir.Unit * flySpeed
         end
 
-        -- set tốc độ
-        BodyVelocity.Velocity = dir.Unit * flySpeed
-
-        -- hướng nhân vật theo camera, giữ nghiêng
-        if dir.Magnitude > 0.01 then
-            BodyGyro.CFrame = CFrame.new(hrp.Position, hrp.Position + Vector3.new(dir.X, dir.Y, dir.Z))
-        end
+        BodyGyro.CFrame = CFrame.new(hrp.Position, hrp.Position + look)
     end)
 end
 
@@ -253,13 +248,19 @@ local function disableFly()
     flying = false
     if flyLoop then flyLoop:Disconnect() end
     flyLoop = nil
+
     if BodyGyro then BodyGyro:Destroy() BodyGyro = nil end
     if BodyVelocity then BodyVelocity:Destroy() BodyVelocity = nil end
+    BodyGyro = nil
+    BodyVelocity = nil
+
     local c = LocalPlayer.Character
-    if c and c:FindFirstChild("Humanoid") then c.Humanoid.AutoRotate = true end
+    if c and c:FindFirstChild("Humanoid") then
+        c.Humanoid.AutoRotate = true
+    end
 end
 
--- INF JUMP (không dùng cho mobile, nhưng giữ UI)
+-- INF JUMP
 local jumpConnection = nil
 local function enableInfJump()
     infjump = true
@@ -276,7 +277,7 @@ local function disableInfJump()
     if jumpConnection then jumpConnection:Disconnect() end
 end
 
--- mode button
+-- MODE SWITCH
 ModeButton.MouseButton1Click:Connect(function()
     mode += 1
     if mode > 3 then mode = 1 end
@@ -300,6 +301,7 @@ LocalPlayer.CharacterAdded:Connect(function()
     task.wait(0.6)
     if mode == 3 then enableFly() end
 end)
+
 --=====================
 -- HITBOX
 --=====================
