@@ -139,78 +139,82 @@ ModeButton.TextSize = 16
 ModeButton.Text = "Mode: DEFAULT"
 Instance.new("UICorner",ModeButton).CornerRadius = UDim.new(0,8)
 
+--=====================
+-- MODE BUTTON
+-- FLY GUI STYLE
+--=====================
+
 local mode = 1
 local flying = false
 local infjump = false
 
-local BodyGyro = nil
-local BodyVelocity = nil
-local flySpeed = 60
+local BG = nil
+local BV = nil
+local flySpeed = 50
+local flyConn = nil
 
---=====================
--- FLY HD ADMIN MOBILE
---=====================
-local function applyFlyForces(char)
-    local hrp = char:WaitForChild("HumanoidRootPart")
-    local hum = char:WaitForChild("Humanoid")
-
-    hum.PlatformStand = true
-    hum:ChangeState(Enum.HumanoidStateType.Physics)
-
-    BodyGyro = Instance.new("BodyGyro")
-    BodyGyro.MaxTorque = Vector3.new(9e9,9e9,9e9)
-    BodyGyro.P = 30000
-    BodyGyro.Parent = hrp
-
-    BodyVelocity = Instance.new("BodyVelocity")
-    BodyVelocity.MaxForce = Vector3.new(9e9,9e9,9e9)
-    BodyVelocity.Parent = hrp
-end
-
-local flyLoop = nil
-
-local function enableFly()
+local function startFly()
     flying = true
 
     local char = LocalPlayer.Character
     if not char then return end
 
-    applyFlyForces(char)
+    local hrp = char:WaitForChild("HumanoidRootPart")
+    local hum = char:WaitForChild("Humanoid")
 
-    flyLoop = RunService.RenderStepped:Connect(function()
+    hum.PlatformStand = true
+
+    BG = Instance.new("BodyGyro")
+    BG.P = 9000
+    BG.MaxTorque = Vector3.new(1e9,1e9,1e9)
+    BG.CFrame = hrp.CFrame
+    BG.Parent = hrp
+
+    BV = Instance.new("BodyVelocity")
+    BV.Velocity = Vector3.zero
+    BV.MaxForce = Vector3.new(1e9,1e9,1e9)
+    BV.Parent = hrp
+
+    flyConn = RunService.RenderStepped:Connect(function()
         if not flying then return end
 
-        local char = LocalPlayer.Character
-        if not char then return end
-
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        local hum = char:FindFirstChild("Humanoid")
-        if not hrp or not hum then return end
-
         local cam = workspace.CurrentCamera
-        local moveDir = hum.MoveDirection
-        local camDir = cam.CFrame.LookVector
+        local move = Vector3.zero
 
-        -- HD ADMIN STYLE
-        local horizontal = Vector3.new(moveDir.X,0,moveDir.Z)
-        local vertical = Vector3.new(0,camDir.Y,0)
-
-        local flyVector = (horizontal + vertical) * flySpeed
-        BodyVelocity.Velocity = flyVector
-
-        if flyVector.Magnitude > 0.2 then
-            BodyGyro.CFrame = CFrame.new(Vector3.zero, flyVector)
+        -- PC: Space lên / Ctrl xuống
+        -- Mobile: JumpRequest = lên, crouch = xuống
+        if UIS:IsKeyDown(Enum.KeyCode.W) then
+            move = move + cam.CFrame.LookVector
         end
+        if UIS:IsKeyDown(Enum.KeyCode.S) then
+            move = move - cam.CFrame.LookVector
+        end
+        if UIS:IsKeyDown(Enum.KeyCode.A) then
+            move = move - cam.CFrame.RightVector
+        end
+        if UIS:IsKeyDown(Enum.KeyCode.D) then
+            move = move + cam.CFrame.RightVector
+        end
+
+        if UIS:IsKeyDown(Enum.KeyCode.Space) then
+            move = move + Vector3.new(0,1,0)
+        end
+        if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then
+            move = move + Vector3.new(0,-1,0)
+        end
+
+        BV.Velocity = move * flySpeed
+        
+        BG.CFrame = cam.CFrame
     end)
 end
 
-local function disableFly()
+local function stopFly()
     flying = false
-    if flyLoop then flyLoop:Disconnect() end
-    flyLoop = nil
 
-    if BodyGyro then BodyGyro:Destroy() end
-    if BodyVelocity then BodyVelocity:Destroy() end
+    if flyConn then flyConn:Disconnect() end
+    if BG then BG:Destroy() end
+    if BV then BV:Destroy() end
 
     local char = LocalPlayer.Character
     if char and char:FindFirstChild("Humanoid") then
@@ -218,16 +222,7 @@ local function disableFly()
     end
 end
 
-LocalPlayer.CharacterAdded:Connect(function(c)
-    wait(1)
-    if mode == 3 then
-        enableFly()
-    end
-end)
-
---=====================
--- INF JUMP
---=====================
+-- INF JUMP (giữ nguyên)
 local jumpConnection = nil
 local function enableInfJump()
     infjump = true
@@ -244,25 +239,32 @@ local function disableInfJump()
     if jumpConnection then jumpConnection:Disconnect() end
 end
 
--- Switch mode
+-- SWITCH MODES
 ModeButton.MouseButton1Click:Connect(function()
     mode += 1
     if mode > 3 then mode = 1 end
 
     if mode == 1 then
         ModeButton.Text = "Mode: DEFAULT"
-        disableFly()
+        stopFly()
         disableInfJump()
 
     elseif mode == 2 then
         ModeButton.Text = "Mode: INF JUMP"
-        disableFly()
+        stopFly()
         enableInfJump()
 
     elseif mode == 3 then
         ModeButton.Text = "Mode: FLY"
         disableInfJump()
-        enableFly()
+        startFly()
+    end
+end)
+
+LocalPlayer.CharacterAdded:Connect(function()
+    task.wait(0.5)
+    if mode == 3 then
+        startFly()
     end
 end)
 
