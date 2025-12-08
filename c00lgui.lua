@@ -1,4 +1,4 @@
---// Hitbox Expander c00llgui //--
+--//c00lgui FE//--
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
@@ -137,6 +137,25 @@ ModeButton.TextSize = 16
 ModeButton.Text = "Mode: DEFAULT"
 Instance.new("UICorner",ModeButton).CornerRadius = UDim.new(0,8)
 
+-- ============================
+-- CYCLIC BUTTON (DEFAULT → INF JUMP → FLY → DEFAULT)
+-- ============================
+
+local ModeButton = Instance.new("TextButton")
+ModeButton.Parent = MainFrame
+ModeButton.Size = UDim2.new(0,220,0,35)
+ModeButton.Position = UDim2.new(0,20,0,205)
+ModeButton.BackgroundColor3 = Color3.fromRGB(100,0,0)
+ModeButton.TextColor3 = Color3.fromRGB(255,255,255)
+ModeButton.Font = Enum.Font.GothamBold
+ModeButton.TextSize = 16
+ModeButton.Text = "Mode: DEFAULT"
+Instance.new("UICorner",ModeButton).CornerRadius = UDim.new(0,8)
+
+-- ============================
+--       mode FLY/INFJUMP
+-- ============================
+
 local mode = 1
 local flying = false
 local infjump = false
@@ -148,7 +167,6 @@ local flySpeed = 60
 local function applyFlyForces(char)
     local hrp = char:WaitForChild("HumanoidRootPart")
     local hum = char:WaitForChild("Humanoid")
-
     hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
     hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
     hum.PlatformStand = true
@@ -158,7 +176,7 @@ local function applyFlyForces(char)
     BodyGyro.P = 30000
     BodyGyro.CFrame = hrp.CFrame
     BodyGyro.Parent = hrp
-
+    
     BodyVelocity = Instance.new("BodyVelocity")
     BodyVelocity.MaxForce = Vector3.new(9e9, 9e9, 9e9)
     BodyVelocity.Velocity = Vector3.zero
@@ -167,12 +185,16 @@ end
 
 local function enableFly()
     flying = true
+
     local char = LocalPlayer.Character
     if not char then return end
+
     applyFlyForces(char)
 
+    -- loop 
     RunService.RenderStepped:Connect(function()
         if not flying then return end
+        
         local char = LocalPlayer.Character
         if not char then return end
 
@@ -182,8 +204,9 @@ local function enableFly()
         if not hrp or not hum then return end
 
         local moveDir = hum.MoveDirection
-        BodyVelocity.Velocity = moveDir * flySpeed
 
+        BodyVelocity.Velocity = moveDir * flySpeed
+         
         if moveDir.Magnitude > 0 then
             BodyGyro.CFrame = CFrame.new(Vector3.zero, moveDir)
         end
@@ -192,6 +215,7 @@ end
 
 local function disableFly()
     flying = false
+
     if BodyGyro then BodyGyro:Destroy() end
     if BodyVelocity then BodyVelocity:Destroy() end
 
@@ -201,11 +225,16 @@ local function disableFly()
     end
 end
 
+
 LocalPlayer.CharacterAdded:Connect(function(char)
     wait(1)
-    if mode == 3 then enableFly() end
+
+    if mode == 3 then
+        enableFly()
+    end
 end)
 
+-- INF JUMP giữ nguyên
 local jumpConnection = nil
 local function enableInfJump()
     infjump = true
@@ -222,6 +251,7 @@ local function disableInfJump()
     if jumpConnection then jumpConnection:Disconnect() end
 end
 
+-- MODE BUTTON giữ nguyên
 ModeButton.MouseButton1Click:Connect(function()
     mode += 1
     if mode > 3 then mode = 1 end
@@ -230,10 +260,12 @@ ModeButton.MouseButton1Click:Connect(function()
         ModeButton.Text = "Mode: DEFAULT"
         disableFly()
         disableInfJump()
+
     elseif mode == 2 then
         ModeButton.Text = "Mode: INF JUMP"
         disableFly()
         enableInfJump()
+
     elseif mode == 3 then
         ModeButton.Text = "Mode: FLY"
         disableInfJump()
