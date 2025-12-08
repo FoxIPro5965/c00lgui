@@ -418,11 +418,28 @@ FlowersButton.MouseButton1Click:Connect(function()
 end)
 
 --=====================
--- HIDE UI
+-- HIDE UI BUTTON
 --=====================
-local HideBtn=Instance.new("TextButton")
-HideBtn.Parent=MainFrame
-HideBtn.Size=UDim2.new(0,25,0,25)
-HideBtn.Position=UDim2.new(1,-30,0,5)
-HideBtn.BackgroundColor3=Color3.fromRGB(60,0,0)
-HideBtn
+local HideBtn = Instance.new("TextButton")
+HideBtn.Parent = MainFrame
+HideBtn.Size = UDim2.new(0,25,0,25)
+HideBtn.Position = UDim2.new(1,-30,0,5)
+HideBtn.BackgroundColor3 = Color3.fromRGB(60,0,0)
+HideBtn.Text = "-"
+HideBtn.TextColor3 = Color3.fromRGB(255,255,255)
+HideBtn.Font = Enum.Font.GothamBold
+HideBtn.TextSize = 18
+Instance.new("UICorner",HideBtn).CornerRadius = UDim.new(0,6)
+
+local uiHidden = false
+HideBtn.MouseButton1Click:Connect(function()
+    uiHidden = not uiHidden
+    MainFrame.Visible = not uiHidden
+    if uiHidden then
+        HideBtn.Text = "+"
+        HideBtn.Parent = ScreenGui -- để nút vẫn còn hiển thị
+    else
+        HideBtn.Text = "-"
+        HideBtn.Parent = MainFrame
+    end
+end)
