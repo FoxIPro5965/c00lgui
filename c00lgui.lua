@@ -142,11 +142,8 @@ Instance.new("UICorner",ModeButton).CornerRadius = UDim.new(0,8)
 local mode = 1
 local flying = false
 local infjump = false
-
-local BodyGyro = nil
-local BodyVelocity = nil
+local BodyGyro, BodyVelocity, flyLoop = nil, nil, nil
 local flySpeed = 65
-local flyLoop = nil
 
 -------------------------
 -- APPLY FLY FORCES
@@ -154,8 +151,7 @@ local flyLoop = nil
 local function applyFlyForces(char)
     local hrp = char:WaitForChild("HumanoidRootPart")
     local hum = char:WaitForChild("Humanoid")
-
-    hum.AutoRotate = false   -- Không dùng PlatformStand!
+    hum.AutoRotate = false
 
     BodyGyro = Instance.new("BodyGyro")
     BodyGyro.MaxTorque = Vector3.new(9e9,9e9,9e9)
@@ -170,7 +166,21 @@ local function applyFlyForces(char)
 end
 
 -------------------------
--- ENABLE FLY (JOYSTICK)
+-- MOBILE JOYSTICK MOVE VECTOR
+-------------------------
+local function getMobileMove()
+    local controls = require(LocalPlayer.PlayerScripts:WaitForChild("PlayerModule"))
+    local touch = controls:GetControls()
+
+    if touch.moveVector then
+        return Vector3.new(touch.moveVector.X, 0, touch.moveVector.Y)
+    end
+
+    return Vector3.zero
+end
+
+-------------------------
+-- ENABLE FLY (PC + MOBILE)
 -------------------------
 local function enableFly()
     flying = true
@@ -180,7 +190,6 @@ local function enableFly()
 
     flyLoop = RunService.RenderStepped:Connect(function()
         if not flying then return end
-
         local char = LocalPlayer.Character
         if not char then return end
 
@@ -190,17 +199,15 @@ local function enableFly()
 
         local cam = workspace.CurrentCamera
 
-        local cf = cam.CFrame
-        local moveDir = hum.MoveDirection
+        local moveDir = getMobileMove()  -- FIX MOBILE FLY
+        local flyVec = (cam.CFrame.RightVector * moveDir.X + cam.CFrame.LookVector * moveDir.Z)
+        flyVec = flyVec * flySpeed
 
-        local flyVec = (cf.RightVector * moveDir.X + cf.LookVector * moveDir.Z) * flySpeed
-
-        flyVec += Vector3.new(0, cf.LookVector.Y * flySpeed, 0)
-
+        flyVec += Vector3.new(0, cam.CFrame.LookVector.Y * flySpeed, 0)
         BodyVelocity.Velocity = flyVec
 
         if flyVec.Magnitude > 1 then
-            BodyGyro.CFrame = CFrame.new(Vector3.new(), flyVec)
+            BodyGyro.CFrame = CFrame.lookAt(hrp.Position, hrp.Position + flyVec)
         end
     end)
 end
@@ -210,12 +217,13 @@ end
 -------------------------
 local function disableFly()
     flying = false
-
     if flyLoop then flyLoop:Disconnect() end
     flyLoop = nil
-
-    if BodyGyro then BodyGyro:Destroy() BodyGyro = nil end
-    if BodyVelocity then BodyVelocity:Destroy() BodyVelocity = nil end
+    
+    if BodyGyro then BodyGyro:Destroy() end
+    if BodyVelocity then BodyVelocity:Destroy() end
+    BodyGyro = nil
+    BodyVelocity = nil
 
     local char = LocalPlayer.Character
     if char and char:FindFirstChild("Humanoid") then
@@ -224,10 +232,8 @@ local function disableFly()
 end
 
 LocalPlayer.CharacterAdded:Connect(function(c)
-    wait(0.5)
-    if mode == 3 then
-        enableFly()
-    end
+    task.wait(0.5)
+    if mode == 3 then enableFly() end
 end)
 
 ---------------------------------------------------------
@@ -307,8 +313,7 @@ Toggle.MouseButton1Click:Connect(function()
     else
         Toggle.Text = "OFF"
         Toggle.BackgroundColor3 = Color3.fromRGB(150,0,0)
-
-        for _,plr in pairs(Players:GetPlayers()) do
+        for _,plr in ipairs(Players:GetPlayers()) do
             if plr ~= LocalPlayer and plr.Character then
                 ResetHitbox(plr.Character)
             end
@@ -327,7 +332,7 @@ end)
 
 RunService.RenderStepped:Connect(function()
     if Enabled then
-        for _,plr in pairs(Players:GetPlayers()) do
+        for _,plr in ipairs(Players:GetPlayers()) do
             if plr ~= LocalPlayer and plr.Character then
                 ExpandHitbox(plr.Character)
             end
@@ -356,7 +361,7 @@ local oo = Lighting.OutdoorAmbient
 local oc = Lighting.ClockTime
 
 local function applyDaySky()
-    for _,v in pairs(Lighting:GetChildren()) do
+    for _,v in ipairs(Lighting:GetChildren()) do
         if v:IsA("Sky") then v:Destroy() end
     end
     local sky = Instance.new("Sky", Lighting)
@@ -388,7 +393,7 @@ FBButton.MouseButton1Click:Connect(function()
         Lighting.OutdoorAmbient = oo
         Lighting.ClockTime = oc
 
-        for _,v in pairs(Lighting:GetChildren()) do
+        for _,v in ipairs(Lighting:GetChildren()) do
             if v:IsA("Sky") then v:Destroy() end
         end
     end
