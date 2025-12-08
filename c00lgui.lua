@@ -140,7 +140,7 @@ ModeButton.Text = "Mode: DEFAULT"
 Instance.new("UICorner",ModeButton).CornerRadius = UDim.new(0,8)
 
 --=====================
--- MODE FLY / INFJUMP LOGIC
+-- MODE FLY / INFJUMP LOGIC MOBILE
 --=====================
 local mode = 1
 local flying = false
@@ -208,7 +208,7 @@ local function applyFlyForces(char)
     BodyVelocity.Parent = hrp
 end
 
--- bật fly ổn định
+-- bật fly mobile nghiêng
 local function enableFly()
     if flying then return end
     flying = true
@@ -223,25 +223,28 @@ local function enableFly()
         local hum = char:FindFirstChild("Humanoid")
         if not hrp or not hum then return end
 
-        local move = getMoveVector(hum)
-        local dir = Vector3.new(move.X,0,move.Z)
+        local move = getMoveVector(hum) -- joystick input
+        local cam = workspace.CurrentCamera
+        local look = cam.CFrame.LookVector
 
-        -- vertical
-        local vertical = 0
-        if UIS:IsKeyDown(Enum.KeyCode.Space) then vertical += 1 end
-        if UIS:IsKeyDown(Enum.KeyCode.LeftControl) or UIS:IsKeyDown(Enum.KeyCode.LeftShift) then vertical -= 1 end
-        dir = dir + Vector3.new(0, vertical, 0)
+        -- tính hướng bay theo camera + move vector
+        local right = cam.CFrame.RightVector
+        local forward = Vector3.new(look.X, look.Y, look.Z)
 
-        -- velocity
-        if dir.Magnitude < 0.05 then
-            BodyVelocity.Velocity = Vector3.new(0,0,0)
-        else
-            BodyVelocity.Velocity = dir.Unit * flySpeed
+        -- di chuyển theo trục nghiêng camera
+        local dir = (right * move.X) + (forward * move.Z)
+
+        -- nếu joystick đứng yên, vẫn bay theo nghiêng camera (look.Y)
+        if move.Magnitude < 0.05 then
+            dir = Vector3.new(0, look.Y, 0)
         end
 
-        -- hướng nhân vật theo move vector, không xoay camera
-        if dir.X ~= 0 or dir.Z ~= 0 then
-            BodyGyro.CFrame = CFrame.new(hrp.Position, hrp.Position + Vector3.new(dir.X,0,dir.Z))
+        -- set tốc độ
+        BodyVelocity.Velocity = dir.Unit * flySpeed
+
+        -- hướng nhân vật theo camera, giữ nghiêng
+        if dir.Magnitude > 0.01 then
+            BodyGyro.CFrame = CFrame.new(hrp.Position, hrp.Position + Vector3.new(dir.X, dir.Y, dir.Z))
         end
     end)
 end
@@ -256,7 +259,7 @@ local function disableFly()
     if c and c:FindFirstChild("Humanoid") then c.Humanoid.AutoRotate = true end
 end
 
--- INF JUMP
+-- INF JUMP (không dùng cho mobile, nhưng giữ UI)
 local jumpConnection = nil
 local function enableInfJump()
     infjump = true
@@ -297,7 +300,6 @@ LocalPlayer.CharacterAdded:Connect(function()
     task.wait(0.6)
     if mode == 3 then enableFly() end
 end)
-
 --=====================
 -- HITBOX
 --=====================
