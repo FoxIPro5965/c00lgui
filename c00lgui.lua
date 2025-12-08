@@ -145,9 +145,9 @@ local infjump = false
 local BodyGyro, BodyVelocity, flyLoop = nil, nil, nil
 local flySpeed = 65
 
--------------------------
--- APPLY FLY FORCES
--------------------------
+-----------------------------------
+-- FLY INF YIELD STYLE (PC + MOBILE)
+-----------------------------------
 local function applyFlyForces(char)
     local hrp = char:WaitForChild("HumanoidRootPart")
     local hum = char:WaitForChild("Humanoid")
@@ -156,67 +156,74 @@ local function applyFlyForces(char)
     BodyGyro = Instance.new("BodyGyro")
     BodyGyro.MaxTorque = Vector3.new(9e9,9e9,9e9)
     BodyGyro.P = 30000
-    BodyGyro.CFrame = hrp.CFrame
     BodyGyro.Parent = hrp
 
     BodyVelocity = Instance.new("BodyVelocity")
     BodyVelocity.MaxForce = Vector3.new(9e9,9e9,9e9)
-    BodyVelocity.P = 10000
     BodyVelocity.Parent = hrp
 end
 
--------------------------
--- MOBILE JOYSTICK MOVE VECTOR
--------------------------
+-----------------------------
+-- LẤY MOVE VECTOR MOBILE
+-----------------------------
 local function getMobileMove()
     local controls = require(LocalPlayer.PlayerScripts:WaitForChild("PlayerModule"))
-    local touch = controls:GetControls()
+    local m = controls:GetControls()
 
-    if touch.moveVector then
-        return Vector3.new(touch.moveVector.X, 0, touch.moveVector.Y)
+    if m.moveVector then
+        return Vector3.new(m.moveVector.X, 0, m.moveVector.Y)
     end
-
     return Vector3.zero
 end
 
--------------------------
--- ENABLE FLY (PC + MOBILE)
--------------------------
+-----------------------------------
+-- ENABLE FLY (CAMERA BASED)
+-----------------------------------
 local function enableFly()
     flying = true
     local char = LocalPlayer.Character
     if not char then return end
+
     applyFlyForces(char)
 
     flyLoop = RunService.RenderStepped:Connect(function()
         if not flying then return end
-        local char = LocalPlayer.Character
-        if not char then return end
 
         local hrp = char:FindFirstChild("HumanoidRootPart")
         local hum = char:FindFirstChild("Humanoid")
+        local cam = workspace.CurrentCamera
         if not hrp or not hum then return end
 
-        local cam = workspace.CurrentCamera
+        -- Joystick PC + Mobile
+        local move = getMobileMove()
 
-        local moveDir = getMobileMove()  -- FIX MOBILE FLY
-        local flyVec = (cam.CFrame.RightVector * moveDir.X + cam.CFrame.LookVector * moveDir.Z)
-        flyVec = flyVec * flySpeed
+        -- Hướng bay theo camera
+        local camLook = cam.CFrame.LookVector
+        local camRight = cam.CFrame.RightVector
 
-        flyVec += Vector3.new(0, cam.CFrame.LookVector.Y * flySpeed, 0)
-        BodyVelocity.Velocity = flyVec
+        local flyVec =
+            (camLook * move.Z) +
+            (camRight * move.X)
 
-        if flyVec.Magnitude > 1 then
-            BodyGyro.CFrame = CFrame.lookAt(hrp.Position, hrp.Position + flyVec)
+        -- Nhìn lên = bay lên, nhìn xuống = đáp
+        flyVec += Vector3.new(0, camLook.Y, 0)
+
+        if flyVec.Magnitude < 0.1 then
+            BodyVelocity.Velocity = Vector3.new(0,0,0)
+        else
+            BodyVelocity.Velocity = flyVec.Unit * flySpeed
         end
+
+        BodyGyro.CFrame = CFrame.lookAt(hrp.Position, hrp.Position + camLook)
     end)
 end
 
--------------------------
+-----------------------------------
 -- DISABLE FLY
--------------------------
+-----------------------------------
 local function disableFly()
     flying = false
+
     if flyLoop then flyLoop:Disconnect() end
     flyLoop = nil
     
@@ -225,28 +232,25 @@ local function disableFly()
     BodyGyro = nil
     BodyVelocity = nil
 
-    local char = LocalPlayer.Character
-    if char and char:FindFirstChild("Humanoid") then
-        char.Humanoid.AutoRotate = true
+    local c = LocalPlayer.Character
+    if c and c:FindFirstChild("Humanoid") then
+        c.Humanoid.AutoRotate = true
     end
 end
 
-LocalPlayer.CharacterAdded:Connect(function(c)
-    task.wait(0.5)
-    if mode == 3 then enableFly() end
-end)
-
----------------------------------------------------------
+-----------------------------------
 -- INF JUMP
----------------------------------------------------------
+-----------------------------------
 local jumpConnection = nil
 
 local function enableInfJump()
     infjump = true
     if jumpConnection then jumpConnection:Disconnect() end
+
     jumpConnection = UIS.JumpRequest:Connect(function()
-        if infjump and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-            LocalPlayer.Character.Humanoid:ChangeState("Jumping")
+        if infjump then
+            local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
+            if hum then hum:ChangeState("Jumping") end
         end
     end)
 end
@@ -256,9 +260,9 @@ local function disableInfJump()
     if jumpConnection then jumpConnection:Disconnect() end
 end
 
----------------------------------------------------------
+-----------------------------------
 -- SWITCH MODES
----------------------------------------------------------
+-----------------------------------
 ModeButton.MouseButton1Click:Connect(function()
     mode += 1
     if mode > 3 then mode = 1 end
@@ -280,6 +284,10 @@ ModeButton.MouseButton1Click:Connect(function()
     end
 end)
 
+LocalPlayer.CharacterAdded:Connect(function()
+    task.wait(0.5)
+    if mode == 3 then enableFly() end
+end)
 --=====================
 -- HITBOX
 --=====================
