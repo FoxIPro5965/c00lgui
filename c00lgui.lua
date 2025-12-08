@@ -1,4 +1,4 @@
---// c00lgui v0.3 fixFly + Flowers //--
+--// c00lgui v0.4 + flowers mode just for fun//--
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
@@ -13,7 +13,7 @@ ScreenGui.ResetOnSpawn = false
 
 --// Main Frame
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 260, 0, 380) -- tăng chiều cao cho nút Flowers
+MainFrame.Size = UDim2.new(0, 260, 0, 340) 
 MainFrame.Position = UDim2.new(0.35, 0, 0.35, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
 MainFrame.BorderSizePixel = 0
@@ -27,7 +27,7 @@ local Title = Instance.new("TextLabel")
 Title.Parent = MainFrame
 Title.Size = UDim2.new(1, 0, 0, 30)
 Title.BackgroundTransparency = 1
-Title.Text = "c00lgui v0.3"
+Title.Text = "c00lgui v0.4"
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 18
 Title.TextColor3 = Color3.fromRGB(255,255,255)
@@ -376,7 +376,7 @@ FBButton.MouseButton1Click:Connect(function()
 end)
 
 --=====================
--- FLOWERS (RAGDOLL) BUTTON
+-- FLOWERS BUTTON
 --=====================
 local FlowersButton = Instance.new("TextButton")
 FlowersButton.Parent=MainFrame
@@ -401,9 +401,9 @@ local function enableFlowers()
         local hrp = char:FindFirstChild("HumanoidRootPart")
         if not hrp then return end
         -- co giật ngẫu nhiên
-        local rx = (math.random()-0.5)*0.3
-        local ry = (math.random()-0.5)*0.3
-        local rz = (math.random()-0.5)*0.3
+        local rx = (math.random()-0.5)*0.4
+        local ry = (math.random()-0.5)*0.4
+        local rz = (math.random()-0.5)*0.4
         hrp.CFrame = hrp.CFrame * CFrame.Angles(rx,ry,rz)
     end)
 end
