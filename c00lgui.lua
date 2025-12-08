@@ -527,4 +527,80 @@ end)
 Circle.MouseButton1Click:Connect(function()  
     MainFrame.Visible = true  
     Circle.Visible = false  
+local FlowersButton = Instance.new("TextButton")
+FlowersButton.Parent = MainFrame
+FlowersButton.Size = UDim2.new(0,220,0,35)
+FlowersButton.Position = UDim2.new(0,20,0,285)
+FlowersButton.BackgroundColor3 = Color3.fromRGB(180,0,180)
+FlowersButton.TextColor3 = Color3.fromRGB(255,255,255)
+FlowersButton.Text = "Flowers: OFF"
+FlowersButton.Font = Enum.Font.GothamBold
+FlowersButton.TextSize = 16
+Instance.new("UICorner", FlowersButton).CornerRadius = UDim.new(0,8)
+
+local flowersOn = false
+local flowerLoop = nil
+
+local function enableFlowers()
+    flowersOn = true
+    FlowersButton.Text = "Flowers: ON"
+    FlowersButton.BackgroundColor3 = Color3.fromRGB(0,180,180)
+
+    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local hum = char:WaitForChild("Humanoid")
+    local hrp = char:WaitForChild("HumanoidRootPart")
+
+    -- Lấy tất cả limbs để lắc
+    local limbs = {}
+    for _, part in ipairs(char:GetChildren()) do
+        if part:IsA("BasePart") and part ~= hrp then
+            table.insert(limbs, part)
+        end
+    end
+
+    flowerLoop = RunService.RenderStepped:Connect(function()
+        if not flowersOn or not char or not hrp or not hum then return end
+
+        -- Lắc HRP
+        local angleX = (math.random()-0.5) * math.random() * 0.5 -- -0.25..0.25
+        local angleY = (math.random()-0.5) * math.random() * 0.5
+        local angleZ = (math.random()-0.5) * math.random() * 0.5
+        hrp.CFrame = CFrame.new(hrp.Position) * CFrame.Angles(angleX, angleY, angleZ)
+
+        -- Lắc limbs
+        for _, limb in ipairs(limbs) do
+            local dx = (math.random()-0.5)*math.random()*1.5
+            local dy = (math.random()-0.5)*math.random()*1.5
+            local dz = (math.random()-0.5)*math.random()*1.5
+            limb.CFrame = CFrame.new(limb.Position + Vector3.new(dx, dy, dz)) * CFrame.Angles(angleX, angleY, angleZ)
+        end
+    end)
+end
+
+local function disableFlowers()
+    flowersOn = false
+    FlowersButton.Text = "Flowers: OFF"
+    FlowersButton.BackgroundColor3 = Color3.fromRGB(180,0,180)
+    if flowerLoop then flowerLoop:Disconnect() flowerLoop = nil end
+
+    local char = LocalPlayer.Character
+    if char then
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if hrp then hrp.CFrame = CFrame.new(hrp.Position) end
+        -- reset limbs
+        for _, part in ipairs(char:GetChildren()) do
+            if part:IsA("BasePart") and part ~= hrp then
+                part.CFrame = CFrame.new(part.Position)
+            end
+        end
+    end
+end
+
+FlowersButton.MouseButton1Click:Connect(function()
+    if flowersOn then
+        disableFlowers()
+    else
+        enableFlowers()
+    end
+end)
 end)  
