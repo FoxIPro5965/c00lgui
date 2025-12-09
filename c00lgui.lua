@@ -376,114 +376,79 @@ FBButton.MouseButton1Click:Connect(function()
 end)
 
 --=====================
--- RAGDOLL BUTTON (SAFE)
+-- RAGDOLL FALL BUTTON
 --=====================
-local RagdollBtn = Instance.new("TextButton")
-RagdollBtn.Parent = MainFrame
-RagdollBtn.Size = UDim2.new(0,220,0,35)
-RagdollBtn.Position = UDim2.new(0,20,0,80)
-RagdollBtn.BackgroundColor3 = Color3.fromRGB(180,0,0)
-RagdollBtn.Text = "Ragdoll: OFF"
-RagdollBtn.TextColor3 = Color3.fromRGB(255,255,255)
-RagdollBtn.Font = Enum.Font.GothamBold
-RagdollBtn.TextSize = 16
-Instance.new("UICorner", RagdollBtn).CornerRadius = UDim.new(0,8)
+local FallBtn = Instance.new("TextButton")
+FallBtn.Parent = MainFrame
+FallBtn.Size = UDim2.new(0,220,0,35)
+FallBtn.Position = UDim2.new(0,20,0,285)
+FallBtn.BackgroundColor3 = Color3.fromRGB(180,0,0)
+FallBtn.Text = "Fall: OFF"
+FallBtn.TextColor3 = Color3.fromRGB(255,255,255)
+FallBtn.Font = Enum.Font.GothamBold
+FallBtn.TextSize = 16
+Instance.new("UICorner", FallBtn).CornerRadius = UDim.new(0,8)
 
-local ragOn = false
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
--- Oof sound
-local function playOof(hrp)
-    local s = Instance.new("Sound", hrp)
-    s.SoundId = "rbxassetid://286090356"
-    s.Volume = 1
-    s:Play()
-    game.Debris:AddItem(s, 2)
-end
+local fallOn = false
 
-local createdConstraints = {}
-local disabledMotors = {}
-
-local function enableRagdoll()
+local function fallOver()
     local char = LocalPlayer.Character
     if not char then return end
     local hum = char:FindFirstChildOfClass("Humanoid")
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if not hum or not hrp then return end
 
-    ragOn = true
-    RagdollBtn.Text = "Ragdoll: ON"
+    fallOn = true
+    FallBtn.Text = "Fall: ON"
 
-    hum.PlatformStand = true
+    hum.PlatformStand = true   -- cho ngã xuống
 
-    for _, motor in ipairs(char:GetDescendants()) do
-        if motor:IsA("Motor6D") and motor.Name ~= "RootJoint" then
-            motor.Enabled = false
-            table.insert(disabledMotors, motor)
+    -- Xoay player để ngã sang 1 bên
+    hrp.CFrame = hrp.CFrame * CFrame.Angles(math.rad(90), 0, 0)
 
-            local att0 = Instance.new("Attachment")
-            att0.Parent = motor.Part0
-            att0.CFrame = motor.C0
-
-            local att1 = Instance.new("Attachment")
-            att1.Parent = motor.Part1
-            att1.CFrame = motor.C1
-
-            local socket = Instance.new("BallSocketConstraint")
-            socket.Attachment0 = att0
-            socket.Attachment1 = att1
-            socket.Parent = motor.Parent
-
-            table.insert(createdConstraints, socket)
+    -- Cho physics hoạt động
+    for _, p in pairs(char:GetChildren()) do
+        if p:IsA("BasePart") then
+            p.CanCollide = true
+            p.Massless = false
         end
     end
 
-    -- Oof khi rơi
-    task.spawn(function()
-        local lastY = hrp.Position.Y
-        while ragOn do
-            task.wait(0.1)
-            if math.abs(hrp.Velocity.Y) < 1 and lastY - hrp.Position.Y > 4 then
-                playOof(hrp)
-            end
-            lastY = hrp.Position.Y
-        end
-    end)
+    -- Thêm độ "quán tính"
+    hrp.Velocity = Vector3.new(0, -30, 0)
 end
 
-local function disableRagdoll()
-    ragOn = false
-    RagdollBtn.Text = "Ragdoll: OFF"
-
+local function standUp()
     local char = LocalPlayer.Character
     if not char then return end
     local hum = char:FindFirstChildOfClass("Humanoid")
+    local hrp = char:FindFirstChild("HumanoidRootPart")
 
-    if hum then hum.PlatformStand = false end
+    fallOn = false
+    FallBtn.Text = "Fall: OFF"
 
-    -- Khôi phục joint
-    for _, m in ipairs(disabledMotors) do
-        if m and m.Parent then
-            m.Enabled = true
+    if hum then
+        hum.PlatformStand = false
+        hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+    end
+
+    -- Reset collision
+    for _, p in pairs(char:GetChildren()) do
+        if p:IsA("BasePart") then
+            p.CanCollide = false
         end
     end
-    disabledMotors = {}
-
-    -- Xoá BallSocket
-    for _, c in ipairs(createdConstraints) do
-        if c and c.Parent then
-            c:Destroy()
-        end
-    end
-    createdConstraints = {}
+    if hrp then hrp.CanCollide = true end
 end
 
-RagdollBtn.MouseButton1Click:Connect(function()
-    if ragOn then
-        disableRagdoll()
+FallBtn.MouseButton1Click:Connect(function()
+    if fallOn then
+        standUp()
     else
-        enableRagdoll()
+        fallOver()
     end
 end)
 --=====================
