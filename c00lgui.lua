@@ -269,7 +269,7 @@ end)
 -- Create LookBack Button
 local LookBack = Instance.new("TextButton")
 LookBack.Name = "LookBack"
-LookBack.Parent = MainMenuFrame
+LookBack.Parent = MainFrame
 LookBack.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 LookBack.TextColor3 = Color3.fromRGB(255, 255, 255)
 LookBack.Size = UDim2.new(0, 120, 0, 40)
