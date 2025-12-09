@@ -18,27 +18,27 @@ toggleButton.BorderColor3 = Color3.fromRGB(255, 0, 0)
 toggleButton.BorderSizePixel = 2
 toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 toggleButton.Font = Enum.Font.SourceSansBold
-toggleButton.TextSize = 16
+toggleButton.TextSize = 19
 toggleButton.Text = "Backstab: OFF"
 toggleButton.Parent = screenGui
 
 -- Range Label
 local rangeLabel = Instance.new("TextLabel")
 rangeLabel.Size = UDim2.new(0, 120, 0, 20)
-rangeLabel.Position = UDim2.new(0, 10, 0, 35)
+rangeLabel.Position = UDim2.new(0, 10, 0, 50)
 rangeLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 rangeLabel.BorderColor3 = Color3.fromRGB(255, 0, 0)
 rangeLabel.BorderSizePixel = 2
 rangeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 rangeLabel.Font = Enum.Font.SourceSans
-rangeLabel.TextSize = 16
+rangeLabel.TextSize = 15
 rangeLabel.Text = "Range:"
 rangeLabel.Parent = screenGui
 
 -- Range TextBox
 local rangeBox = Instance.new("TextBox")
 rangeBox.Size = UDim2.new(0, 120, 0, 25)
-rangeBox.Position = UDim2.new(0, 10, 0, 55)
+rangeBox.Position = UDim2.new(0, 10, 0, 75)
 rangeBox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 rangeBox.BorderColor3 = Color3.fromRGB(255, 0, 0)
 rangeBox.BorderSizePixel = 2
@@ -54,7 +54,7 @@ rangeBox.Parent = screenGui
 local mode = "Behind"
 local modeButton = Instance.new("TextButton")
 modeButton.Size = UDim2.new(0, 120, 0, 20)
-modeButton.Position = UDim2.new(0, 10, 0, 75)
+modeButton.Position = UDim2.new(0, 10, 0, 105)
 modeButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 modeButton.BorderColor3 = Color3.fromRGB(255, 0, 0)
 modeButton.BorderSizePixel = 2
@@ -67,7 +67,7 @@ modeButton.Parent = screenGui
 -- Infinite Stamina Button
 local infStamButton = Instance.new("TextButton")
 infStamButton.Size = UDim2.new(0, 120, 0, 25)
-infStamButton.Position = UDim2.new(0, 10, 0, 110)
+infStamButton.Position = UDim2.new(0, 10, 0, 130)
 infStamButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 infStamButton.BorderColor3 = Color3.fromRGB(255, 0, 0)
 infStamButton.BorderSizePixel = 2
@@ -76,30 +76,6 @@ infStamButton.Font = Enum.Font.SourceSans
 infStamButton.TextSize = 16
 infStamButton.Text = "Inf Stamina: OFF"
 infStamButton.Parent = screenGui
-
--- Hide GUI Small Button (luôn hiện, trên cùng)
-local hideButton = Instance.new("TextButton")
-hideButton.Size = UDim2.new(0, 30, 0, 15) -- nút nhỏ
-hideButton.Position = UDim2.new(0, 10, 0, 3) -- trên cùng
-hideButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-hideButton.BorderColor3 = Color3.fromRGB(0, 0, 0)
-hideButton.BorderSizePixel = 1
-hideButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-hideButton.Font = Enum.Font.SourceSans
-hideButton.TextSize = 14
-hideButton.Text = "H"
-hideButton.Parent = screenGui
-
-local guiHidden = false
-hideButton.MouseButton1Click:Connect(function()
-    guiHidden = not guiHidden
-    -- Ẩn tất cả các nút/label khác trừ hideButton
-    for _, obj in pairs(screenGui:GetChildren()) do
-        if obj ~= hideButton then
-            obj.Visible = not guiHidden
-        end
-    end
-end)
 
 -- Variables
 local enabled = false
@@ -117,7 +93,7 @@ local sprint = rs.Systems.Character.Game.Sprinting
 local m = require(sprint)
 task.spawn(function()
     while task.wait(0.1) do
-        if infStaminaEnabled and m.Stamina < 100 then
+        if infStaminaEnabled and m.Stamina < 3 then
             m.Stamina = 100
         end
     end
@@ -146,13 +122,6 @@ end)
 infStamButton.MouseButton1Click:Connect(function()
     infStaminaEnabled = not infStaminaEnabled
     infStamButton.Text = "Inf Stamina: " .. (infStaminaEnabled and "ON" or "OFF")
-end)
-
-local guiHidden = false
-hideButton.MouseButton1Click:Connect(function()
-    guiHidden = not guiHidden
-    screenGui.Enabled = not guiHidden
-    hideButton.Text = "Hide GUI: " .. (guiHidden and "ON" or "OFF")
 end)
 
 -- Helper function
