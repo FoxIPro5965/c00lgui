@@ -1,4 +1,4 @@
---// c00lgui v0.4 + flowers mode just for fun//--
+--// c00lgui v0.4 //--
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
@@ -141,9 +141,10 @@ Instance.new("UICorner",ModeButton).CornerRadius = UDim.new(0,8)
 local flying = false
 local infjump = false
 local mode = 1
+local lookBackEnabled = false
 
 local bv, bg, flyConn, infConn = nil, nil, nil, nil
-local flySpeed = 80  -- Change this value anytime (80 = perfect speed)
+local flySpeed = 80
 
 local ctrl = {f=0, b=0, l=0, r=0, upd=0, down=0}
 
@@ -162,17 +163,26 @@ local function disableInfJump()
     if infConn then infConn:Disconnect() infConn = nil end
 end
 
---=== PERFECT FLY (NO MORE UP = BACKWARD BUG) ===
+--=== AUTO SHIFT LOCK ===
+local function setShiftLock(state)
+    pcall(function()
+        LocalPlayer.DevEnableMouseLock = state
+        LocalPlayer.DevMouseLockMode = state and Enum.DevMouseLockMode.LockCenter or Enum.DevMouseLockMode.None
+    end)
+end
+
+--=== PERFECT FLY ===
 local function startFly()
     if flying then return end
     flying = true
+
+    setShiftLock(true)
 
     local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
     local root = char:WaitForChild("HumanoidRootPart")
     local hum = char:WaitForChild("Humanoid")
     hum.PlatformStand = true
 
-    -- BodyVelocity & BodyGyro
     bv = Instance.new("BodyVelocity", root)
     bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
     bv.Velocity = Vector3.zero
@@ -185,33 +195,30 @@ local function startFly()
     local controls = require(LocalPlayer.PlayerScripts.PlayerModule):GetControls()
 
     flyConn = RunService.RenderStepped:Connect(function()
-        if not flying or not root or not root.Parent then return end
+        if not flying or not root.Parent then return end
 
         local cam = workspace.CurrentCamera
         local moveVec = controls:GetMoveVector()
 
-        -- Reset controls
         ctrl = {f=0, b=0, l=0, r=0, upd=0, down=0}
         if moveVec.Z < -0.1 then ctrl.f = 1 end
         if moveVec.Z > 0.1 then ctrl.b = 1 end
         if moveVec.X < -0.1 then ctrl.l = 1 end
         if moveVec.X > 0.1 then ctrl.r = 1 end
 
-        -- Up = Space / Jump button | Down = Ctrl / Crouch
-        if UIS:IsKeyDown(Enum.KeyCode.Space) or UIS:IsKeyDown(Enum.KeyCode.ButtonA) then ctrl.upd = 1 end
-        if UIS:IsKeyDown(Enum.KeyCode.LeftControl) or UIS:IsKeyDown(Enum.KeyCode.ButtonB) or UIS:IsKeyDown(Enum.KeyCode.E) then ctrl.down = 1 end
+        if UIS:IsKeyDown(Enum.KeyCode.Space) then ctrl.upd = 1 end
+        if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then ctrl.down = 1 end
 
         local speed = flySpeed
-        if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then speed = speed * 2 end  -- Shift = fly faster
+        if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then speed *= 2 end
 
-        -- Final direction in camera space
-        local dir = Vector3.new()
-        dir = dir + (ctrl.f == 1 and cam.CFrame.LookVector or Vector3.zero)
-        dir = dir - (ctrl.b == 1 and cam.CFrame.LookVector or Vector3.zero)
-        dir = dir + (ctrl.r == 1 and cam.CFrame.RightVector or Vector3.zero)
-        dir = dir - (ctrl.l == 1 and cam.CFrame.RightVector or Vector3.zero)
-        dir = dir + (ctrl.upd == 1 and cam.CFrame.UpVector or Vector3.zero)
-        dir = dir - (ctrl.down == 1 and cam.CFrame.UpVector or Vector3.zero)
+        local dir = Vector3.zero
+        dir += (ctrl.f == 1 and cam.CFrame.LookVector or Vector3.zero)
+        dir -= (ctrl.b == 1 and cam.CFrame.LookVector or Vector3.zero)
+        dir += (ctrl.r == 1 and cam.CFrame.RightVector or Vector3.zero)
+        dir -= (ctrl.l == 1 and cam.CFrame.RightVector or Vector3.zero)
+        dir += (ctrl.upd == 1 and cam.CFrame.UpVector or Vector3.zero)
+        dir -= (ctrl.down == 1 and cam.CFrame.UpVector or Vector3.zero)
 
         if dir.Magnitude > 0.01 then
             dir = dir.Unit
@@ -225,14 +232,17 @@ end
 
 local function stopFly()
     flying = false
+    setShiftLock(false)
+
     if flyConn then flyConn:Disconnect() flyConn = nil end
     if bv then bv:Destroy() bv = nil end
     if bg then bg:Destroy() bg = nil end
+
     local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
     if hum then hum.PlatformStand = false end
 end
 
---=== MODE SWITCHING (your button) ===
+--=== MODE BUTTON ===
 ModeButton.MouseButton1Click:Connect(function()
     mode = mode + 1
     if mode > 3 then mode = 1 end
@@ -251,6 +261,57 @@ ModeButton.MouseButton1Click:Connect(function()
     end
 end)
 
+
+--===============
+-- LOOKBACK SYSTEM
+--===============
+
+-- Create LookBack Button
+local LookBack = Instance.new("TextButton")
+LookBack.Name = "LookBack"
+LookBack.Parent = ScreenGui
+LookBack.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+LookBack.TextColor3 = Color3.fromRGB(255, 255, 255)
+LookBack.Size = UDim2.new(0, 120, 0, 40)
+LookBack.Position = UDim2.new(0, 20, 0, 285)
+LookBack.Text = "LookBack: OFF"
+LookBack.AutoButtonColor = true
+LookBack.BorderSizePixel = 0
+LookBack.BackgroundTransparency = 0.2
+
+LookBack.MouseButton1Click:Connect(function()
+    lookBackEnabled = not lookBackEnabled
+    LookBack.Text = lookBackEnabled and "LookBack: ON" or "LookBack: OFF"
+end)
+
+-- Teleport behind target
+RunService.Heartbeat:Connect(function()
+    if not lookBackEnabled then return end
+    local char = LocalPlayer.Character
+    if not char then return end
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+
+    -- find nearest player
+    local nearest = nil
+    local dist = 9999
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+            local d = (plr.Character.HumanoidRootPart.Position - root.Position).Magnitude
+            if d < dist then
+                dist = d
+                nearest = plr
+            end
+        end
+    end
+
+    if nearest and dist <= 12 then
+        local targetRoot = nearest.Character.HumanoidRootPart
+        local backPos = targetRoot.Position - (targetRoot.CFrame.LookVector * 3)
+        root.CFrame = CFrame.new(backPos, targetRoot.Position)
+    end
+end)
+
 --=== RESPAWN FIX ===
 LocalPlayer.CharacterAdded:Connect(function()
     task.wait(0.7)
@@ -259,6 +320,9 @@ LocalPlayer.CharacterAdded:Connect(function()
     if mode == 2 then enableInfJump() end
     if mode == 3 then startFly() end
 end)
+
+-- [Rest of your script continues below... hitbox, fullbright, etc.]
+
 
 --=====================
 -- HITBOX
