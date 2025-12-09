@@ -269,11 +269,11 @@ end)
 -- Create LookBack Button
 local LookBack = Instance.new("TextButton")
 LookBack.Name = "LookBack"
-LookBack.Parent = MainFrame
+LookBack.Parent = ScreenGui
 LookBack.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 LookBack.TextColor3 = Color3.fromRGB(255, 255, 255)
 LookBack.Size = UDim2.new(0, 120, 0, 40)
-LookBack.Position = UDim2.new(0, 20, 0, 285)
+LookBack.Position = UDim2.new(0, 20, 0, 45)
 LookBack.Text = "LookBack: OFF"
 LookBack.AutoButtonColor = true
 LookBack.BorderSizePixel = 0
