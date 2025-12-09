@@ -375,48 +375,91 @@ FBButton.MouseButton1Click:Connect(function()
     end
 end)
 
---=====================
--- FLOWERS BUTTON
---=====================
+--=================
+-- FLOWERS BUTTON 
+--=================
 local FlowersButton = Instance.new("TextButton")
-FlowersButton.Parent=MainFrame
-FlowersButton.Size=UDim2.new(0,220,0,35)
-FlowersButton.Position=UDim2.new(0,20,0,285)
-FlowersButton.BackgroundColor3=Color3.fromRGB(180,0,0)
-FlowersButton.Text="Flowers: OFF"
-FlowersButton.TextColor3=Color3.fromRGB(255,255,255)
-FlowersButton.Font=Enum.Font.GothamBold
-FlowersButton.TextSize=16
-Instance.new("UICorner",FlowersButton).CornerRadius=UDim.new(0,8)
+FlowersButton.Parent = MainFrame
+FlowersButton.Size = UDim2.new(0, 220, 0, 35)
+FlowersButton.Position = UDim2.new(0, 20, 0, 285)
+FlowersButton.BackgroundColor3 = Color3.fromRGB(180,0,0)
+FlowersButton.Text = "Flowers: OFF"
+FlowersButton.TextColor3 = Color3.fromRGB(255,255,255)
+FlowersButton.Font = Enum.Font.GothamBold
+FlowersButton.TextSize = 16
+Instance.new("UICorner", FlowersButton).CornerRadius = UDim.new(0, 8)
 
-local flowersOn=false
-local flowerLoop=nil
+local flowersOn = false
+local flowerLoop = nil
+local ghostLoop = nil
 
 local function enableFlowers()
-    flowersOn=true
-    FlowersButton.Text="Flowers: ON"
-    flowerLoop=RunService.RenderStepped:Connect(function()
-        local char=LocalPlayer.Character
+    flowersOn = true
+    FlowersButton.Text = "Flowers: ON"
+
+    -- Giật nhân vật liên tục
+    flowerLoop = RunService.RenderStepped:Connect(function()
+        local char = LocalPlayer.Character
         if not char then return end
         local hrp = char:FindFirstChild("HumanoidRootPart")
         if not hrp then return end
-        -- co giật ngẫu nhiên
+
         local rx = (math.random()-0.5)*0.5
         local ry = (math.random()-0.5)*0.5
         local rz = (math.random()-0.5)*0.5
-        hrp.CFrame = hrp.CFrame * CFrame.Angles(rx,ry,rz)
+        hrp.CFrame = hrp.CFrame * CFrame.Angles(rx, ry, rz)
+    end)
+
+    -- Ẩn/hiện cơ thể mỗi 1 giây
+    ghostLoop = RunService.Heartbeat:Connect(function(deltaTime)
+        local timer = 0
+        timer = timer + deltaTime
+        if timer >= 1 then
+            local char = LocalPlayer.Character
+            if char then
+                for _, partName in pairs({"Head","Torso","LeftArm","RightArm","LeftLeg","RightLeg","UpperTorso","LowerTorso"}) do
+                    local part = char:FindFirstChild(partName)
+                    if part and part:IsA("BasePart") then
+                        part.Transparency = math.random() < 0.5 and 1 or 0
+                        part.CanCollide = part.Transparency == 0
+                    end
+                end
+            end
+            timer = 0
+        end
     end)
 end
-local function disableFlowers()
-    flowersOn=false
-    FlowersButton.Text="Flowers: OFF"
-    if flowerLoop then flowerLoop:Disconnect() end
-    flowerLoop=nil
-end
-FlowersButton.MouseButton1Click:Connect(function()
-    if flowersOn then disableFlowers() else enableFlowers() end
-end)
 
+local function disableFlowers()
+    flowersOn = false
+    FlowersButton.Text = "Flowers: OFF"
+
+    if flowerLoop then flowerLoop:Disconnect() end
+    flowerLoop = nil
+
+    if ghostLoop then ghostLoop:Disconnect() end
+    ghostLoop = nil
+
+    -- Reset cơ thể hiện lại
+    local char = LocalPlayer.Character
+    if char then
+        for _, partName in pairs({"Head","Torso","LeftArm","RightArm","LeftLeg","RightLeg","UpperTorso","LowerTorso"}) do
+            local part = char:FindFirstChild(partName)
+            if part and part:IsA("BasePart") then
+                part.Transparency = 0
+                part.CanCollide = true
+            end
+        end
+    end
+end
+
+FlowersButton.MouseButton1Click:Connect(function()
+    if flowersOn then
+        disableFlowers()
+    else
+        enableFlowers()
+    end
+end)
 --=====================
 -- HIDE / SHOW UI 
 --=====================
