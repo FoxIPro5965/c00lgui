@@ -160,8 +160,8 @@ local function getCameraDirection()
         move = controls:GetMoveVector()
     else
         -- PC: keyboard
-        if UIS:IsKeyDown(Enum.KeyCode.W) then move = move + Vector3.new(0,0,-1) end
-        if UIS:IsKeyDown(Enum.KeyCode.S) then move = move + Vector3.new(0,0,1) end
+        if UIS:IsKeyDown(Enum.KeyCode.S) then move = move + Vector3.new(0,0,-1) end
+        if UIS:IsKeyDown(Enum.KeyCode.W) then move = move + Vector3.new(0,0,1) end
         if UIS:IsKeyDown(Enum.KeyCode.A) then move = move - Vector3.new(1,0,0) end
         if UIS:IsKeyDown(Enum.KeyCode.D) then move = move + Vector3.new(1,0,0) end
     end
@@ -387,13 +387,13 @@ FBButton.MouseButton1Click:Connect(function()
     end
 end)
 
---=====================
--- BACKLOOK BUTTON
---=====================
+--=================
+-- BACKLOOK BUTTON 
+--=================
 local BackBtn = Instance.new("TextButton")
 BackBtn.Parent = MainFrame
 BackBtn.Size = UDim2.new(0,220,0,35)
-BackBtn.Position = UDim2.new(0,20,0,280)
+BackBtn.Position = UDim2.new(0,20,0,285)
 BackBtn.BackgroundColor3 = Color3.fromRGB(0,120,255)
 BackBtn.Text = "BackLook: OFF"
 BackBtn.TextColor3 = Color3.fromRGB(255,255,255)
@@ -408,42 +408,53 @@ local RunService = game:GetService("RunService")
 local backLookOn = false
 local followConnection = nil
 
-local function getNearestEnemy()
+-- Config
+local MAX_DISTANCE = 12    -- Max distance to detect enemy
+local BACK_OFFSET = 3      -- How many studs behind the enemy
+
+local function isSameTeam(plr1, plr2)
+    if not plr1 or not plr2 then return false end
+    if not plr1.Team or not plr2.Team then return false end -- Neutral/teamless = enemies
+    return plr1.Team == plr2.Team
+end
+
+local function getClosestEnemy()
     local char = LocalPlayer.Character
-    if not char then return end
+    if not char then return nil end
     local hrp = char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
+    if not hrp then return nil end
 
-    local closest = nil
-    local closestDist = 12 -- check trong 10 studs, để 12 dư 1 chút chống lỗi
+    local closestEnemyHRP = nil
+    local closestDist = MAX_DISTANCE
 
-    for _,plr in pairs(Players:GetPlayers()) do
+    for _, plr in ipairs(Players:GetPlayers()) do
         if plr ~= LocalPlayer and plr.Character then
-
-            -- KIỂM TRA TEAM
-            if plr.Team ~= LocalPlayer.Team then
+            if not isSameTeam(LocalPlayer, plr) then -- Enemy check
                 local enemyHRP = plr.Character:FindFirstChild("HumanoidRootPart")
-                if enemyHRP then
+                if enemyHRP and enemyHRP.Parent then
                     local dist = (enemyHRP.Position - hrp.Position).Magnitude
-
                     if dist < closestDist then
-                        closest = enemyHRP
                         closestDist = dist
+                        closestEnemyHRP = enemyHRP
                     end
                 end
             end
         end
     end
 
-    return closest
+    return closestEnemyHRP
 end
 
 local function startBackLook()
+    if backLookOn then return end
     backLookOn = true
     BackBtn.Text = "BackLook: ON"
+    BackBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
 
     followConnection = RunService.Heartbeat:Connect(function()
-        local enemyHRP = getNearestEnemy()
+        if not backLookOn then return end
+
+        local enemyHRP = getClosestEnemy()
         if not enemyHRP then return end
 
         local char = LocalPlayer.Character
@@ -451,20 +462,22 @@ local function startBackLook()
         local hrp = char:FindFirstChild("HumanoidRootPart")
         if not hrp then return end
 
-        -- Lấy hướng nhìn của enemy
-        local forward = enemyHRP.CFrame.LookVector
+        -- Direction enemy is facing
+        local enemyForward = enemyHRP.CFrame.LookVector
+        -- Position exactly 3 studs behind them
+        local targetBehindPos = enemyHRP.Position - (enemyForward * BACK_OFFSET)
 
-        -- Tính vị trí sau lưng 3 studs
-        local targetPos = enemyHRP.Position - forward * 3
+        -- Smoothly move + face the enemy's back
+        local targetCFrame = CFrame.new(targetBehindPos, enemyHRP.Position)
 
-        -- Dịch chuyển mượt (không snap)
-        hrp.CFrame = hrp.CFrame:Lerp(CFrame.new(targetPos, enemyHRP.Position), 0.25)
+        hrp.CFrame = hrp.CFrame:Lerp(targetCFrame, 0.3) -- 0.3 = smooth, 1 = instant
     end)
 end
 
 local function stopBackLook()
     backLookOn = false
     BackBtn.Text = "BackLook: OFF"
+    BackBtn.BackgroundColor3 = Color3.fromRGB(0,120,255)
 
     if followConnection then
         followConnection:Disconnect()
@@ -472,12 +485,27 @@ local function stopBackLook()
     end
 end
 
+-- Toggle Button
 BackBtn.MouseButton1Click:Connect(function()
     if backLookOn then
         stopBackLook()
     else
         startBackLook()
     end
+end)
+
+-- Auto re-enable on respawn
+LocalPlayer.CharacterAdded:Connect(function()
+    task.wait(0.8)
+    if backLookOn then
+        startBackLook()
+    end
+end)
+
+-- Optional: Auto-disable when character dies/removed
+LocalPlayer.CharacterRemoving:Connect(function()
+    stopBackLook()
+end)
 end)
 --=====================
 -- HIDE / SHOW UI 
