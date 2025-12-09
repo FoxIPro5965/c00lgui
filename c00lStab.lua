@@ -19,7 +19,7 @@ toggleButton.BorderSizePixel = 2
 toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)    
 toggleButton.Font = Enum.Font.SourceSansBold    
 toggleButton.TextSize = 20    
-toggleButton.Text = "c00lstab: OFF"    
+toggleButton.Text = "Backstab: OFF"    
 toggleButton.Parent = screenGui    
     
 -- Range Label    
@@ -45,8 +45,8 @@ rangeBox.BorderSizePixel = 2
 rangeBox.TextColor3 = Color3.fromRGB(255, 255, 255)    
 rangeBox.Font = Enum.Font.SourceSans    
 rangeBox.TextSize = 16    
-rangeBox.PlaceholderText = "8"    
-rangeBox.Text = "4"    
+rangeBox.PlaceholderText = "1-10 recommended 8"    
+rangeBox.Text = "8"    
 rangeBox.ClearTextOnFocus = false    
 rangeBox.Parent = screenGui    
     
@@ -62,7 +62,7 @@ local killersFolder = workspace:WaitForChild("Players"):WaitForChild("Killers")
 -- GUI toggle    
 toggleButton.MouseButton1Click:Connect(function()    
 	enabled = not enabled    
-	toggleButton.Text = "c00lstab: " .. (enabled and "ON" or "OFF")    
+	toggleButton.Text = "Backstab: " .. (enabled and "ON" or "OFF")    
 	toggleButton.BackgroundColor3 = enabled and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(0, 0, 0)    
 end)    
     
