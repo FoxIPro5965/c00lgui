@@ -401,9 +401,9 @@ local function enableFlowers()
         local hrp = char:FindFirstChild("HumanoidRootPart")
         if not hrp then return end
         -- co giật ngẫu nhiên
-        local rx = (math.random()-0.5)*0.4
-        local ry = (math.random()-0.5)*0.4
-        local rz = (math.random()-0.5)*0.4
+        local rx = (math.random()-0.5)*0.5
+        local ry = (math.random()-0.5)*0.5
+        local rz = (math.random()-0.5)*0.5
         hrp.CFrame = hrp.CFrame * CFrame.Angles(rx,ry,rz)
     end)
 end
@@ -418,8 +418,21 @@ FlowersButton.MouseButton1Click:Connect(function()
 end)
 
 --=====================
--- HIDE UI BUTTON
+-- HIDE / SHOW UI 
 --=====================
+local Circle = Instance.new("TextButton", ScreenGui)
+Circle.Size = UDim2.new(0, 36, 0, 36)
+Circle.Position = UDim2.new(0.5, 0, 0.5, 0)
+Circle.BackgroundColor3 = Color3.fromRGB(200, 40, 40)
+Circle.Text = "+"
+Circle.Visible = false
+Circle.Font = Enum.Font.GothamBold
+Circle.TextSize = 24
+Circle.TextColor3 = Color3.fromRGB(255,255,255)
+Instance.new("UICorner", Circle).CornerRadius = UDim.new(1, 0)
+Circle.Active = true
+Circle.Draggable = true
+
 local HideBtn = Instance.new("TextButton")
 HideBtn.Parent = MainFrame
 HideBtn.Size = UDim2.new(0,25,0,25)
@@ -432,14 +445,17 @@ HideBtn.TextSize = 18
 Instance.new("UICorner",HideBtn).CornerRadius = UDim.new(0,6)
 
 local uiHidden = false
+
+-- Ẩn menu khi nhấn HideBtn
 HideBtn.MouseButton1Click:Connect(function()
-    uiHidden = not uiHidden
-    MainFrame.Visible = not uiHidden
-    if uiHidden then
-        HideBtn.Text = "+"
-        HideBtn.Parent = ScreenGui -- để nút vẫn còn hiển thị
-    else
-        HideBtn.Text = "-"
-        HideBtn.Parent = MainFrame
-    end
+    uiHidden = true
+    MainFrame.Visible = false
+    Circle.Visible = true
+end)
+
+-- Hiện menu khi nhấn Circle
+Circle.MouseButton1Click:Connect(function()
+    uiHidden = false
+    MainFrame.Visible = true
+    Circle.Visible = false
 end)
