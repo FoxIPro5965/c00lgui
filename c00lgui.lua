@@ -263,82 +263,85 @@ end)
 
 
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local LocalPlayer = Players.LocalPlayer
-local Workspace = game:GetService("Workspace")
+local lp = Players.LocalPlayer
 
--- CONFIG
-local RANGE = 12
-local DELAY_STAB = 0.05
-local LERP_SPEED = 0.35
+-- GUI Setup
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "BackstabToggleGui"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = lp:WaitForChild("PlayerGui")
 
--- trạng thái
-local BackstabEnabled = false
+-- Toggle Button
+local toggleButton = Instance.new("TextButton")
+toggleButton.Size = UDim2.new(0, 150, 0, 40)
+toggleButton.Position = UDim2.new(0, 20, 0, 35)  -- Vị trí yêu cầu
+toggleButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleButton.Font = Enum.Font.SourceSansBold
+toggleButton.TextSize = 20
+toggleButton.Text = "Backstab: OFF"
+toggleButton.Parent = screenGui
 
--- Tạo nút Backstab trong ScreenGui
-local ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
-ScreenGui.Name = "c00lgui"
-
-local BackstabBtn = Instance.new("TextButton")
-BackstabBtn.Name = "BackstabButton"
-BackstabBtn.Parent = ScreenGui
-BackstabBtn.Size = UDim2.new(0, 120, 0, 40)
-BackstabBtn.Position = UDim2.new(0, 20, 0, 35)
-BackstabBtn.BackgroundColor3 = Color3.fromRGB(50,50,50)
-BackstabBtn.TextColor3 = Color3.fromRGB(255,255,255)
-BackstabBtn.Text = "Backstab: OFF"
-BackstabBtn.Font = Enum.Font.GothamBold
-BackstabBtn.TextSize = 18
-BackstabBtn.AutoButtonColor = true
-BackstabBtn.BorderSizePixel = 0
-Instance.new("UICorner", BackstabBtn)
+-- Vars
+local enabled = false
+local cooldown = false
+local lastTarget = nil
+local range = 10
+local daggerRemote = ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("RemoteEvent")
+local killerNames = { "Jason", "c00lkidd", "JohnDoe", "1x1x1x1", "Noli", "Nosferatu", "Guest666" }
+local killersFolder = workspace:WaitForChild("Players"):WaitForChild("Killers")
 
 -- Toggle button
-BackstabBtn.MouseButton1Click:Connect(function()
-    BackstabEnabled = not BackstabEnabled
-    BackstabBtn.Text = BackstabEnabled and "Backstab: ON" or "Backstab: OFF"
+toggleButton.MouseButton1Click:Connect(function()
+	enabled = not enabled
+	toggleButton.Text = "Backstab: " .. (enabled and "ON" or "OFF")
+	toggleButton.BackgroundColor3 = enabled and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(30, 30, 30)
 end)
 
--- Lerp teleport function
-local function LerpTo(root, targetPos, speed)
-    root.CFrame = root.CFrame:Lerp(CFrame.new(targetPos, targetPos + (targetPos - root.Position)), speed)
+-- Helper function: Mode Around
+local function isTargetInRange(hrp, targetHRP)
+	local distance = (hrp.Position - targetHRP.Position).Magnitude
+	return distance <= range
 end
 
--- Main Heartbeat loop
+-- Main loop
 RunService.Heartbeat:Connect(function()
-    if not BackstabEnabled then return end
+	if not enabled or cooldown then return end
 
-    local char = LocalPlayer.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-    local root = char.HumanoidRootPart
+	local char = lp.Character
+	if not (char and char:FindFirstChild("HumanoidRootPart")) then return end
+	local hrp = char.HumanoidRootPart
 
-    -- tìm tất cả killer model trong workspace
-    for _, killer in ipairs(Workspace:GetChildren()) do
-        if killer ~= char and killer:FindFirstChild("HumanoidRootPart") then
-            local kRoot = killer.HumanoidRootPart
-            local dist = (root.Position - kRoot.Position).Magnitude
+	for _, name in ipairs(killerNames) do
+		local killer = killersFolder:FindFirstChild(name)
+		if killer and killer:FindFirstChild("HumanoidRootPart") then
+			local kHRP = killer.HumanoidRootPart
 
-            if dist <= RANGE then
-                -- teleport ra phía sau killer
-                local backPos = kRoot.Position - (kRoot.CFrame.LookVector * 3)
-                LerpTo(root, backPos, LERP_SPEED)
+			if isTargetInRange(hrp, kHRP) and killer ~= lastTarget then
+				cooldown = true
+				lastTarget = killer
 
-                -- delay nhỏ trước khi stab
-                task.wait(DELAY_STAB)
+				-- Teleport trực tiếp ra phía sau killer
+				local behindPos = kHRP.Position - (kHRP.CFrame.LookVector * 3)
+				hrp.CFrame = CFrame.new(behindPos, kHRP.Position)
 
-                -- kích hoạt dagger/stab nếu có
-                local daggerBtn = LocalPlayer:FindFirstChild("PlayerGui") and 
-                                  LocalPlayer.PlayerGui:FindFirstChild("MainUI") and 
-                                  LocalPlayer.PlayerGui.MainUI:FindFirstChild("AbilityContainer") and
-                                  LocalPlayer.PlayerGui.MainUI.AbilityContainer:FindFirstChild("Dagger")
+				-- Fire dagger ngay lập tức
+				daggerRemote:FireServer("UseActorAbility", "Dagger")
 
-                if daggerBtn and daggerBtn.Activate then
-                    pcall(function() daggerBtn:Activate() end)
-                end
-            end
-        end
-    end
+				-- Reset cooldown khi rời khỏi range
+				task.delay(1, function()
+					lastTarget = nil
+					cooldown = false
+				end)
+
+				break
+			end
+		end
+	end
 end)
+
 --=== RESPAWN FIX ===
 LocalPlayer.CharacterAdded:Connect(function()
     task.wait(0.7)
@@ -347,6 +350,9 @@ LocalPlayer.CharacterAdded:Connect(function()
     if mode == 2 then enableInfJump() end
     if mode == 3 then startFly() end
 end)
+
+-- [Rest of your script continues below... hitbox, fullbright, etc.]
+
 
 --=====================
 -- HITBOX
