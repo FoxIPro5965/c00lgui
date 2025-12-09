@@ -1,86 +1,36 @@
---// SERVICES
+--// c00lgui v0.4 + flowers mode just for fun//--
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
+local Lighting = game:GetService("Lighting")
 
---// SCREEN GUI
+--// ScreenGui
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "c00lgui_v05"
+ScreenGui.Name = "c00lgui"
 ScreenGui.Parent = game.CoreGui
+ScreenGui.ResetOnSpawn = false
 
---// MAIN FRAME
+--// Main Frame
 local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 260, 0, 340) 
+MainFrame.Position = UDim2.new(0.35, 0, 0.35, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
 MainFrame.Parent = ScreenGui
-MainFrame.Size = UDim2.new(0, 300, 0, 350)
-MainFrame.Position = UDim2.new(0.5, -150, 0.5, -175)
-MainFrame.BackgroundColor3 = Color3.fromRGB(20,20,20)
-MainFrame.BorderSizePixel = 2
-MainFrame.BorderColor3 = Color3.fromRGB(255,30,30)
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
 
---// TITLE
+-- Title
 local Title = Instance.new("TextLabel")
 Title.Parent = MainFrame
-Title.Size = UDim2.new(1, 0, 0, 40)
+Title.Size = UDim2.new(1, 0, 0, 30)
 Title.BackgroundTransparency = 1
-Title.Text = "c00lgui v0.5"
-Title.TextColor3 = Color3.fromRGB(255,255,255)
+Title.Text = "c00lgui v0.4"
 Title.Font = Enum.Font.GothamBold
-Title.TextSize = 20
-
---// EXAMPLE BUTTON (m thay bằng nút của m)
-local ExampleButton = Instance.new("TextButton")
-ExampleButton.Parent = MainFrame
-ExampleButton.Size = UDim2.new(0, 220, 0, 35)
-ExampleButton.Position = UDim2.new(0, 40, 0, 70)
-ExampleButton.Text = "Example Button"
-ExampleButton.BackgroundColor3 = Color3.fromRGB(20,20,20)
-ExampleButton.TextColor3 = Color3.fromRGB(255,255,255)
-ExampleButton.Font = Enum.Font.GothamBold
-ExampleButton.TextSize = 16
-ExampleButton.BorderSizePixel = 2
-ExampleButton.BorderColor3 = Color3.fromRGB(255,30,30)
-
-Instance.new("UICorner", ExampleButton).CornerRadius = UDim.new(0, 8)
-
---// THEME FUNCTION (tự động đổi màu tất cả nút + frame)
-local function applyTheme(object)
-    if object:IsA("Frame") or object:IsA("TextButton") or object:IsA("TextLabel") then
-        object.BackgroundColor3 = Color3.fromRGB(20,20,20)
-        object.BorderSizePixel = 2
-        object.BorderColor3 = Color3.fromRGB(255,30,30)
-
-        if object:IsA("TextButton") or object:IsA("TextLabel") then
-            object.TextColor3 = Color3.fromRGB(255,255,255)
-        end
-    end
-end
-
-local function scanTheme(gui)
-    for _, obj in ipairs(gui:GetDescendants()) do
-        applyTheme(obj)
-    end
-end
-
---// GLOW EFFECT
-local function addGlow(object)
-    if object:IsA("TextButton") or object:IsA("Frame") then
-        local uiStroke = Instance.new("UIStroke")
-        uiStroke.Parent = object
-        uiStroke.Thickness = 2
-        uiStroke.Color = Color3.fromRGB(255,60,60)
-        uiStroke.Transparency = 0.25
-    end
-end
-
-local function scanGlow(gui)
-    for _, obj in ipairs(gui:GetDescendants()) do
-        addGlow(obj)
-    end
-end
-
-scanTheme(ScreenGui)
-scanGlow(ScreenGui)
+Title.TextSize = 18
+Title.TextColor3 = Color3.fromRGB(255,255,255)
 
 -- Hitbox Label & Input
 local BoxLabel = Instance.new("TextLabel")
@@ -425,97 +375,143 @@ FBButton.MouseButton1Click:Connect(function()
     end
 end)
 
---=====================
--- FLOWERS BUTTON + RANDOM GHOST BODY
---=====================
+--==========================
+-- FLOWERS BUTTON
+--==========================
 local FlowersButton = Instance.new("TextButton")
 FlowersButton.Parent = MainFrame
 FlowersButton.Size = UDim2.new(0, 220, 0, 35)
 FlowersButton.Position = UDim2.new(0, 20, 0, 285)
-FlowersButton.BackgroundColor3 = Color3.fromRGB(180,0,0)
+FlowersButton.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
 FlowersButton.Text = "Flowers: OFF"
 FlowersButton.TextColor3 = Color3.fromRGB(255,255,255)
 FlowersButton.Font = Enum.Font.GothamBold
 FlowersButton.TextSize = 16
-Instance.new("UICorner", FlowersButton).CornerRadius = UDim.new(0, 8)
+Instance.new("UICorner", FlowersButton).CornerRadius = UDim.new(0,8)
 
 local flowersOn = false
-local shakeLoop = nil
-local ghostLoop = nil
+local flowerLoop = nil
+local invisLoop = nil
 
-local bodyParts = {
-    "Head","Torso","UpperTorso","LowerTorso",
-    "LeftArm","RightArm",
-    "LeftLeg","RightLeg"
+--====
+-- R6 
+--====
+local r6Parts = {
+    "Head",
+    "Torso",
+    "Left Arm",
+    "Right Arm",
+    "Left Leg",
+    "Right Leg"
 }
 
-local timer = 0
+local origTransparency = {}
 
-local function enableFlowers()
-    flowersOn = true
-    FlowersButton.Text = "Flowers: ON"
+local function cacheR6(char)
+    origTransparency = {}
+    for _, name in ipairs(r6Parts) do
+        local part = char:FindFirstChild(name)
+        if part then
+            origTransparency[part] = part.Transparency
+        end
+    end
+end
 
-    -- GIẬT LIÊN TỤC
-    shakeLoop = RunService.RenderStepped:Connect(function()
+local function startR6RandomInvisibility()
+    local char = LocalPlayer.Character
+    if not char then return end
+
+    cacheR6(char)
+
+    invisLoop = task.spawn(function()
+        while flowersOn do
+            local char = LocalPlayer.Character
+            if not char then break end
+
+            -- Random 1–3 bộ phận để ẩn
+            for i = 1, math.random(1, 3) do
+                local name = r6Parts[math.random(1, #r6Parts)]
+                local part = char:FindFirstChild(name)
+                if part then
+                    part.Transparency = 1
+                    if part.Name == "Head" and part:FindFirstChild("face") then
+                        part.face.Transparency = 1
+                    end
+                end
+            end
+
+            -- Sau 0.35s hiện lại
+            task.delay(0.35, function()
+                for part, trans in pairs(origTransparency) do
+                    part.Transparency = trans
+                    if part.Name == "Head" and part:FindFirstChild("face") then
+                        part.face.Transparency = 0
+                    end
+                end
+            end)
+
+            task.wait(1)
+        end
+    end)
+end
+
+local function stopR6RandomInvisibility()
+    if invisLoop then
+        pcall(function() task.cancel(invisLoop) end)
+    end
+    invisLoop = nil
+
+    -- Khôi phục lại tất cả Transparency
+    local char = LocalPlayer.Character
+    if char then
+        for part, trans in pairs(origTransparency) do
+            part.Transparency = trans
+            if part.Name == "Head" and part:FindFirstChild("face") then
+                part.face.Transparency = 0
+            end
+        end
+    end
+end
+
+--=================================
+-- HIỆU ỨNG GIẬT NGƯỜI (FLOWERS)
+--=================================
+local function startShake()
+    flowerLoop = RunService.RenderStepped:Connect(function()
         local char = LocalPlayer.Character
         if not char then return end
         local hrp = char:FindFirstChild("HumanoidRootPart")
         if not hrp then return end
 
+        -- Giật ngẫu nhiên
         local rx = (math.random() - 0.5) * 0.5
         local ry = (math.random() - 0.5) * 0.5
         local rz = (math.random() - 0.5) * 0.5
-
         hrp.CFrame = hrp.CFrame * CFrame.Angles(rx, ry, rz)
     end)
+end
 
-    -- TÀNG HÌNH RANDOM MỖI 1 GIÂY
-    ghostLoop = RunService.Heartbeat:Connect(function(dt)
-        timer += dt
-        if timer >= 1 then
-            timer = 0
-            local char = LocalPlayer.Character
-            if not char then return end
+local function stopShake()
+    if flowerLoop then
+        flowerLoop:Disconnect()
+        flowerLoop = nil
+    end
+end
 
-            for _, name in ipairs(bodyParts) do
-                local part = char:FindFirstChild(name)
-                if part and part:IsA("BasePart") then
-                    -- 50% tàng hình, 50% hiện
-                    if math.random() < 0.5 then
-                        part.Transparency = 1  -- tàng hình
-                        part.CanCollide = false
-                    else
-                        part.Transparency = 0  -- hiện lại
-                        part.CanCollide = true
-                    end
-                end
-            end
-        end
-    end)
+local function enableFlowers()
+    flowersOn = true
+    FlowersButton.Text = "Flowers: ON"
+
+    startShake()
+    startR6RandomInvisibility()
 end
 
 local function disableFlowers()
     flowersOn = false
     FlowersButton.Text = "Flowers: OFF"
 
-    if shakeLoop then shakeLoop:Disconnect() end
-    if ghostLoop then ghostLoop:Disconnect() end
-
-    shakeLoop = nil
-    ghostLoop = nil
-    timer = 0
-
-    -- RESET CƠ THỂ
-    local char = LocalPlayer.Character
-    if char then
-        for _, name in ipairs(bodyParts) do
-            local part = char:FindFirstChild(name)
-            if part and part:IsA("BasePart") then
-                part.Transparency = 0
-                part.CanCollide = true
-            end
-        end
-    end
+    stopShake()
+    stopR6RandomInvisibility()
 end
 
 FlowersButton.MouseButton1Click:Connect(function()
