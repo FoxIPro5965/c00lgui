@@ -262,6 +262,12 @@ ModeButton.MouseButton1Click:Connect(function()
 end)
 
 
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local Workspace = game:GetService("Workspace")
+
+-- CONFIG
 local RANGE = 12
 local DELAY_STAB = 0.05
 local LERP_SPEED = 0.35
@@ -333,7 +339,6 @@ RunService.Heartbeat:Connect(function()
         end
     end
 end)
-
 --=== RESPAWN FIX ===
 LocalPlayer.CharacterAdded:Connect(function()
     task.wait(0.7)
