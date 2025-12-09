@@ -376,7 +376,7 @@ FBButton.MouseButton1Click:Connect(function()
 end)
 
 --=====================
--- REAL INERTIA RAGDOLL BUTTON
+-- FAKE INERTIA FALL BUTTON (R6)
 --=====================
 local RagBtn = Instance.new("TextButton")
 RagBtn.Parent = MainFrame
@@ -392,92 +392,64 @@ Instance.new("UICorner", RagBtn).CornerRadius = UDim.new(0,8)
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
-local ragging = false
-local savedMotors = {}
-local welds = {}
+local falling = false
 
-----------------------------------------------------------------
--- FULL BODY RAGDOLL TƯỢNG – NGÃ THEO QUÁN TÍNH
-----------------------------------------------------------------
-local function applyInertiaRagdoll()
+local function applyFall()
     local char = LocalPlayer.Character
     if not char then return end
-
+    
     local hum = char:FindFirstChild("Humanoid")
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if not hum or not hrp then return end
 
-    ragging = true
+    falling = true
     RagBtn.Text = "Ragdoll: ON"
 
     hum.PlatformStand = true
     hum.AutoRotate = false
 
-    -- Lưu và tắt Motor6D
-    for _,m in pairs(char:GetDescendants()) do
-        if m:IsA("Motor6D") then
-            m.Enabled = false
-            table.insert(savedMotors, m)
+    -- Cho toàn thân collidable để bị đẩy
+    for _,p in pairs(char:GetChildren()) do
+        if p:IsA("BasePart") then
+            p.CanCollide = true
+            p.Massless = false
         end
     end
 
-    -- Biến toàn thân thành 1 khối cứng
-    for _,part in pairs(char:GetChildren()) do
-        if part:IsA("BasePart") and part ~= hrp then
-            local w = Instance.new("WeldConstraint")
-            w.Part0 = hrp
-            w.Part1 = part
-            w.Parent = part
-            table.insert(welds, w)
+    -- Lấy hướng vận tốc
+    local vel = hrp.AssemblyLinearVelocity
+    local speed = vel.Magnitude
 
-            part.CanCollide = true
-            part.Massless = false
-        end
-    end
+    if speed > 2 then
+        -- Ngã theo hướng vận tốc
+        local dir = vel.Unit
+        local tilt = CFrame.fromAxisAngle(dir:Cross(Vector3.yAxis), math.rad(90))
+        hrp.CFrame = CFrame.new(hrp.Position) * tilt
 
-    -- Ngã theo hướng vận tốc
-    local vel = hrp.Velocity
-    if vel.Magnitude > 2 then
-        hrp.Velocity = vel * 1.15   -- tăng quán tính
+        -- Đổ mạnh theo quán tính
+        hrp.AssemblyLinearVelocity = vel * 1.2
     else
-        hrp.Velocity = Vector3.new(0, -20, 0) -- đứng yên → ngã xuống
+        -- Nếu đứng yên → ngã random
+        hrp.CFrame = hrp.CFrame * CFrame.Angles(math.rad(90),0,0)
+        hrp.AssemblyLinearVelocity = Vector3.new(0, -10, 0)
     end
-
-    -- Ngã nhẹ về trước để tạo hiệu ứng đổ
-    hrp.CFrame = hrp.CFrame * CFrame.Angles(math.rad(90), 0, 0)
 end
 
-----------------------------------------------------------------
--- RESTORE
-----------------------------------------------------------------
-local function stopInertiaRagdoll()
-    ragging = false
-    RagBtn.Text = "Ragdoll: OFF"
-
+local function stopFall()
     local char = LocalPlayer.Character
     if not char then return end
+    
     local hum = char:FindFirstChild("Humanoid")
+    if not hum then return end
 
-    -- Bật lại Motor
-    for _,m in ipairs(savedMotors) do
-        if m and m.Parent then m.Enabled = true end
-    end
-    savedMotors = {}
+    falling = false
+    RagBtn.Text = "Ragdoll: OFF"
 
-    -- Xóa weld
-    for _,w in ipairs(welds) do
-        if w and w.Parent then w:Destroy() end
-    end
-    welds = {}
+    hum.PlatformStand = false
+    hum.AutoRotate = true
+    hum:ChangeState(Enum.HumanoidStateType.GettingUp)
 
-    -- Khôi phục humanoid
-    if hum then
-        hum.PlatformStand = false
-        hum.AutoRotate = true
-        hum:ChangeState(Enum.HumanoidStateType.GettingUp)
-    end
-
-    -- Tắt collides cho body
+    -- Restore collide
     for _,p in pairs(char:GetChildren()) do
         if p:IsA("BasePart") then
             p.CanCollide = false
@@ -485,14 +457,11 @@ local function stopInertiaRagdoll()
     end
 end
 
-----------------------------------------------------------------
--- BUTTON
-----------------------------------------------------------------
 RagBtn.MouseButton1Click:Connect(function()
-    if ragging then
-        stopInertiaRagdoll()
+    if falling then
+        stopFall()
     else
-        applyInertiaRagdoll()
+        applyFall()
     end
 end)
 --=====================
