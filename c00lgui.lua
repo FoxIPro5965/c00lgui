@@ -134,123 +134,132 @@ ModeButton.TextSize = 16
 ModeButton.Text = "Mode: DEFAULT"
 Instance.new("UICorner",ModeButton).CornerRadius = UDim.new(0,8)
 
---=============
--- PERFECT FLY
---=============
-local Players = game:GetService("Players")
-local UIS = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-local LocalPlayer = Players.LocalPlayer
+--=====================
+-- PERFECT FLY + INF JUMP
+--=====================
 
 local flying = false
-local ctrl = { f = 0, b = 0, l = 0, r = 0, upd = 0, down = 0 }
-local flySpeed = 80
-local maxSpeed = 80
-local connection
+local infjump = false
+local mode = 1
 
-local bv, bg
+local bv, bg, flyConn, infConn = nil, nil, nil, nil
+local flySpeed = 80  -- Change this value anytime (80 = perfect speed)
 
+local ctrl = {f=0, b=0, l=0, r=0, upd=0, down=0}
+
+--=== INFINITE JUMP ===
+local function enableInfJump()
+    if infjump then return end
+    infjump = true
+    infConn = UIS.JumpRequest:Connect(function()
+        local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if hum then hum:ChangeState("Jumping") end
+    end)
+end
+
+local function disableInfJump()
+    infjump = false
+    if infConn then infConn:Disconnect() infConn = nil end
+end
+
+--=== PERFECT FLY (NO MORE UP = BACKWARD BUG) ===
 local function startFly()
     if flying then return end
     flying = true
 
     local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    local hrp = char:WaitForChild("HumanoidRootPart")
+    local root = char:WaitForChild("HumanoidRootPart")
     local hum = char:WaitForChild("Humanoid")
     hum.PlatformStand = true
 
     -- BodyVelocity & BodyGyro
-    bv = Instance.new("BodyVelocity")
+    bv = Instance.new("BodyVelocity", root)
     bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
-    bv.Velocity = Vector3.new(0,0,0)
-    bv.Parent = hrp
+    bv.Velocity = Vector3.zero
 
-    bg = Instance.new("BodyGyro")
+    bg = Instance.new("BodyGyro", root)
     bg.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
-    bg.P = 15000
-    bg.CFrame = hrp.CFrame
-    bg.Parent = hrp
+    bg.P = 20000
+    bg.CFrame = root.CFrame
 
-    -- Input handling (works on mobile too because it reads PlayerModule)
     local controls = require(LocalPlayer.PlayerScripts.PlayerModule):GetControls()
 
-    connection = RunService.RenderStepped:Connect(function()
-        if not flying or not hrp or not hrp.Parent then return end
+    flyConn = RunService.RenderStepped:Connect(function()
+        if not flying or not root or not root.Parent then return end
 
         local cam = workspace.CurrentCamera
-        local moveDir = controls:GetMoveVector() -- works on PC + mobile joystick
+        local moveVec = controls:GetMoveVector()
 
-        -- Reset directions
-        ctrl.f, ctrl.b, ctrl.l, ctrl.r = 0,0,0,0
-        if moveDir.Z < -0.1 then ctrl.f = 1 end
-        if moveDir.Z > 0.1 then ctrl.b = 1 end
-        if moveDir.X < -0.1 then ctrl.l = 1 end
-        if moveDir.X > 0.1 then ctrl.r = 1 end
+        -- Reset controls
+        ctrl = {f=0, b=0, l=0, r=0, upd=0, down=0}
+        if moveVec.Z < -0.1 then ctrl.f = 1 end
+        if moveVec.Z > 0.1 then ctrl.b = 1 end
+        if moveVec.X < -0.1 then ctrl.l = 1 end
+        if moveVec.X > 0.1 then ctrl.r = 1 end
 
-        -- Vertical (Space = up relative to camera, Ctrl = down)
-        if UIS:IsKeyDown(Enum.KeyCode.Space) then ctrl.upd = 1 else ctrl.upd = 0 end
-        if UIS:IsKeyDown(Enum.KeyCode.LeftControl) or UIS:IsKeyDown(Enum.KeyCode.E) then ctrl.down = 1 else ctrl.down = 0 end
+        -- Up = Space / Jump button | Down = Ctrl / Crouch
+        if UIS:IsKeyDown(Enum.KeyCode.Space) or UIS:IsKeyDown(Enum.KeyCode.ButtonA) then ctrl.upd = 1 end
+        if UIS:IsKeyDown(Enum.KeyCode.LeftControl) or UIS:IsKeyDown(Enum.KeyCode.ButtonB) or UIS:IsKeyDown(Enum.KeyCode.E) then ctrl.down = 1 end
 
         local speed = flySpeed
-        if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then speed = speed * 2 end -- sprint in air
+        if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then speed = speed * 2 end  -- Shift = fly faster
 
-        -- Calculate final direction in camera space
-        local camLook = cam.CFrame.LookVector
-        local camRight = cam.CFrame.RightVector
-        local camUp = cam.CFrame.UpVector
+        -- Final direction in camera space
+        local dir = Vector3.new()
+        dir = dir + (ctrl.f == 1 and cam.CFrame.LookVector or Vector3.zero)
+        dir = dir - (ctrl.b == 1 and cam.CFrame.LookVector or Vector3.zero)
+        dir = dir + (ctrl.r == 1 and cam.CFrame.RightVector or Vector3.zero)
+        dir = dir - (ctrl.l == 1 and cam.CFrame.RightVector or Vector3.zero)
+        dir = dir + (ctrl.upd == 1 and cam.CFrame.UpVector or Vector3.zero)
+        dir = dir - (ctrl.down == 1 and cam.CFrame.UpVector or Vector3.zero)
 
-        local move = Vector3.new()
-        if ctrl.f == 1 then move = move + camLook end
-        if ctrl.b == 1 then move = move - camLook end
-        if ctrl.r == 1 then move = move + camRight end
-        if ctrl.l == 1 then move = move - camRight end
-        if ctrl.upd == 1 then move = move + camUp end
-        if ctrl.down == 1 then move = move - camUp end
-
-        if move.Magnitude > 0 then
-            move = move.Unit
-            bv.Velocity = move * speed
-
-            -- Rotate to face movement direction
-            bg.CFrame = CFrame.new(Vector3.new(), move) * CFrame.new(hrp.Position)
+        if dir.Magnitude > 0.01 then
+            dir = dir.Unit
+            bv.Velocity = dir * speed
+            bg.CFrame = CFrame.lookAt(root.Position, root.Position + dir)
         else
-            bv.Velocity = Vector3.new(0,0,0)
+            bv.Velocity = Vector3.zero
         end
     end)
 end
 
 local function stopFly()
     flying = false
-    if connection then connection:Disconnect() connection = nil end
+    if flyConn then flyConn:Disconnect() flyConn = nil end
     if bv then bv:Destroy() bv = nil end
     if bg then bg:Destroy() bg = nil end
-
     local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
     if hum then hum.PlatformStand = false end
 end
 
--- Toggle with your mode button (mode 3 = fly)
+--=== MODE SWITCHING (your button) ===
 ModeButton.MouseButton1Click:Connect(function()
-    mode = mode % 3 + 1
+    mode = mode + 1
+    if mode > 3 then mode = 1 end
+
+    stopFly()
+    disableInfJump()
+
     if mode == 1 then
         ModeButton.Text = "Mode: DEFAULT"
-        stopFly()
-        disableInfJump()
     elseif mode == 2 then
         ModeButton.Text = "Mode: INF JUMP"
-        stopFly()
         enableInfJump()
     elseif mode == 3 then
         ModeButton.Text = "Mode: FLY"
-        disableInfJump()
         startFly()
     end
 end)
 
+--=== RESPAWN FIX ===
 LocalPlayer.CharacterAdded:Connect(function()
     task.wait(0.7)
+    stopFly()
+    disableInfJump()
+    if mode == 2 then enableInfJump() end
     if mode == 3 then startFly() end
 end)
+
 --=====================
 -- HITBOX
 --=====================
