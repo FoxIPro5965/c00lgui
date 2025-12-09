@@ -135,146 +135,158 @@ ModeButton.Text = "Mode: DEFAULT"
 Instance.new("UICorner",ModeButton).CornerRadius = UDim.new(0,8)
 
 --=====================
--- FLY / INF JUMP LOGIC
+-- BETTER FLY / INF JUMP
 --=====================
-local mode = 1
+
 local flying = false
 local infjump = false
-local BodyGyro, BodyVelocity, flyLoop = nil, nil, nil
-local flySpeed = 55
+local mode = 1
 
-local ControlsModule, ControlsOK
-do
-    pcall(function()
-        ControlsModule = require(LocalPlayer:WaitForChild("PlayerScripts"):WaitForChild("PlayerModule"))
-    end)
-    ControlsOK = ControlsModule and true or false
-end
+local BodyGyro = nil
+local BodyVelocity = nil
+local flyConnection = nil
+local flySpeed = 70  -- Adjust this for faster/slower flight
+local verticalSpeed = 70
 
-local function tryGetControls()
-    if not ControlsOK then return nil end
-    if typeof(ControlsModule.GetControls) == "function" then
-        local ok, controls = pcall(function() return ControlsModule:GetControls() end)
-        if ok and controls then return controls end
+-- Direction based on camera (HD Admin style)
+local function getCameraDirection()
+    local camera = workspace.CurrentCamera
+    local move = Vector3.new(0,0,0)
+
+    -- Get movement input (WASD or mobile joystick)
+    if UIS.TouchEnabled then
+        -- Mobile: use PlayerModule move vector (same as PC)
+        local controls = require(LocalPlayer.PlayerScripts.PlayerModule):GetControls()
+        move = controls:GetMoveVector()
+    else
+        -- PC: keyboard
+        if UIS:IsKeyDown(Enum.KeyCode.W) then move = move + Vector3.new(0,0,-1) end
+        if UIS:IsKeyDown(Enum.KeyCode.S) then move = move + Vector3.new(0,0,1) end
+        if UIS:IsKeyDown(Enum.KeyCode.A) then move = move - Vector3.new(1,0,0) end
+        if UIS:IsKeyDown(Enum.KeyCode.D) then move = move + Vector3.new(1,0,0) end
     end
-    if ControlsModule.moveVector then return ControlsModule end
-    return nil
-end
 
-local function getMoveVector(hum)
-    local controls = tryGetControls()
-    if controls then
-        local mv = controls.moveVector or controls.MoveVector or controls.Move
-        if mv then
-            return Vector3.new(mv.X or 0,0,mv.Y or mv.y or 0)
-        end
+    if move.Magnitude > 0 then
+        move = move.Unit
+        -- Convert local movement to world direction based on camera
+        local camLook = camera.CFrame.LookVector
+        local camRight = camera.CFrame.RightVector
+        local camUp = Vector3.new(0,1,0)
+
+        -- Project movement onto horizontal plane (ignore Y)
+        local horizontalDir = (camRight * move.X + camLook * move.Z).Unit
+
+        return horizontalDir, move.Y -- return horizontal + up/down intent
     end
-    if hum and hum.MoveDirection then
-        local md = hum.MoveDirection
-        return Vector3.new(md.X,0,md.Z)
-    end
-    return Vector3.new(0,0,0)
+
+    return Vector3.new(0,0,0), 0
 end
 
-local function applyFlyForces(char)
-    local hrp = char:WaitForChild("HumanoidRootPart")
-    local hum = char:WaitForChild("Humanoid")
-    if hum then hum.AutoRotate = false end
-    if BodyGyro then BodyGyro:Destroy() end
-    if BodyVelocity then BodyVelocity:Destroy() end
-    BodyGyro = Instance.new("BodyGyro")
-    BodyGyro.MaxTorque = Vector3.new(9e9,9e9,9e9)
-    BodyGyro.P = 25000
-    BodyGyro.CFrame = hrp.CFrame
-    BodyGyro.Parent = hrp
-    BodyVelocity = Instance.new("BodyVelocity")
-    BodyVelocity.MaxForce = Vector3.new(9e9,9e9,9e9)
-    BodyVelocity.Velocity = Vector3.new(0,0,0)
-    BodyVelocity.Parent = hrp
-end
-
-local function enableFly()
+local function startFly()
     if flying then return end
     flying = true
+
     local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    applyFlyForces(char)
-    flyLoop = RunService.RenderStepped:Connect(function()
-        if not flying then return end
-        local char = LocalPlayer.Character
-        if not char then return end
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        local hum = char:FindFirstChild("Humanoid")
-        if not hrp or not hum then return end
+    local hrp = char:WaitForChild("HumanoidRootPart")
+    local hum = char:WaitForChild("Humanoid")
 
-        local move = getMoveVector(hum)
-        local dir = Vector3.new(move.X,0,move.Z)
+    hum.PlatformStand = true -- Prevents default movement
 
-        -- vertical
+    -- BodyGyro for rotation
+    if BodyGyro then BodyGyro:Destroy() end
+    BodyGyro = Instance.new("BodyGyro")
+    BodyGyro.P = 15000
+    BodyGyro.MaxTorque = Vector3.new(4000, 0, 4000) -- Only rotate on Y axis (optional)
+    BodyGyro.CFrame = hrp.CFrame
+    BodyGyro.Parent = hrp
+
+    -- BodyVelocity for movement
+    if BodyVelocity then BodyVelocity:Destroy() end
+    BodyVelocity = Instance.new("BodyVelocity")
+    BodyVelocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+    BodyVelocity.Velocity = Vector3.new(0,0,0)
+    BodyVelocity.Parent = hrp
+
+    flyConnection = RunService.RenderStepped:Connect(function()
+        if not flying or not hrp or not hrp.Parent then return end
+
+        local cam = workspace.CurrentCamera
+        local moveDir, verticalInput = getCameraDirection()
+
+        -- Vertical movement (Space = up, Ctrl = down)
         local vertical = 0
-        if UIS:IsKeyDown(Enum.KeyCode.Space) then vertical += 1 end
-        if UIS:IsKeyDown(Enum.KeyCode.LeftControl) or UIS:IsKeyDown(Enum.KeyCode.LeftShift) then vertical -= 1 end
-        dir = dir + Vector3.new(0, vertical, 0)
+        if UIS:IsKeyDown(Enum.KeyCode.Space) then vertical = vertical + 1 end
+        if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then vertical = vertical - 1 end
 
-        -- velocity
-        if dir.Magnitude < 0.05 then
-            BodyVelocity.Velocity = Vector3.new(0,0,0)
-        else
-            BodyVelocity.Velocity = dir.Unit * flySpeed
-        end
+        -- Combine horizontal + vertical
+        local finalVelocity = (moveDir * flySpeed) + (Vector3.new(0, vertical * verticalSpeed, 0))
 
-        if dir.X ~= 0 or dir.Z ~= 0 then
-            BodyGyro.CFrame = CFrame.new(hrp.Position, hrp.Position + Vector3.new(dir.X,0,dir.Z))
+        BodyVelocity.Velocity = finalVelocity
+
+        -- Face the direction you're moving (smooth look)
+        if moveDir.Magnitude > 0 then
+            BodyGyro.CFrame = CFrame.new(hrp.Position, hrp.Position + moveDir)
         end
     end)
 end
 
-local function disableFly()
+local function stopFly()
     flying = false
-    if flyLoop then flyLoop:Disconnect() end
-    flyLoop = nil
-    if BodyGyro then BodyGyro:Destroy() BodyGyro=nil end
-    if BodyVelocity then BodyVelocity:Destroy() BodyVelocity=nil end
-    local c = LocalPlayer.Character
-    if c and c:FindFirstChild("Humanoid") then c.Humanoid.AutoRotate=true end
+    if flyConnection then flyConnection:Disconnect() flyConnection = nil end
+    if BodyGyro then BodyGyro:Destroy() BodyGyro = nil end
+    if BodyVelocity then BodyVelocity:Destroy() BodyVelocity = nil end
+
+    local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
+    if hum then
+        hum.PlatformStand = false
+    end
 end
 
--- INF JUMP
-local jumpConnection = nil
+-- Infinite Jump
+local infJumpConn
 local function enableInfJump()
     infjump = true
-    if jumpConnection then jumpConnection:Disconnect() end
-    jumpConnection = UIS.JumpRequest:Connect(function()
-        if infjump and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-            LocalPlayer.Character.Humanoid:ChangeState("Jumping")
+    if infJumpConn then infJumpConn:Disconnect() end
+    infJumpConn = UIS.JumpRequest:Connect(function()
+        if infjump and LocalPlayer.Character then
+            local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if hum then
+                hum:ChangeState(Enum.HumanoidStateType.Jumping)
+            end
         end
     end)
 end
+
 local function disableInfJump()
     infjump = false
-    if jumpConnection then jumpConnection:Disconnect() end
+    if infJumpConn then infJumpConn:Disconnect() infJumpConn = nil end
 end
 
--- Mode button logic
+-- Mode Switching (assuming you have a ModeButton in a ScreenGui)
 ModeButton.MouseButton1Click:Connect(function()
-    mode += 1
-    if mode > 3 then mode = 1 end
-    if mode==1 then
-        ModeButton.Text="Mode: DEFAULT"
-        disableFly()
+    mode = (mode % 3) + 1
+
+    if mode == 1 then
+        ModeButton.Text = "Mode: DEFAULT"
+        stopFly()
         disableInfJump()
-    elseif mode==2 then
-        ModeButton.Text="Mode: INF JUMP"
-        disableFly()
+    elseif mode == 2 then
+        ModeButton.Text = "Mode: INF JUMP"
+        stopFly()
         enableInfJump()
-    elseif mode==3 then
-        ModeButton.Text="Mode: FLY"
+    elseif mode == 3 then
+        ModeButton.Text = "Mode: FLY"
         disableInfJump()
-        enableFly()
+        startFly()
     end
 end)
+
+-- Re-enable fly on respawn
 LocalPlayer.CharacterAdded:Connect(function()
-    task.wait(0.6)
-    if mode==3 then enableFly() end
+    task.wait(0.7)
+    if mode == 3 then
+        startFly()
+    end
 end)
 
 --=====================
@@ -376,100 +388,96 @@ FBButton.MouseButton1Click:Connect(function()
 end)
 
 --=====================
--- ADVANCED INERTIA RAGDOLL (R6)
+-- BACKLOOK BUTTON
 --=====================
-local RagBtn = Instance.new("TextButton")
-RagBtn.Parent = MainFrame
-RagBtn.Size = UDim2.new(0,220,0,35)
-RagBtn.Position = UDim2.new(0,20,0,285)
-RagBtn.BackgroundColor3 = Color3.fromRGB(180,0,0)
-RagBtn.Text = "Ragdoll: OFF"
-RagBtn.TextColor3 = Color3.fromRGB(255,255,255)
-RagBtn.Font = Enum.Font.GothamBold
-RagBtn.TextSize = 16
-Instance.new("UICorner", RagBtn).CornerRadius = UDim.new(0,8)
+local BackBtn = Instance.new("TextButton")
+BackBtn.Parent = MainFrame
+BackBtn.Size = UDim2.new(0,220,0,35)
+BackBtn.Position = UDim2.new(0,20,0,280)
+BackBtn.BackgroundColor3 = Color3.fromRGB(0,120,255)
+BackBtn.Text = "BackLook: OFF"
+BackBtn.TextColor3 = Color3.fromRGB(255,255,255)
+BackBtn.Font = Enum.Font.GothamBold
+BackBtn.TextSize = 16
+Instance.new("UICorner", BackBtn).CornerRadius = UDim.new(0,8)
 
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
-local falling = false
-local ragdolling = false
-local lastVel = Vector3.zero
+local RunService = game:GetService("RunService")
 
-local function startRagdoll()
-	local char = LocalPlayer.Character
-	if not char then return end
-	local hum = char:FindFirstChild("Humanoid")
-	local hrp = char:FindFirstChild("HumanoidRootPart")
-	if not hum or not hrp then return end
+local backLookOn = false
+local followConnection = nil
 
-	falling = true
-	RagBtn.Text = "Ragdoll: ON"
-	hum.PlatformStand = false -- giữ điều khiển nhưng tắt trọng lực
-	hum.AutoRotate = false
+local function getNearestEnemy()
+    local char = LocalPlayer.Character
+    if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
 
-	-- bật gravity “ảo”
-	for _,p in pairs(char:GetChildren()) do
-		if p:IsA("BasePart") then
-			p.Massless = false
-			p.CanCollide = true
-		end
-	end
+    local closest = nil
+    local closestDist = 12 -- check trong 10 studs, để 12 dư 1 chút chống lỗi
 
-	task.spawn(function()
-		while falling and task.wait(0.05) do
-			if not hrp or not hum then break end
+    for _,plr in pairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer and plr.Character then
 
-			local vel = hrp.AssemblyLinearVelocity
-			local accel = (vel - lastVel) / 0.05
-			lastVel = vel
+            -- KIỂM TRA TEAM
+            if plr.Team ~= LocalPlayer.Team then
+                local enemyHRP = plr.Character:FindFirstChild("HumanoidRootPart")
+                if enemyHRP then
+                    local dist = (enemyHRP.Position - hrp.Position).Magnitude
 
-			-- kiểm tra nếu player nghiêng mạnh, va chạm hoặc bị lực lớn
-			if not ragdolling and (accel.Magnitude > 100 or vel.Magnitude > 40) then
-				ragdolling = true
-				hum.PlatformStand = true
+                    if dist < closestDist then
+                        closest = enemyHRP
+                        closestDist = dist
+                    end
+                end
+            end
+        end
+    end
 
-				-- ngã theo hướng vận tốc
-				local dir = vel.Magnitude > 2 and vel.Unit or Vector3.new(math.random(),0,math.random()).Unit
-				local tilt = CFrame.fromAxisAngle(dir:Cross(Vector3.yAxis), math.rad(90))
-				hrp.CFrame = CFrame.new(hrp.Position) * tilt
-
-				-- ngã tự nhiên nhờ quán tính
-				hrp.AssemblyLinearVelocity = vel * 1.2
-
-				task.wait(2) -- chờ player "ngã"
-				hum.PlatformStand = false
-				ragdolling = false
-			end
-		end
-	end)
+    return closest
 end
 
-local function stopRagdoll()
-	local char = LocalPlayer.Character
-	if not char then return end
-	local hum = char:FindFirstChild("Humanoid")
-	if not hum then return end
+local function startBackLook()
+    backLookOn = true
+    BackBtn.Text = "BackLook: ON"
 
-	falling = false
-	ragdolling = false
-	RagBtn.Text = "Ragdoll: OFF"
-	hum.PlatformStand = false
-	hum.AutoRotate = true
+    followConnection = RunService.Heartbeat:Connect(function()
+        local enemyHRP = getNearestEnemy()
+        if not enemyHRP then return end
 
-	for _,p in pairs(char:GetChildren()) do
-		if p:IsA("BasePart") then
-			p.CanCollide = false
-		end
-	end
+        local char = LocalPlayer.Character
+        if not char then return end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+
+        -- Lấy hướng nhìn của enemy
+        local forward = enemyHRP.CFrame.LookVector
+
+        -- Tính vị trí sau lưng 3 studs
+        local targetPos = enemyHRP.Position - forward * 3
+
+        -- Dịch chuyển mượt (không snap)
+        hrp.CFrame = hrp.CFrame:Lerp(CFrame.new(targetPos, enemyHRP.Position), 0.25)
+    end)
 end
 
-RagBtn.MouseButton1Click:Connect(function()
-	if falling then
-		stopRagdoll()
-	else
-		startRagdoll()
-	end
+local function stopBackLook()
+    backLookOn = false
+    BackBtn.Text = "BackLook: OFF"
+
+    if followConnection then
+        followConnection:Disconnect()
+        followConnection = nil
+    end
+end
+
+BackBtn.MouseButton1Click:Connect(function()
+    if backLookOn then
+        stopBackLook()
+    else
+        startBackLook()
+    end
 end)
 --=====================
 -- HIDE / SHOW UI 
