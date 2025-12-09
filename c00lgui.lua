@@ -262,84 +262,54 @@ ModeButton.MouseButton1Click:Connect(function()
 end)
 
 
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
-local lp = Players.LocalPlayer
+--===============
+-- LOOKBACK SYSTEM
+--===============
 
--- GUI Setup
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "BackstabToggleGui"
-screenGui.ResetOnSpawn = false
-screenGui.Parent = lp:WaitForChild("PlayerGui")
+-- Create LookBack Button
+local LookBack = Instance.new("TextButton")
+LookBack.Name = "LookBack"
+LookBack.Parent = ScreenGui
+LookBack.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+LookBack.TextColor3 = Color3.fromRGB(255, 255, 255)
+LookBack.Size = UDim2.new(0, 120, 0, 40)
+LookBack.Position = UDim2.new(0, 20, 0, 45)
+LookBack.Text = "LookBack: OFF"
+LookBack.AutoButtonColor = true
+LookBack.BorderSizePixel = 0
+LookBack.BackgroundTransparency = 0.2
 
--- Toggle Button
-local toggleButton = Instance.new("TextButton")
-toggleButton.Size = UDim2.new(0, 150, 0, 40)
-toggleButton.Position = UDim2.new(0, 20, 0, 35)  -- Vị trí yêu cầu
-toggleButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-toggleButton.Font = Enum.Font.SourceSansBold
-toggleButton.TextSize = 20
-toggleButton.Text = "Backstab: OFF"
-toggleButton.Parent = screenGui
-
--- Vars
-local enabled = false
-local cooldown = false
-local lastTarget = nil
-local range = 10
-local daggerRemote = ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("RemoteEvent")
-local killerNames = { "Jason", "c00lkidd", "JohnDoe", "1x1x1x1", "Noli", "Nosferatu", "Guest666" }
-local killersFolder = workspace:WaitForChild("Players"):WaitForChild("Killers")
-
--- Toggle button
-toggleButton.MouseButton1Click:Connect(function()
-	enabled = not enabled
-	toggleButton.Text = "Backstab: " .. (enabled and "ON" or "OFF")
-	toggleButton.BackgroundColor3 = enabled and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(30, 30, 30)
+LookBack.MouseButton1Click:Connect(function()
+    lookBackEnabled = not lookBackEnabled
+    LookBack.Text = lookBackEnabled and "LookBack: ON" or "LookBack: OFF"
 end)
 
--- Helper function: Mode Around
-local function isTargetInRange(hrp, targetHRP)
-	local distance = (hrp.Position - targetHRP.Position).Magnitude
-	return distance <= range
-end
-
--- Main loop
+-- Teleport behind target
 RunService.Heartbeat:Connect(function()
-	if not enabled or cooldown then return end
+    if not lookBackEnabled then return end
+    local char = LocalPlayer.Character
+    if not char then return end
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not root then return end
 
-	local char = lp.Character
-	if not (char and char:FindFirstChild("HumanoidRootPart")) then return end
-	local hrp = char.HumanoidRootPart
+    -- find nearest player
+    local nearest = nil
+    local dist = 9999
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+            local d = (plr.Character.HumanoidRootPart.Position - root.Position).Magnitude
+            if d < dist then
+                dist = d
+                nearest = plr
+            end
+        end
+    end
 
-	for _, name in ipairs(killerNames) do
-		local killer = killersFolder:FindFirstChild(name)
-		if killer and killer:FindFirstChild("HumanoidRootPart") then
-			local kHRP = killer.HumanoidRootPart
-
-			if isTargetInRange(hrp, kHRP) and killer ~= lastTarget then
-				cooldown = true
-				lastTarget = killer
-
-				-- Teleport trực tiếp ra phía sau killer
-				local behindPos = kHRP.Position - (kHRP.CFrame.LookVector * 3)
-				hrp.CFrame = CFrame.new(behindPos, kHRP.Position)
-
-				-- Fire dagger ngay lập tức
-				daggerRemote:FireServer("UseActorAbility", "Dagger")
-
-				-- Reset cooldown khi rời khỏi range
-				task.delay(1, function()
-					lastTarget = nil
-					cooldown = false
-				end)
-
-				break
-			end
-		end
-	end
+    if nearest and dist <= 13 then
+        local targetRoot = nearest.Character.HumanoidRootPart
+        local backPos = targetRoot.Position - (targetRoot.CFrame.LookVector * 3.5)
+        root.CFrame = CFrame.new(backPos, targetRoot.Position)
+    end
 end)
 
 --=== RESPAWN FIX ===
