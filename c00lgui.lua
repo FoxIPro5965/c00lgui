@@ -375,150 +375,125 @@ FBButton.MouseButton1Click:Connect(function()
     end
 end)
 
---==========================
--- FLOWERS BUTTON
---==========================
-local FlowersButton = Instance.new("TextButton")
-FlowersButton.Parent = MainFrame
-FlowersButton.Size = UDim2.new(0, 220, 0, 35)
-FlowersButton.Position = UDim2.new(0, 20, 0, 285)
-FlowersButton.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
-FlowersButton.Text = "Flowers: OFF"
-FlowersButton.TextColor3 = Color3.fromRGB(255,255,255)
-FlowersButton.Font = Enum.Font.GothamBold
-FlowersButton.TextSize = 16
-Instance.new("UICorner", FlowersButton).CornerRadius = UDim.new(0,8)
 
-local flowersOn = false
-local flowerLoop = nil
-local invisLoop = nil
+--==============================
+-- RAGDOLL BUTTON
+--==============================
+local RagdollButton = Instance.new("TextButton")
+RagdollButton.Parent = MainFrame
+RagdollButton.Size = UDim2.new(0, 220, 0, 35)
+RagdollButton.Position = UDim2.new(0, 20, 0, 330)
+RagdollButton.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
+RagdollButton.Text = "Ragdoll: OFF"
+RagdollButton.TextColor3 = Color3.fromRGB(255,255,255)
+RagdollButton.Font = Enum.Font.GothamBold
+RagdollButton.TextSize = 16
+Instance.new("UICorner", RagdollButton).CornerRadius = UDim.new(0,8)
 
---====
--- R6 
---====
-local r6Parts = {
-    "Head",
-    "Torso",
-    "Left Arm",
-    "Right Arm",
-    "Left Leg",
-    "Right Leg"
-}
+local ragdollOn = false
+local gravityConnection = nil
+local impactCooldown = false
 
-local origTransparency = {}
+--==============================
+-- PLAY OOF WHEN IMPACT
+--==============================
 
-local function cacheR6(char)
-    origTransparency = {}
-    for _, name in ipairs(r6Parts) do
-        local part = char:FindFirstChild(name)
-        if part then
-            origTransparency[part] = part.Transparency
-        end
-    end
+local function playOof(hrp)
+    if impactCooldown then return end
+    impactCooldown = true
+
+    local sound = Instance.new("Sound")
+    sound.SoundId = "rbxassetid://5949429033" -- OOF sound
+    sound.Volume = 2
+    sound.PlayOnRemove = true
+    sound.Parent = hrp
+    sound:Destroy()
+
+    task.delay(0.5, function()
+        impactCooldown = false
+    end)
 end
 
-local function startR6RandomInvisibility()
+--==============================
+-- APPLY RAGDOLL (R6)
+--==============================
+local motorCache = {}
+
+local function applyRagdoll()
     local char = LocalPlayer.Character
     if not char then return end
 
-    cacheR6(char)
+    motorCache = {}
 
-    invisLoop = task.spawn(function()
-        while flowersOn do
-            local char = LocalPlayer.Character
-            if not char then break end
+    for _, obj in ipairs(char:GetDescendants()) do
+        if obj:IsA("Motor6D") then
+            table.insert(motorCache, obj)
+            obj.Enabled = false
+        end
+    end
 
-            -- Random 1–3 bộ phận để ẩn
-            for i = 1, math.random(1, 3) do
-                local name = r6Parts[math.random(1, #r6Parts)]
-                local part = char:FindFirstChild(name)
-                if part then
-                    part.Transparency = 1
-                    if part.Name == "Head" and part:FindFirstChild("face") then
-                        part.face.Transparency = 1
-                    end
-                end
-            end
+    local hum = char:FindFirstChild("Humanoid")
+    if hum then
+        hum.PlatformStand = true   -- player mềm oặt
+    end
 
-            -- Sau 0.35s hiện lại
-            task.delay(0.35, function()
-                for part, trans in pairs(origTransparency) do
-                    part.Transparency = trans
-                    if part.Name == "Head" and part:FindFirstChild("face") then
-                        part.face.Transparency = 0
-                    end
-                end
-            end)
-
-            task.wait(1)
+    -- Trọng lực = 0
+    gravityConnection = RunService.Stepped:Connect(function()
+        if char:FindFirstChild("HumanoidRootPart") then
+            char.HumanoidRootPart.AssemblyLinearVelocity *= 0.98
+            char.HumanoidRootPart.AssemblyAngularVelocity *= 0.98
         end
     end)
+
+    -- Detect impact
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if hrp then
+        hrp.Touched:Connect(function(hit)
+            if ragdollOn then
+                -- Kiểm tra va chạm mạnh (tốc độ lớn)
+                if hrp.AssemblyLinearVelocity.Magnitude > 15 then
+                    playOof(hrp)
+                end
+            end
+        end)
+    end
 end
 
-local function stopR6RandomInvisibility()
-    if invisLoop then
-        pcall(function() task.cancel(invisLoop) end)
-    end
-    invisLoop = nil
-
-    -- Khôi phục lại tất cả Transparency
+local function removeRagdoll()
     local char = LocalPlayer.Character
-    if char then
-        for part, trans in pairs(origTransparency) do
-            part.Transparency = trans
-            if part.Name == "Head" and part:FindFirstChild("face") then
-                part.face.Transparency = 0
-            end
+    if not char then return end
+
+    for _, m in ipairs(motorCache) do
+        if m then
+            m.Enabled = true
         end
     end
-end
 
---=================================
--- HIỆU ỨNG GIẬT NGƯỜI (FLOWERS)
---=================================
-local function startShake()
-    flowerLoop = RunService.RenderStepped:Connect(function()
-        local char = LocalPlayer.Character
-        if not char then return end
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
+    motorCache = {}
 
-        -- Giật ngẫu nhiên
-        local rx = (math.random() - 0.5) * 0.5
-        local ry = (math.random() - 0.5) * 0.5
-        local rz = (math.random() - 0.5) * 0.5
-        hrp.CFrame = hrp.CFrame * CFrame.Angles(rx, ry, rz)
-    end)
-end
+    local hum = char:FindFirstChild("Humanoid")
+    if hum then
+        hum.PlatformStand = false
+    end
 
-local function stopShake()
-    if flowerLoop then
-        flowerLoop:Disconnect()
-        flowerLoop = nil
+    if gravityConnection then
+        gravityConnection:Disconnect()
+        gravityConnection = nil
     end
 end
 
-local function enableFlowers()
-    flowersOn = true
-    FlowersButton.Text = "Flowers: ON"
+--==============================
+-- BUTTON TOGGLE
+--==============================
+RagdollButton.MouseButton1Click:Connect(function()
+    ragdollOn = not ragdollOn
 
-    startShake()
-    startR6RandomInvisibility()
-end
-
-local function disableFlowers()
-    flowersOn = false
-    FlowersButton.Text = "Flowers: OFF"
-
-    stopShake()
-    stopR6RandomInvisibility()
-end
-
-FlowersButton.MouseButton1Click:Connect(function()
-    if flowersOn then
-        disableFlowers()
+    if ragdollOn then
+        RagdollButton.Text = "Ragdoll: ON"
+        applyRagdoll()
     else
-        enableFlowers()
+        RagdollButton.Text = "Ragdoll: OFF"
+        removeRagdoll()
     end
 end)
 --=====================
