@@ -375,120 +375,13 @@ FBButton.MouseButton1Click:Connect(function()
     end
 end)
 
-
---==============================
--- RAGDOLL BUTTON
---==============================
-local RagdollButton = Instance.new("TextButton")
-RagdollButton.Parent = MainFrame
-RagdollButton.Size = UDim2.new(0, 220, 0, 35)
-RagdollButton.Position = UDim2.new(0, 20, 0, 330)
-RagdollButton.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
-RagdollButton.Text = "Ragdoll: OFF"
-RagdollButton.TextColor3 = Color3.fromRGB(255,255,255)
-RagdollButton.Font = Enum.Font.GothamBold
-RagdollButton.TextSize = 16
-Instance.new("UICorner", RagdollButton).CornerRadius = UDim.new(0,8)
-
-local ragdollOn = false
-local gravityConnection = nil
-local impactCooldown = false
-
---==============================
--- PLAY OOF WHEN IMPACT
---==============================
-
-local function playOof(hrp)
-    if impactCooldown then return end
-    impactCooldown = true
-
-    local sound = Instance.new("Sound")
-    sound.SoundId = "rbxassetid://5949429033" -- OOF sound
-    sound.Volume = 2
-    sound.PlayOnRemove = true
-    sound.Parent = hrp
-    sound:Destroy()
-
-    task.delay(0.5, function()
-        impactCooldown = false
-    end)
-end
-
---==============================
--- APPLY RAGDOLL (R6)
---==============================
-local motorCache = {}
-
-local function applyRagdoll()
-    local char = LocalPlayer.Character
-    if not char then return end
-
-    motorCache = {}
-
-    for _, obj in ipairs(char:GetDescendants()) do
-        if obj:IsA("Motor6D") then
-            table.insert(motorCache, obj)
-            obj.Enabled = false
-        end
-    end
-
-    local hum = char:FindFirstChild("Humanoid")
-    if hum then
-        hum.PlatformStand = true   -- player mềm oặt
-    end
-
-    -- Trọng lực = 0
-    gravityConnection = RunService.Stepped:Connect(function()
-        if char:FindFirstChild("HumanoidRootPart") then
-            char.HumanoidRootPart.AssemblyLinearVelocity *= 0.98
-            char.HumanoidRootPart.AssemblyAngularVelocity *= 0.98
-        end
-    end)
-
-    -- Detect impact
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    if hrp then
-        hrp.Touched:Connect(function(hit)
-            if ragdollOn then
-                -- Kiểm tra va chạm mạnh (tốc độ lớn)
-                if hrp.AssemblyLinearVelocity.Magnitude > 15 then
-                    playOof(hrp)
-                end
-            end
-        end)
-    end
-end
-
-local function removeRagdoll()
-    local char = LocalPlayer.Character
-    if not char then return end
-
-    for _, m in ipairs(motorCache) do
-        if m then
-            m.Enabled = true
-        end
-    end
-
-    motorCache = {}
-
-    local hum = char:FindFirstChild("Humanoid")
-    if hum then
-        hum.PlatformStand = false
-    end
-
-    if gravityConnection then
-        gravityConnection:Disconnect()
-        gravityConnection = nil
-    end
-end
-
 --=====================
--- RAGDOLL BUTTON
+-- RAGDOLL BUTTON (SAFE)
 --=====================
 local RagdollBtn = Instance.new("TextButton")
 RagdollBtn.Parent = MainFrame
 RagdollBtn.Size = UDim2.new(0,220,0,35)
-RagdollBtn.Position = UDim2.new(0,20,0,80)  -- << NÚT CAO HƠN ĐÂY
+RagdollBtn.Position = UDim2.new(0,20,0,80)
 RagdollBtn.BackgroundColor3 = Color3.fromRGB(180,0,0)
 RagdollBtn.Text = "Ragdoll: OFF"
 RagdollBtn.TextColor3 = Color3.fromRGB(255,255,255)
@@ -497,55 +390,58 @@ RagdollBtn.TextSize = 16
 Instance.new("UICorner", RagdollBtn).CornerRadius = UDim.new(0,8)
 
 local ragOn = false
-local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
--- Âm thanh oof
+-- Oof sound
 local function playOof(hrp)
     local s = Instance.new("Sound", hrp)
-    s.SoundId = "rbxassetid://286090356"  -- OOF
+    s.SoundId = "rbxassetid://286090356"
     s.Volume = 1
     s:Play()
     game.Debris:AddItem(s, 2)
 end
 
--- Tạo ragdoll R6
+local createdConstraints = {}
+local disabledMotors = {}
+
 local function enableRagdoll()
     local char = LocalPlayer.Character
     if not char then return end
     local hum = char:FindFirstChildOfClass("Humanoid")
-    if not hum then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hum or not hrp then return end
 
     ragOn = true
     RagdollBtn.Text = "Ragdoll: ON"
 
-    hum.PlatformStand = true  -- Tắt đứng → ngã liền
+    hum.PlatformStand = true
 
-    -- Tạo ragdoll joints
-    for _, part in pairs(char:GetChildren()) do
-        if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-            part.CanCollide = true
-        end
-        -- Phá Motor6D → tạo ragdoll
-        if part:IsA("Motor6D") then
-            local att0 = Instance.new("Attachment", part.Part0)
-            local att1 = Instance.new("Attachment", part.Part1)
+    for _, motor in ipairs(char:GetDescendants()) do
+        if motor:IsA("Motor6D") and motor.Name ~= "RootJoint" then
+            motor.Enabled = false
+            table.insert(disabledMotors, motor)
 
-            local ball = Instance.new("BallSocketConstraint")
-            ball.Attachment0 = att0
-            ball.Attachment1 = att1
-            ball.Parent = part.Parent
+            local att0 = Instance.new("Attachment")
+            att0.Parent = motor.Part0
+            att0.CFrame = motor.C0
 
-            part:Destroy() -- phá Motor6D
+            local att1 = Instance.new("Attachment")
+            att1.Parent = motor.Part1
+            att1.CFrame = motor.C1
+
+            local socket = Instance.new("BallSocketConstraint")
+            socket.Attachment0 = att0
+            socket.Attachment1 = att1
+            socket.Parent = motor.Parent
+
+            table.insert(createdConstraints, socket)
         end
     end
 
-    -- Chờ player rơi xuống → phát âm OOF
+    -- Oof khi rơi
     task.spawn(function()
-        local hrp = char:WaitForChild("HumanoidRootPart")
         local lastY = hrp.Position.Y
-
         while ragOn do
             task.wait(0.1)
             if math.abs(hrp.Velocity.Y) < 1 and lastY - hrp.Position.Y > 4 then
@@ -556,19 +452,31 @@ local function enableRagdoll()
     end)
 end
 
--- Tắt ragdoll
 local function disableRagdoll()
     ragOn = false
     RagdollBtn.Text = "Ragdoll: OFF"
 
     local char = LocalPlayer.Character
     if not char then return end
-    
     local hum = char:FindFirstChildOfClass("Humanoid")
+
     if hum then hum.PlatformStand = false end
 
-    -- Respawn để khôi phục Motor6D (ragdoll phá hết joint)
-    LocalPlayer:LoadCharacter()
+    -- Khôi phục joint
+    for _, m in ipairs(disabledMotors) do
+        if m and m.Parent then
+            m.Enabled = true
+        end
+    end
+    disabledMotors = {}
+
+    -- Xoá BallSocket
+    for _, c in ipairs(createdConstraints) do
+        if c and c.Parent then
+            c:Destroy()
+        end
+    end
+    createdConstraints = {}
 end
 
 RagdollBtn.MouseButton1Click:Connect(function()
