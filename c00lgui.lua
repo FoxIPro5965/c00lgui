@@ -269,7 +269,7 @@ end)
 -- Create LookBack Button
 local LookBack = Instance.new("TextButton")
 LookBack.Name = "LookBack"
-LookBack.Parent = ScreenGui
+LookBack.Parent = MainMenuFrame
 LookBack.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 LookBack.TextColor3 = Color3.fromRGB(255, 255, 255)
 LookBack.Size = UDim2.new(0, 120, 0, 40)
@@ -305,9 +305,9 @@ RunService.Heartbeat:Connect(function()
         end
     end
 
-    if nearest and dist <= 12 then
+    if nearest and dist <= 13 then
         local targetRoot = nearest.Character.HumanoidRootPart
-        local backPos = targetRoot.Position - (targetRoot.CFrame.LookVector * 3)
+        local backPos = targetRoot.Position - (targetRoot.CFrame.LookVector * 3.5)
         root.CFrame = CFrame.new(backPos, targetRoot.Position)
     end
 end)
