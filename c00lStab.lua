@@ -38,7 +38,7 @@ rangeLabel.Parent = screenGui
 -- Range TextBox
 local rangeBox = Instance.new("TextBox")
 rangeBox.Size = UDim2.new(0, 150, 0, 25)
-rangeBox.Position = UDim2.new(0, 10, 0, 75)
+rangeBox.Position = UDim2.new(0, 10, 0, 80)
 rangeBox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 rangeBox.BorderColor3 = Color3.fromRGB(255, 0, 0)
 rangeBox.BorderSizePixel = 2
@@ -54,7 +54,7 @@ rangeBox.Parent = screenGui
 local mode = "Behind"
 local modeButton = Instance.new("TextButton")
 modeButton.Size = UDim2.new(0, 150, 0, 25)
-modeButton.Position = UDim2.new(0, 10, 0, 105)
+modeButton.Position = UDim2.new(0, 10, 0, 110)
 modeButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 modeButton.BorderColor3 = Color3.fromRGB(255, 0, 0)
 modeButton.BorderSizePixel = 2
@@ -67,7 +67,7 @@ modeButton.Parent = screenGui
 -- Infinite Stamina Button
 local infStamButton = Instance.new("TextButton")
 infStamButton.Size = UDim2.new(0, 150, 0, 25)
-infStamButton.Position = UDim2.new(0, 10, 0, 135)
+infStamButton.Position = UDim2.new(0, 10, 0, 140)
 infStamButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 infStamButton.BorderColor3 = Color3.fromRGB(255, 0, 0)
 infStamButton.BorderSizePixel = 2
@@ -77,18 +77,29 @@ infStamButton.TextSize = 16
 infStamButton.Text = "Inf Stamina: OFF"
 infStamButton.Parent = screenGui
 
--- Hide GUI Button
+-- Hide GUI Small Button (luôn hiện, trên cùng)
 local hideButton = Instance.new("TextButton")
-hideButton.Size = UDim2.new(0, 150, 0, 25)
-hideButton.Position = UDim2.new(0, 10, 0, 165)
-hideButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-hideButton.BorderColor3 = Color3.fromRGB(255, 0, 0)
-hideButton.BorderSizePixel = 2
+hideButton.Size = UDim2.new(0, 30, 0, 15) -- nút nhỏ
+hideButton.Position = UDim2.new(0, 10, 0, 3) -- trên cùng
+hideButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+hideButton.BorderColor3 = Color3.fromRGB(0, 0, 0)
+hideButton.BorderSizePixel = 1
 hideButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 hideButton.Font = Enum.Font.SourceSans
-hideButton.TextSize = 16
-hideButton.Text = "Hide GUI: OFF"
+hideButton.TextSize = 14
+hideButton.Text = "H"
 hideButton.Parent = screenGui
+
+local guiHidden = false
+hideButton.MouseButton1Click:Connect(function()
+    guiHidden = not guiHidden
+    -- Ẩn tất cả các nút/label khác trừ hideButton
+    for _, obj in pairs(screenGui:GetChildren()) do
+        if obj ~= hideButton then
+            obj.Visible = not guiHidden
+        end
+    end
+end)
 
 -- Variables
 local enabled = false
