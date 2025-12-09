@@ -262,53 +262,75 @@ ModeButton.MouseButton1Click:Connect(function()
 end)
 
 
---===============
--- LOOKBACK SYSTEM
---===============
+local RANGE = 12
+local DELAY_STAB = 0.05
+local LERP_SPEED = 0.35
 
--- Create LookBack Button
-local LookBack = Instance.new("TextButton")
-LookBack.Name = "LookBack"
-LookBack.Parent = ScreenGui
-LookBack.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-LookBack.TextColor3 = Color3.fromRGB(255, 255, 255)
-LookBack.Size = UDim2.new(0, 120, 0, 40)
-LookBack.Position = UDim2.new(0, 20, 0, 45)
-LookBack.Text = "LookBack: OFF"
-LookBack.AutoButtonColor = true
-LookBack.BorderSizePixel = 0
-LookBack.BackgroundTransparency = 0.2
+-- trạng thái
+local BackstabEnabled = false
 
-LookBack.MouseButton1Click:Connect(function()
-    lookBackEnabled = not lookBackEnabled
-    LookBack.Text = lookBackEnabled and "LookBack: ON" or "LookBack: OFF"
+-- Tạo nút Backstab trong ScreenGui
+local ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
+ScreenGui.Name = "c00lgui"
+
+local BackstabBtn = Instance.new("TextButton")
+BackstabBtn.Name = "BackstabButton"
+BackstabBtn.Parent = ScreenGui
+BackstabBtn.Size = UDim2.new(0, 120, 0, 40)
+BackstabBtn.Position = UDim2.new(0, 20, 0, 35)
+BackstabBtn.BackgroundColor3 = Color3.fromRGB(50,50,50)
+BackstabBtn.TextColor3 = Color3.fromRGB(255,255,255)
+BackstabBtn.Text = "Backstab: OFF"
+BackstabBtn.Font = Enum.Font.GothamBold
+BackstabBtn.TextSize = 18
+BackstabBtn.AutoButtonColor = true
+BackstabBtn.BorderSizePixel = 0
+Instance.new("UICorner", BackstabBtn)
+
+-- Toggle button
+BackstabBtn.MouseButton1Click:Connect(function()
+    BackstabEnabled = not BackstabEnabled
+    BackstabBtn.Text = BackstabEnabled and "Backstab: ON" or "Backstab: OFF"
 end)
 
--- Teleport behind target
-RunService.Heartbeat:Connect(function()
-    if not lookBackEnabled then return end
-    local char = LocalPlayer.Character
-    if not char then return end
-    local root = char:FindFirstChild("HumanoidRootPart")
-    if not root then return end
+-- Lerp teleport function
+local function LerpTo(root, targetPos, speed)
+    root.CFrame = root.CFrame:Lerp(CFrame.new(targetPos, targetPos + (targetPos - root.Position)), speed)
+end
 
-    -- find nearest player
-    local nearest = nil
-    local dist = 9999
-    for _, plr in pairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-            local d = (plr.Character.HumanoidRootPart.Position - root.Position).Magnitude
-            if d < dist then
-                dist = d
-                nearest = plr
+-- Main Heartbeat loop
+RunService.Heartbeat:Connect(function()
+    if not BackstabEnabled then return end
+
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    local root = char.HumanoidRootPart
+
+    -- tìm tất cả killer model trong workspace
+    for _, killer in ipairs(Workspace:GetChildren()) do
+        if killer ~= char and killer:FindFirstChild("HumanoidRootPart") then
+            local kRoot = killer.HumanoidRootPart
+            local dist = (root.Position - kRoot.Position).Magnitude
+
+            if dist <= RANGE then
+                -- teleport ra phía sau killer
+                local backPos = kRoot.Position - (kRoot.CFrame.LookVector * 3)
+                LerpTo(root, backPos, LERP_SPEED)
+
+                -- delay nhỏ trước khi stab
+                task.wait(DELAY_STAB)
+
+                -- kích hoạt dagger/stab nếu có
+                local daggerBtn = LocalPlayer:FindFirstChild("PlayerGui") and 
+                                  LocalPlayer.PlayerGui:FindFirstChild("MainUI") and 
+                                  LocalPlayer.PlayerGui.MainUI:FindFirstChild("AbilityContainer") and
+                                  LocalPlayer.PlayerGui.MainUI.AbilityContainer:FindFirstChild("Dagger")
+
+                if daggerBtn and daggerBtn.Activate then
+                    pcall(function() daggerBtn:Activate() end)
+                end
             end
         end
-    end
-
-    if nearest and dist <= 13 then
-        local targetRoot = nearest.Character.HumanoidRootPart
-        local backPos = targetRoot.Position - (targetRoot.CFrame.LookVector * 3.5)
-        root.CFrame = CFrame.new(backPos, targetRoot.Position)
     end
 end)
 
@@ -320,9 +342,6 @@ LocalPlayer.CharacterAdded:Connect(function()
     if mode == 2 then enableInfJump() end
     if mode == 3 then startFly() end
 end)
-
--- [Rest of your script continues below... hitbox, fullbright, etc.]
-
 
 --=====================
 -- HITBOX
