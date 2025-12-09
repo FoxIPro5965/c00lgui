@@ -376,7 +376,7 @@ FBButton.MouseButton1Click:Connect(function()
 end)
 
 --=====================
--- REAL INERTIA RAGDOLL BUTTON (R6)
+-- ADVANCED INERTIA RAGDOLL (R6)
 --=====================
 local RagBtn = Instance.new("TextButton")
 RagBtn.Parent = MainFrame
@@ -390,92 +390,86 @@ RagBtn.TextSize = 16
 Instance.new("UICorner", RagBtn).CornerRadius = UDim.new(0,8)
 
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
-
 local falling = false
+local ragdolling = false
+local lastVel = Vector3.zero
 
--- Hàm bật ragdoll vật lý
-local function applyFall()
-    local char = LocalPlayer.Character
-    if not char then return end
+local function startRagdoll()
+	local char = LocalPlayer.Character
+	if not char then return end
+	local hum = char:FindFirstChild("Humanoid")
+	local hrp = char:FindFirstChild("HumanoidRootPart")
+	if not hum or not hrp then return end
 
-    local hum = char:FindFirstChild("Humanoid")
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    if not hum or not hrp then return end
+	falling = true
+	RagBtn.Text = "Ragdoll: ON"
+	hum.PlatformStand = false -- giữ điều khiển nhưng tắt trọng lực
+	hum.AutoRotate = false
 
-    falling = true
-    RagBtn.Text = "Ragdoll: ON"
+	-- bật gravity “ảo”
+	for _,p in pairs(char:GetChildren()) do
+		if p:IsA("BasePart") then
+			p.Massless = false
+			p.CanCollide = true
+		end
+	end
 
-    hum.PlatformStand = true
-    hum.AutoRotate = false
+	task.spawn(function()
+		while falling and task.wait(0.05) do
+			if not hrp or not hum then break end
 
-    -- Toàn thân collidable (để bị đẩy như bóng)
-    for _,p in pairs(char:GetChildren()) do
-        if p:IsA("BasePart") then
-            p.CanCollide = true
-            p.Massless = false
-        end
-    end
+			local vel = hrp.AssemblyLinearVelocity
+			local accel = (vel - lastVel) / 0.05
+			lastVel = vel
 
-    -- Hướng vận tốc hiện tại
-    local vel = hrp.AssemblyLinearVelocity
-    local speed = vel.Magnitude
+			-- kiểm tra nếu player nghiêng mạnh, va chạm hoặc bị lực lớn
+			if not ragdolling and (accel.Magnitude > 100 or vel.Magnitude > 40) then
+				ragdolling = true
+				hum.PlatformStand = true
 
-    if speed > 2 then
-        local dir = vel.Unit
+				-- ngã theo hướng vận tốc
+				local dir = vel.Magnitude > 2 and vel.Unit or Vector3.new(math.random(),0,math.random()).Unit
+				local tilt = CFrame.fromAxisAngle(dir:Cross(Vector3.yAxis), math.rad(90))
+				hrp.CFrame = CFrame.new(hrp.Position) * tilt
 
-        -- Trục xoay để đổ theo vận tốc
-        local axis = dir:Cross(Vector3.new(0,1,0))
-        if axis.Magnitude < 0.1 then
-            axis = Vector3.new(1,0,0)
-        end
+				-- ngã tự nhiên nhờ quán tính
+				hrp.AssemblyLinearVelocity = vel * 1.2
 
-        hrp.CFrame = CFrame.new(hrp.Position) * CFrame.fromAxisAngle(axis, math.rad(95))
-
-        -- Đổ mạnh theo quán tính
-        hrp.AssemblyLinearVelocity = vel * 1.3
-    else
-        -- Đứng yên thì ngã ngẫu nhiên
-        hrp.CFrame = hrp.CFrame * CFrame.Angles(math.rad(90), math.random()*2*math.pi, 0)
-        hrp.AssemblyLinearVelocity = Vector3.new(
-            math.random(-12,12),
-            -15,
-            math.random(-12,12)
-        )
-    end
+				task.wait(2) -- chờ player "ngã"
+				hum.PlatformStand = false
+				ragdolling = false
+			end
+		end
+	end)
 end
 
--- Hàm tắt ragdoll
-local function stopFall()
-    local char = LocalPlayer.Character
-    if not char then return end
+local function stopRagdoll()
+	local char = LocalPlayer.Character
+	if not char then return end
+	local hum = char:FindFirstChild("Humanoid")
+	if not hum then return end
 
-    local hum = char:FindFirstChild("Humanoid")
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    if not hum or not hrp then return end
+	falling = false
+	ragdolling = false
+	RagBtn.Text = "Ragdoll: OFF"
+	hum.PlatformStand = false
+	hum.AutoRotate = true
 
-    falling = false
-    RagBtn.Text = "Ragdoll: OFF"
-
-    hum.PlatformStand = false
-    hum.AutoRotate = true
-    hum:ChangeState(Enum.HumanoidStateType.GettingUp)
-
-    -- Tắt collidable (trả lại bình thường)
-    for _,p in pairs(char:GetChildren()) do
-        if p:IsA("BasePart") then
-            p.CanCollide = false
-        end
-    end
+	for _,p in pairs(char:GetChildren()) do
+		if p:IsA("BasePart") then
+			p.CanCollide = false
+		end
+	end
 end
 
--- Click nút bật/tắt
 RagBtn.MouseButton1Click:Connect(function()
-    if falling then
-        stopFall()
-    else
-        applyFall()
-    end
+	if falling then
+		stopRagdoll()
+	else
+		startRagdoll()
+	end
 end)
 --=====================
 -- HIDE / SHOW UI 
