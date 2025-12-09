@@ -11,21 +11,21 @@ screenGui.Parent = lp:WaitForChild("PlayerGui")
 
 -- Toggle Backstab Button
 local toggleButton = Instance.new("TextButton")
-toggleButton.Size = UDim2.new(0, 150, 0, 40)
+toggleButton.Size = UDim2.new(0, 120, 0, 35)
 toggleButton.Position = UDim2.new(0, 10, 0, 10)
 toggleButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 toggleButton.BorderColor3 = Color3.fromRGB(255, 0, 0)
 toggleButton.BorderSizePixel = 2
 toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 toggleButton.Font = Enum.Font.SourceSansBold
-toggleButton.TextSize = 20
+toggleButton.TextSize = 16
 toggleButton.Text = "Backstab: OFF"
 toggleButton.Parent = screenGui
 
 -- Range Label
 local rangeLabel = Instance.new("TextLabel")
-rangeLabel.Size = UDim2.new(0, 150, 0, 20)
-rangeLabel.Position = UDim2.new(0, 10, 0, 55)
+rangeLabel.Size = UDim2.new(0, 120, 0, 20)
+rangeLabel.Position = UDim2.new(0, 10, 0, 35)
 rangeLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 rangeLabel.BorderColor3 = Color3.fromRGB(255, 0, 0)
 rangeLabel.BorderSizePixel = 2
@@ -37,8 +37,8 @@ rangeLabel.Parent = screenGui
 
 -- Range TextBox
 local rangeBox = Instance.new("TextBox")
-rangeBox.Size = UDim2.new(0, 150, 0, 25)
-rangeBox.Position = UDim2.new(0, 10, 0, 80)
+rangeBox.Size = UDim2.new(0, 120, 0, 25)
+rangeBox.Position = UDim2.new(0, 10, 0, 55)
 rangeBox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 rangeBox.BorderColor3 = Color3.fromRGB(255, 0, 0)
 rangeBox.BorderSizePixel = 2
@@ -53,8 +53,8 @@ rangeBox.Parent = screenGui
 -- Mode Button
 local mode = "Behind"
 local modeButton = Instance.new("TextButton")
-modeButton.Size = UDim2.new(0, 150, 0, 25)
-modeButton.Position = UDim2.new(0, 10, 0, 110)
+modeButton.Size = UDim2.new(0, 120, 0, 20)
+modeButton.Position = UDim2.new(0, 10, 0, 75)
 modeButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 modeButton.BorderColor3 = Color3.fromRGB(255, 0, 0)
 modeButton.BorderSizePixel = 2
@@ -66,8 +66,8 @@ modeButton.Parent = screenGui
 
 -- Infinite Stamina Button
 local infStamButton = Instance.new("TextButton")
-infStamButton.Size = UDim2.new(0, 150, 0, 25)
-infStamButton.Position = UDim2.new(0, 10, 0, 140)
+infStamButton.Size = UDim2.new(0, 120, 0, 25)
+infStamButton.Position = UDim2.new(0, 10, 0, 110)
 infStamButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 infStamButton.BorderColor3 = Color3.fromRGB(255, 0, 0)
 infStamButton.BorderSizePixel = 2
