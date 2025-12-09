@@ -134,53 +134,21 @@ ModeButton.TextSize = 16
 ModeButton.Text = "Mode: DEFAULT"
 Instance.new("UICorner",ModeButton).CornerRadius = UDim.new(0,8)
 
---=====================
--- BETTER FLY / INF JUMP
---=====================
+--=============
+-- PERFECT FLY
+--=============
+local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
 
 local flying = false
-local infjump = false
-local mode = 1
+local ctrl = { f = 0, b = 0, l = 0, r = 0, upd = 0, down = 0 }
+local flySpeed = 80
+local maxSpeed = 80
+local connection
 
-local BodyGyro = nil
-local BodyVelocity = nil
-local flyConnection = nil
-local flySpeed = 70  -- Adjust this for faster/slower flight
-local verticalSpeed = 70
-
--- Direction based on camera (HD Admin style)
-local function getCameraDirection()
-    local camera = workspace.CurrentCamera
-    local move = Vector3.new(0,0,0)
-
-    -- Get movement input (WASD or mobile joystick)
-    if UIS.TouchEnabled then
-        -- Mobile: use PlayerModule move vector (same as PC)
-        local controls = require(LocalPlayer.PlayerScripts.PlayerModule):GetControls()
-        move = controls:GetMoveVector()
-    else
-        -- PC: keyboard
-        if UIS:IsKeyDown(Enum.KeyCode.S) then move = move + Vector3.new(0,0,-1) end
-        if UIS:IsKeyDown(Enum.KeyCode.W) then move = move + Vector3.new(0,0,1) end
-        if UIS:IsKeyDown(Enum.KeyCode.A) then move = move - Vector3.new(1,0,0) end
-        if UIS:IsKeyDown(Enum.KeyCode.D) then move = move + Vector3.new(1,0,0) end
-    end
-
-    if move.Magnitude > 0 then
-        move = move.Unit
-        -- Convert local movement to world direction based on camera
-        local camLook = camera.CFrame.LookVector
-        local camRight = camera.CFrame.RightVector
-        local camUp = Vector3.new(0,1,0)
-
-        -- Project movement onto horizontal plane (ignore Y)
-        local horizontalDir = (camRight * move.X + camLook * move.Z).Unit
-
-        return horizontalDir, move.Y -- return horizontal + up/down intent
-    end
-
-    return Vector3.new(0,0,0), 0
-end
+local bv, bg
 
 local function startFly()
     if flying then return end
@@ -189,83 +157,81 @@ local function startFly()
     local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
     local hrp = char:WaitForChild("HumanoidRootPart")
     local hum = char:WaitForChild("Humanoid")
+    hum.PlatformStand = true
 
-    hum.PlatformStand = true -- Prevents default movement
+    -- BodyVelocity & BodyGyro
+    bv = Instance.new("BodyVelocity")
+    bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+    bv.Velocity = Vector3.new(0,0,0)
+    bv.Parent = hrp
 
-    -- BodyGyro for rotation
-    if BodyGyro then BodyGyro:Destroy() end
-    BodyGyro = Instance.new("BodyGyro")
-    BodyGyro.P = 15000
-    BodyGyro.MaxTorque = Vector3.new(4000, 0, 4000) -- Only rotate on Y axis (optional)
-    BodyGyro.CFrame = hrp.CFrame
-    BodyGyro.Parent = hrp
+    bg = Instance.new("BodyGyro")
+    bg.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+    bg.P = 15000
+    bg.CFrame = hrp.CFrame
+    bg.Parent = hrp
 
-    -- BodyVelocity for movement
-    if BodyVelocity then BodyVelocity:Destroy() end
-    BodyVelocity = Instance.new("BodyVelocity")
-    BodyVelocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)
-    BodyVelocity.Velocity = Vector3.new(0,0,0)
-    BodyVelocity.Parent = hrp
+    -- Input handling (works on mobile too because it reads PlayerModule)
+    local controls = require(LocalPlayer.PlayerScripts.PlayerModule):GetControls()
 
-    flyConnection = RunService.RenderStepped:Connect(function()
+    connection = RunService.RenderStepped:Connect(function()
         if not flying or not hrp or not hrp.Parent then return end
 
         local cam = workspace.CurrentCamera
-        local moveDir, verticalInput = getCameraDirection()
+        local moveDir = controls:GetMoveVector() -- works on PC + mobile joystick
 
-        -- Vertical movement (Space = up, Ctrl = down)
-        local vertical = 0
-        if UIS:IsKeyDown(Enum.KeyCode.Space) then vertical = vertical + 1 end
-        if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then vertical = vertical - 1 end
+        -- Reset directions
+        ctrl.f, ctrl.b, ctrl.l, ctrl.r = 0,0,0,0
+        if moveDir.Z < -0.1 then ctrl.f = 1 end
+        if moveDir.Z > 0.1 then ctrl.b = 1 end
+        if moveDir.X < -0.1 then ctrl.l = 1 end
+        if moveDir.X > 0.1 then ctrl.r = 1 end
 
-        -- Combine horizontal + vertical
-        local finalVelocity = (moveDir * flySpeed) + (Vector3.new(0, vertical * verticalSpeed, 0))
+        -- Vertical (Space = up relative to camera, Ctrl = down)
+        if UIS:IsKeyDown(Enum.KeyCode.Space) then ctrl.upd = 1 else ctrl.upd = 0 end
+        if UIS:IsKeyDown(Enum.KeyCode.LeftControl) or UIS:IsKeyDown(Enum.KeyCode.E) then ctrl.down = 1 else ctrl.down = 0 end
 
-        BodyVelocity.Velocity = finalVelocity
+        local speed = flySpeed
+        if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then speed = speed * 2 end -- sprint in air
 
-        -- Face the direction you're moving (smooth look)
-        if moveDir.Magnitude > 0 then
-            BodyGyro.CFrame = CFrame.new(hrp.Position, hrp.Position + moveDir)
+        -- Calculate final direction in camera space
+        local camLook = cam.CFrame.LookVector
+        local camRight = cam.CFrame.RightVector
+        local camUp = cam.CFrame.UpVector
+
+        local move = Vector3.new()
+        if ctrl.f == 1 then move = move + camLook end
+        if ctrl.b == 1 then move = move - camLook end
+        if ctrl.r == 1 then move = move + camRight end
+        if ctrl.l == 1 then move = move - camRight end
+        if ctrl.upd == 1 then move = move + camUp end
+        if ctrl.down == 1 then move = move - camUp end
+
+        if move.Magnitude > 0 then
+            move = move.Unit
+            bv.Velocity = move * speed
+
+            -- Rotate to face movement direction
+            bg.CFrame = CFrame.new(Vector3.new(), move) * CFrame.new(hrp.Position)
+        else
+            bv.Velocity = Vector3.new(0,0,0)
         end
     end)
 end
 
 local function stopFly()
     flying = false
-    if flyConnection then flyConnection:Disconnect() flyConnection = nil end
-    if BodyGyro then BodyGyro:Destroy() BodyGyro = nil end
-    if BodyVelocity then BodyVelocity:Destroy() BodyVelocity = nil end
+    if connection then connection:Disconnect() connection = nil end
+    if bv then bv:Destroy() bv = nil end
+    if bg then bg:Destroy() bg = nil end
 
     local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
-    if hum then
-        hum.PlatformStand = false
-    end
+    if hum then hum.PlatformStand = false end
 end
 
--- Infinite Jump
-local infJumpConn
-local function enableInfJump()
-    infjump = true
-    if infJumpConn then infJumpConn:Disconnect() end
-    infJumpConn = UIS.JumpRequest:Connect(function()
-        if infjump and LocalPlayer.Character then
-            local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-            if hum then
-                hum:ChangeState(Enum.HumanoidStateType.Jumping)
-            end
-        end
-    end)
-end
-
-local function disableInfJump()
-    infjump = false
-    if infJumpConn then infJumpConn:Disconnect() infJumpConn = nil end
-end
-
--- Mode Switching (assuming you have a ModeButton in a ScreenGui)
+-- Toggle with your mode button (mode 3 = fly)
 ModeButton.MouseButton1Click:Connect(function()
-    mode = (mode % 3) + 1
-
+    mode = mode % 3 + 1
     if mode == 1 then
         ModeButton.Text = "Mode: DEFAULT"
         stopFly()
@@ -281,14 +247,10 @@ ModeButton.MouseButton1Click:Connect(function()
     end
 end)
 
--- Re-enable fly on respawn
 LocalPlayer.CharacterAdded:Connect(function()
     task.wait(0.7)
-    if mode == 3 then
-        startFly()
-    end
+    if mode == 3 then startFly() end
 end)
-
 --=====================
 -- HITBOX
 --=====================
@@ -387,126 +349,6 @@ FBButton.MouseButton1Click:Connect(function()
     end
 end)
 
---=================
--- BACKLOOK BUTTON 
---=================
-local BackBtn = Instance.new("TextButton")
-BackBtn.Parent = MainFrame
-BackBtn.Size = UDim2.new(0,220,0,35)
-BackBtn.Position = UDim2.new(0,20,0,285)
-BackBtn.BackgroundColor3 = Color3.fromRGB(0,120,255)
-BackBtn.Text = "BackLook: OFF"
-BackBtn.TextColor3 = Color3.fromRGB(255,255,255)
-BackBtn.Font = Enum.Font.GothamBold
-BackBtn.TextSize = 16
-Instance.new("UICorner", BackBtn).CornerRadius = UDim.new(0,8)
-
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local RunService = game:GetService("RunService")
-
-local backLookOn = false
-local followConnection = nil
-
--- Config
-local MAX_DISTANCE = 12    -- Max distance to detect enemy
-local BACK_OFFSET = 3      -- How many studs behind the enemy
-
-local function isSameTeam(plr1, plr2)
-    if not plr1 or not plr2 then return false end
-    if not plr1.Team or not plr2.Team then return false end -- Neutral/teamless = enemies
-    return plr1.Team == plr2.Team
-end
-
-local function getClosestEnemy()
-    local char = LocalPlayer.Character
-    if not char then return nil end
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return nil end
-
-    local closestEnemyHRP = nil
-    local closestDist = MAX_DISTANCE
-
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer and plr.Character then
-            if not isSameTeam(LocalPlayer, plr) then -- Enemy check
-                local enemyHRP = plr.Character:FindFirstChild("HumanoidRootPart")
-                if enemyHRP and enemyHRP.Parent then
-                    local dist = (enemyHRP.Position - hrp.Position).Magnitude
-                    if dist < closestDist then
-                        closestDist = dist
-                        closestEnemyHRP = enemyHRP
-                    end
-                end
-            end
-        end
-    end
-
-    return closestEnemyHRP
-end
-
-local function startBackLook()
-    if backLookOn then return end
-    backLookOn = true
-    BackBtn.Text = "BackLook: ON"
-    BackBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
-
-    followConnection = RunService.Heartbeat:Connect(function()
-        if not backLookOn then return end
-
-        local enemyHRP = getClosestEnemy()
-        if not enemyHRP then return end
-
-        local char = LocalPlayer.Character
-        if not char then return end
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
-
-        -- Direction enemy is facing
-        local enemyForward = enemyHRP.CFrame.LookVector
-        -- Position exactly 3 studs behind them
-        local targetBehindPos = enemyHRP.Position - (enemyForward * BACK_OFFSET)
-
-        -- Smoothly move + face the enemy's back
-        local targetCFrame = CFrame.new(targetBehindPos, enemyHRP.Position)
-
-        hrp.CFrame = hrp.CFrame:Lerp(targetCFrame, 0.3) -- 0.3 = smooth, 1 = instant
-    end)
-end
-
-local function stopBackLook()
-    backLookOn = false
-    BackBtn.Text = "BackLook: OFF"
-    BackBtn.BackgroundColor3 = Color3.fromRGB(0,120,255)
-
-    if followConnection then
-        followConnection:Disconnect()
-        followConnection = nil
-    end
-end
-
--- Toggle Button
-BackBtn.MouseButton1Click:Connect(function()
-    if backLookOn then
-        stopBackLook()
-    else
-        startBackLook()
-    end
-end)
-
--- Auto re-enable on respawn
-LocalPlayer.CharacterAdded:Connect(function()
-    task.wait(0.8)
-    if backLookOn then
-        startBackLook()
-    end
-end)
-
--- Optional: Auto-disable when character dies/removed
-LocalPlayer.CharacterRemoving:Connect(function()
-    stopBackLook()
-end)
-end)
 --=====================
 -- HIDE / SHOW UI 
 --=====================
