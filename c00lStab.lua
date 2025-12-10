@@ -63,6 +63,143 @@ modeButton.Font = Enum.Font.SourceSans
 modeButton.TextSize = 16
 modeButton.Text = "Mode: Behind"
 modeButton.Parent = screenGui
+local PlayersFolder = workspace:WaitForChild("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = game.Players.LocalPlayer
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local killersLabel = Instance.new("TextLabel")
+killersLabel.Size = UDim2.new(0, 200, 0, 50)
+killersLabel.Position = UDim2.new(0, 10, 0, 10)
+killersLabel.BackgroundColor3 = Color3.fromRGB(255, 40, 40)
+killersLabel.TextColor3 = Color3.new(1, 1, 1)
+killersLabel.TextScaled = true
+killersLabel.Font = Enum.Font.SourceSansBold
+killersLabel.Parent = screenGui
+
+local survivorsLabel = Instance.new("TextLabel")
+survivorsLabel.Size = UDim2.new(0, 200, 0, 50)
+survivorsLabel.Position = UDim2.new(0, 10, 0, 70)
+survivorsLabel.BackgroundColor3 = Color3.fromRGB(40, 255, 40)
+survivorsLabel.TextColor3 = Color3.new(1, 1, 1)
+survivorsLabel.TextScaled = true
+survivorsLabel.Font = Enum.Font.SourceSansBold
+survivorsLabel.Parent = screenGui
+
+local espButton = Instance.new("TextButton")
+espButton.Size = UDim2.new(0, 200, 0, 40)
+espButton.Position = UDim2.new(0, 10, 0, 130)
+espButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+espButton.BorderSizePixel = 2
+espButton.BorderColor3 = Color3.fromRGB(255, 0, 0)
+espButton.TextColor3 = Color3.new(1, 1, 1)
+espButton.TextScaled = true
+espButton.Font = Enum.Font.SourceSansBold
+espButton.Text = "ESP: ON"
+espButton.Parent = screenGui
+
+local espEnabled = true
+
+local function clearESP()
+	for _, obj in pairs(PlayersFolder:GetChildren()) do
+		if obj:IsA("Model") and obj:FindFirstChild("Humanoid") then
+			for _, h in ipairs(obj:GetChildren()) do
+				if h:IsA("Highlight") then
+					h:Destroy()
+				end
+			end
+		end
+	end
+
+	local generators = workspace:FindFirstChild("Map") 
+		and workspace.Map:FindFirstChild("Ingame") 
+		and workspace.Map.Ingame:FindFirstChild("Map")
+
+	if generators then
+		for _, g in pairs(generators:GetChildren()) do
+			if g:IsA("Model") then
+				for _, h in pairs(g:GetChildren()) do
+					if h:IsA("Highlight") then
+						h:Destroy()
+					end
+				end
+			end
+		end
+	end
+end
+
+local function createESP(model, outlineColor, fillColor)
+	local highlight = Instance.new("Highlight")
+	highlight.Parent = model
+	highlight.Adornee = model
+	highlight.FillTransparency = 0.75
+	highlight.FillColor = fillColor
+	highlight.OutlineColor = outlineColor
+	highlight.OutlineTransparency = 0
+end
+
+local function espGroup(group, oc, fc)
+	for _, obj in pairs(group:GetChildren()) do
+		local hum = obj:FindFirstChildOfClass("Humanoid")
+		if hum and obj:FindFirstChild("HumanoidRootPart") then
+			createESP(obj, oc, fc)
+		end
+	end
+end
+
+local function espGenerators()
+	local folder = workspace:FindFirstChild("Map") 
+		and workspace.Map:FindFirstChild("Ingame") 
+		and workspace.Map.Ingame:FindFirstChild("Map")
+
+	if folder then
+		for _, obj in pairs(folder:GetChildren()) do
+			if obj:IsA("Model") and obj.Name == "Generator" then
+				createESP(obj, Color3.new(1, 1, 0), Color3.new(1, 1, 0.5))
+			end
+		end
+	end
+end
+
+local function updateESP()
+	while true do
+		if espEnabled then
+			clearESP()
+
+			local killers = PlayersFolder:FindFirstChild("Killers")
+			if killers then
+				espGroup(killers, Color3.new(1, 0, 0), Color3.new(1, 0.5, 0.5))
+				killersLabel.Text = "Killers: " .. #killers:GetChildren()
+			else
+				killersLabel.Text = "Killers: 0"
+			end
+
+			local survivors = PlayersFolder:FindFirstChild("Survivors")
+			if survivors then
+				espGroup(survivors, Color3.new(0, 1, 0), Color3.new(0.5, 1, 0.5))
+				survivorsLabel.Text = "Survivors: " .. #survivors:GetChildren()
+			else
+				survivorsLabel.Text = "Survivors: 0"
+			end
+
+			espGenerators()
+		end
+
+		wait(5)
+	end
+end
+
+espButton.MouseButton1Click:Connect(function()
+	espEnabled = not espEnabled
+	espButton.Text = "ESP: " .. (espEnabled and "ON" or "OFF")
+	if not espEnabled then
+		clearESP()
+	end
+end)
+
+task.spawn(updateESP)
 
 -- Infinite Stamina Button
 local infStamButton = Instance.new("TextButton")
@@ -77,53 +214,6 @@ infStamButton.TextSize = 16
 infStamButton.Text = "Inf Stamina: OFF"
 infStamButton.Parent = screenGui
 
--- ESP Toggle Button
-local espEnabled = true
-local espButton = Instance.new("TextButton")
-espButton.Size = UDim2.new(0, 120, 0, 25)
-espButton.Position =  UDim2.new(0, 10, 0, 160) 
-espButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-espButton.BorderColor3 = Color3.fromRGB(255, 0, 0)
-espButton.BorderSizePixel = 2
-espButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-espButton.Font = Enum.Font.SourceSansBold
-espButton.TextSize = 16
-espButton.Text = "ESP: ON"
-espButton.Parent = screenGui
-
--- Function to clear all ESP Highlights
-local function clearESP()
-    for _, obj in pairs(workspace.Players:GetChildren()) do
-        if obj:IsA("Model") and obj:FindFirstChild("Humanoid") then
-            for _, h in ipairs(obj:GetChildren()) do
-                if h:IsA("Highlight") then
-                    h:Destroy()
-                end
-            end
-        end
-    end
-end
-
--- Toggle ESP Logic
-espButton.MouseButton1Click:Connect(function()
-    espEnabled = not espEnabled
-    espButton.Text = "ESP: " .. (espEnabled and "ON" or "OFF")
-
-    if not espEnabled then
-        clearESP()
-    end
-end)
-
--- Hook vào vòng lặp ESP có sẵn
-task.spawn(function()
-    while task.wait(1) do
-        if espEnabled then
-            pcall(function()
-                updateESP()
-            end)
-        end
-    end
-end)
 
 -- Variables
 local enabled = false
