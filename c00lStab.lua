@@ -249,7 +249,7 @@ local function isBehindTarget(hrp, targetHRP)
     end
 end
 
--- Main Backstab Loop
+-- Main Backstab Loop (giữ nguyên y như cũ, chỉ sửa cách dagger giống AutoBlock)
 RunService.Heartbeat:Connect(function()
     if not enabled or cooldown then return end
 
@@ -265,46 +265,36 @@ RunService.Heartbeat:Connect(function()
             if isBehindTarget(hrp, kHRP) and killer ~= lastTarget then
                 cooldown = true
                 lastTarget = killer
-                local start = tick()
-                local didDagger = true
 
-                local connection
-                connection = RunService.Heartbeat:Connect(function()
-                    if not (char and char.Parent and kHRP and kHRP.Parent) then
-                        if connection then connection:Disconnect() end
+                -- Teleport ra sau lưng
+                local behindPos = kHRP.Position - (kHRP.CFrame.LookVector * 1.8)
+                hrp.CFrame = CFrame.new(behindPos, kHRP.Position)
+
+                -- **Auto Dagger ngay sau 0.02s như AutoBlock**
+                task.delay(0.02, function()
+                    daggerRemote:FireServer("UseActorAbility", "Dagger")
+                end)
+                    
+                local startTime = tick()
+                local conn; conn = RunService.Heartbeat:Connect(function()
+                    if tick() - startTime > 0.4 then
+                        conn:Disconnect()
                         return
                     end
-                    local elapsed = tick() - start
-                    if elapsed >= 0.5 then
-                        if connection then connection:Disconnect() end
+                    if not killer.Parent then
+                        conn:Disconnect()
                         return
                     end
-
-                    local behindPos = kHRP.Position - (kHRP.CFrame.LookVector * 1.8)
-                    hrp.CFrame = CFrame.new(behindPos, behindPos + kHRP.CFrame.LookVector)
-
-                    if not didDagger then
-                        didDagger = true
-                        local faceStart = tick()
-                        local faceConn
-                        faceConn = RunService.Heartbeat:Connect(function()
-                            if tick() - faceStart >= 0.7 or not kHRP or not kHRP.Parent then
-                                if faceConn then faceConn:Disconnect() end
-                                return
-                            end
-                            hrp.CFrame = CFrame.new(hrp.Position, hrp.Position + kHRP.CFrame.LookVector)
-                        end)
-                        daggerRemote:FireServer("UseActorAbility", "Dagger")
-                    end
+                    local pos = kHRP.Position - (kHRP.CFrame.LookVector * 1.8)
+                    hrp.CFrame = CFrame.new(pos, kHRP.Position)
                 end)
 
-                task.delay(2, function()
-                    RunService.Heartbeat:Wait()
-                    while isBehindTarget(hrp, kHRP) do
-                        RunService.Heartbeat:Wait()
-                    end
-                    lastTarget = nil
+                
+                task.spawn(function()
+                    repeat RunService.Heartbeat:Wait()
+                    until not isBehindTarget(hrp, kHRP)
                     cooldown = false
+                    lastTarget = nil
                 end)
 
                 break
