@@ -194,7 +194,7 @@ local cooldown = false
 local lastTarget = nil
 local range = 4
 local daggerRemote = ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("RemoteEvent")
-local killerNames = { "Slasher", "c00lkidd", "JohnDoe", "1x1x1x1", "Noli", "Nosferatu", "Guest666" }
+local killerNames = { "Slasher", "Jason", "c00lkidd", "JohnDoe", "1x1x1x1", "Noli", "Nosferatu", "Sixer" }
 local killersFolder = workspace:WaitForChild("Players"):WaitForChild("Killers")
 
 -- Infinite Stamina Setup
@@ -280,7 +280,7 @@ RunService.Heartbeat:Connect(function()
                         return
                     end
 
-                    local behindPos = kHRP.Position - (kHRP.CFrame.LookVector * 0.3)
+                    local behindPos = kHRP.Position - (kHRP.CFrame.LookVector * 1.8)
                     hrp.CFrame = CFrame.new(behindPos, behindPos + kHRP.CFrame.LookVector)
 
                     if not didDagger then
