@@ -123,109 +123,151 @@ local function createToggleGui()
     rangeBox.ClearTextOnFocus = false
     rangeBox.Parent = screenGui
 
-    -- Inf Stamina button (keeps c00lstab behavior)
-    local infStaminaEnabled = false
-    local infStamBtn = makeBtn("Inf Stamina: OFF", 115)
+    -- Infinite Stamina Button
+local infStamButton = Instance.new("TextButton")
+infStamButton.Size = UDim2.new(0, 120, 0, 25)
+infStamButton.Position = UDim2.new(0, 10, 0, 130)
+infStamButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+infStamButton.BorderColor3 = Color3.fromRGB(255, 0, 0)
+infStamButton.BorderSizePixel = 2
+infStamButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+infStamButton.Font = Enum.Font.SourceSans
+infStamButton.TextSize = 16
+infStamButton.Text = "Inf Stamina: OFF"
+infStamButton.Parent = screenGui
 
-    infStamBtn.MouseButton1Click:Connect(function()
-        infStaminaEnabled = not infStaminaEnabled
-        infStamBtn.Text = infStaminaEnabled and "Inf Stamina: ON" or "Inf Stamina: OFF"
-    end)
+-- ESP Toggle Button
+local Lighting = game:GetService("Lighting")
+local PlayersFolder = workspace:WaitForChild("Players")
 
-    -- ESP button (Highlight + FullBright + Fog off)
-    local espEnabled = false
-    local espBtn = makeBtn("ESP: OFF", 150)
+local espEnabled = false
+local espButton = Instance.new("TextButton")
+espButton.Size = UDim2.new(0, 120, 0, 25)
+espButton.Position = UDim2.new(0, 10, 0, 160)
+espButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+espButton.BorderColor3 = Color3.fromRGB(255, 0, 0)
+espButton.BorderSizePixel = 2
+espButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+espButton.Font = Enum.Font.SourceSansBold
+espButton.TextSize = 16
+espButton.Text = "ESP: OFF"
+espButton.Parent = screenGui
 
-    local oldAmbient = Lighting.Ambient
-    local oldOutdoor = Lighting.OutdoorAmbient
-    local oldBrightness = Lighting.Brightness
-    local oldFogEnd = Lighting.FogEnd
-    local oldFogStart = Lighting.FogStart
+local oldAmbient = Lighting.Ambient
+local oldOutdoor = Lighting.OutdoorAmbient
+local oldBrightness = Lighting.Brightness
+local oldFogEnd = Lighting.FogEnd
+local oldFogStart = Lighting.FogStart
 
-    local highlights = {}
+local function enableFullBright()
+    Lighting.Ambient = Color3.new(1,1,1)
+    Lighting.OutdoorAmbient = Color3.new(1,1,1)
+    Lighting.Brightness = 4
+    Lighting.FogEnd = 100000
+    Lighting.FogStart = 0
+end
 
-    local function enableFullBright()
-        Lighting.Ambient = Color3.new(1,1,1)
-        Lighting.OutdoorAmbient = Color3.new(1,1,1)
-        Lighting.Brightness = 4
-        Lighting.FogEnd = 100000
-        Lighting.FogStart = 0
-    end
+local function disableFullBright()
+    Lighting.Ambient = oldAmbient
+    Lighting.OutdoorAmbient = oldOutdoor
+    Lighting.Brightness = oldBrightness
+    Lighting.FogEnd = oldFogEnd
+    Lighting.FogStart = oldFogStart
+end
 
-    local function disableFullBright()
-        Lighting.Ambient = oldAmbient
-        Lighting.OutdoorAmbient = oldOutdoor
-        Lighting.Brightness = oldBrightness
-        Lighting.FogEnd = oldFogEnd
-        Lighting.FogStart = oldFogStart
-    end
+-- Highlight ESP
+local function createESP(model, outline, fill)
+    local h = Instance.new("Highlight")
+    h.Parent = model
+    h.Adornee = model
+    h.FillTransparency = 0.75
+    h.FillColor = fill
+    h.OutlineColor = outline
+end
 
-    local function applyHighlights()
-        for _, plr in ipairs(Players:GetPlayers()) do
-            if plr ~= localPlayer then
-                local char = plr.Character
-                if char and not highlights[plr] then
-                    local h = Instance.new("Highlight")
-                    h.Parent = char
-                    h.Adornee = char
-                    h.FillTransparency = 0.75
-                    h.FillColor = Color3.new(1,0,0)
-                    h.OutlineColor = Color3.new(1,1,1)
-                    highlights[plr] = h
-                end
+local function clearESP()
+    for _, grp in ipairs(PlayersFolder:GetChildren()) do
+        for _, plr in ipairs(grp:GetChildren()) do
+            for _, obj in ipairs(plr:GetChildren()) do
+                if obj:IsA("Highlight") then obj:Destroy() end
             end
         end
-
-        pcall(function()
-            local genFolder = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Ingame") and workspace.Map.Ingame:FindFirstChild("Map")
-            if genFolder then
-                for _, obj in ipairs(genFolder:GetChildren()) do
-                    if obj:IsA("Model") and obj.Name == "Generator" and not highlights[obj] then
-                        local hg = Instance.new("Highlight")
-                        hg.Parent = obj
-                        hg.Adornee = obj
-                        hg.FillTransparency = 0.75
-                        hg.FillColor = Color3.new(1,1,0)
-                        hg.OutlineColor = Color3.new(1,1,1)
-                        highlights[obj] = hg
-                    end
-                end
-            end
-        end)
     end
+end
 
-    local function clearHighlights()
-        for k,v in pairs(highlights) do
-            if v and v.Parent then
-                pcall(function() v:Destroy() end)
+local function applyESP()
+    local killers = PlayersFolder:FindFirstChild("Killers")
+    if killers then
+        for _, m in ipairs(killers:GetChildren()) do
+            if m:FindFirstChild("Humanoid") then
+                createESP(m, Color3.new(1,0,0), Color3.new(1,0.3,0.3))
             end
         end
-        highlights = {}
     end
 
-    espBtn.MouseButton1Click:Connect(function()
-        espEnabled = not espEnabled
-        espBtn.Text = espEnabled and "ESP: ON" or "ESP: OFF"
+    local survivors = PlayersFolder:FindFirstChild("Survivors")
+    if survivors then
+        for _, m in ipairs(survivors:GetChildren()) do
+            if m:FindFirstChild("Humanoid") then
+                createESP(m, Color3.new(0,1,0), Color3.new(0.4,1,0.4))
+            end
+        end
+    end
+
+    local genFolder = workspace.Map.Ingame.Map
+    for _, obj in ipairs(genFolder:GetChildren()) do
+        if obj.Name == "Generator" then
+            createESP(obj, Color3.new(1,1,0), Color3.new(1,1,0.4))
+        end
+    end
+end
+
+-- Nút bật ESP
+espButton.MouseButton1Click:Connect(function()
+    espEnabled = not espEnabled
+    espButton.Text = "ESP: " .. (espEnabled and "ON" or "OFF")
+
+    if espEnabled then
+        enableFullBright()
+        applyESP()
+    else
+        disableFullBright()
+        clearESP()
+    end
+end)
+
+-- Auto refresh ESP
+task.spawn(function()
+    while task.wait(1) do
         if espEnabled then
             enableFullBright()
-            applyHighlights()
-        else
-            disableFullBright()
-            clearHighlights()
+            clearESP()
+            applyESP()
         end
-    end)
+    end
+end)
 
-    -- Auto refresh ESP while enabled
-    task.spawn(function()
-        while true do
-            task.wait(1)
-            if espEnabled then
-                enableFullBright()
-                clearHighlights()
-                applyHighlights()
-            end
+-- Variables
+local enabled = false
+local cooldown = false
+local lastTarget = nil
+local range = 4
+local daggerRemote = ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("RemoteEvent")
+local killerNames = { "Slasher", "Jason", "c00lkidd", "JohnDoe", "1x1x1x1", "Noli", "Nosferatu", "Sixer" }
+local killersFolder = workspace:WaitForChild("Players"):WaitForChild("Killers")
+
+-- Infinite Stamina Setup
+local infStaminaEnabled = false
+local rs = cloneref(ReplicatedStorage)
+local sprint = rs.Systems.Character.Game.Sprinting
+local m = require(sprint)
+task.spawn(function()
+    while task.wait(1) do
+        if infStaminaEnabled and m.Stamina < 100 then
+            m.Stamina = 100
         end
-    end)
+    end
+end)
 
     -- Setup saved flags
     local toggleFlag = getBoolFlag("AutoBlockToggle")
@@ -311,48 +353,3 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- Inf Stamina Setup (keep c00lstab behavior)
-local infStaminaEnabled = false
-local rs_clone = cloneref(ReplicatedStorage)
-local sprintModule = nil
-pcall(function()
-    sprintModule = rs_clone.Systems.Character.Game.Sprinting
-end)
-local m = nil
-if sprintModule then
-    local ok, req = pcall(function() return require(sprintModule) end)
-    if ok then m = req end
-end
-
-task.spawn(function()
-    while task.wait(0.5) do
-        if infStaminaEnabled and m and m.Stamina then
-            if m.Stamina < 99 then
-                pcall(function() m.Stamina = 100 end)
-            end
-        end
-    end
-end)
-
--- Bind Inf Stamina GUI button to the internal variable (works after GUI created)
-task.spawn(function()
-    while not screenGui do task.wait(0.1) end
-    local function bindInfStam()
-        local gui = localPlayer:FindFirstChild("PlayerGui")
-        if not gui then return end
-        local g = gui:FindFirstChild("BlockAutoToggleGui")
-        if not g then return end
-        for _, child in ipairs(g:GetChildren()) do
-            if child:IsA("TextButton") and child.Text:match("Inf Stamina") then
-                child.MouseButton1Click:Connect(function()
-                    infStaminaEnabled = not infStaminaEnabled
-                    child.Text = infStaminaEnabled and "Inf Stamina: ON" or "Inf Stamina: OFF"
-                end)
-                return
-            end
-        end
-    end
-    while task.wait(0.5) do
-        pcall(bindInfStam)
-    end
-end)
