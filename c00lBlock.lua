@@ -77,7 +77,7 @@ local function getNumberFlag(name)
     if not flag then
         flag = Instance.new("NumberValue")
         flag.Name = name
-        flag.Value = 18
+        flag.Value = 12
         flag.Parent = localPlayer
     end
     return flag
@@ -298,7 +298,6 @@ RunService.Heartbeat:Connect(function()
                                 continue
                             end
                             clickedTracks[track] = true
-                            notify(otherPlayer.Name .. " started animation " .. id)
                             clickBlockButton()
                             task.spawn(function()
                                 track.Stopped:Wait()
