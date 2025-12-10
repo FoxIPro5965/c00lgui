@@ -94,8 +94,8 @@ local function createToggleGui()
 
     local function makeBtn(text, y)
         local b = Instance.new("TextButton")
-        b.Size = UDim2.new(0, 130, 0, 30)
-        b.Position = UDim2.new(0, 10, 0, y)
+        b.Size = UDim2.new(0, 120, 0, 30)
+        b.Position = UDim2.new(0, 135, 0, y)
         b.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
         b.BorderColor3 = Color3.fromRGB(255, 0, 0)
         b.BorderSizePixel = 2
@@ -111,8 +111,8 @@ local function createToggleGui()
     strictButton = makeBtn("Strict Range: OFF", 45)
 
     rangeBox = Instance.new("TextBox")
-    rangeBox.Size = UDim2.new(0, 130, 0, 30)
-    rangeBox.Position = UDim2.new(0, 10, 0, 80)
+    rangeBox.Size = UDim2.new(0, 120, 0, 20)
+    rangeBox.Position = UDim2.new(0, 135, 0, 80)
     rangeBox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     rangeBox.BorderColor3 = Color3.fromRGB(255, 0, 0)
     rangeBox.BorderSizePixel = 2
@@ -123,151 +123,152 @@ local function createToggleGui()
     rangeBox.ClearTextOnFocus = false
     rangeBox.Parent = screenGui
 
-    -- Infinite Stamina Button
-local infStamButton = Instance.new("TextButton")
-infStamButton.Size = UDim2.new(0, 120, 0, 25)
-infStamButton.Position = UDim2.new(0, 10, 0, 130)
-infStamButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-infStamButton.BorderColor3 = Color3.fromRGB(255, 0, 0)
-infStamButton.BorderSizePixel = 2
-infStamButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-infStamButton.Font = Enum.Font.SourceSans
-infStamButton.TextSize = 16
-infStamButton.Text = "Inf Stamina: OFF"
-infStamButton.Parent = screenGui
-
--- ESP Toggle Button
-local Lighting = game:GetService("Lighting")
-local PlayersFolder = workspace:WaitForChild("Players")
-
-local espEnabled = false
-local espButton = Instance.new("TextButton")
-espButton.Size = UDim2.new(0, 120, 0, 25)
-espButton.Position = UDim2.new(0, 10, 0, 160)
-espButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-espButton.BorderColor3 = Color3.fromRGB(255, 0, 0)
-espButton.BorderSizePixel = 2
-espButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-espButton.Font = Enum.Font.SourceSansBold
-espButton.TextSize = 16
-espButton.Text = "ESP: OFF"
-espButton.Parent = screenGui
-
-local oldAmbient = Lighting.Ambient
-local oldOutdoor = Lighting.OutdoorAmbient
-local oldBrightness = Lighting.Brightness
-local oldFogEnd = Lighting.FogEnd
-local oldFogStart = Lighting.FogStart
-
-local function enableFullBright()
-    Lighting.Ambient = Color3.new(1,1,1)
-    Lighting.OutdoorAmbient = Color3.new(1,1,1)
-    Lighting.Brightness = 4
-    Lighting.FogEnd = 100000
-    Lighting.FogStart = 0
-end
-
-local function disableFullBright()
-    Lighting.Ambient = oldAmbient
-    Lighting.OutdoorAmbient = oldOutdoor
-    Lighting.Brightness = oldBrightness
-    Lighting.FogEnd = oldFogEnd
-    Lighting.FogStart = oldFogStart
-end
-
--- Highlight ESP
-local function createESP(model, outline, fill)
-    local h = Instance.new("Highlight")
-    h.Parent = model
-    h.Adornee = model
-    h.FillTransparency = 0.75
-    h.FillColor = fill
-    h.OutlineColor = outline
-end
-
-local function clearESP()
-    for _, grp in ipairs(PlayersFolder:GetChildren()) do
-        for _, plr in ipairs(grp:GetChildren()) do
-            for _, obj in ipairs(plr:GetChildren()) do
-                if obj:IsA("Highlight") then obj:Destroy() end
-            end
-        end
-    end
-end
-
-local function applyESP()
-    local killers = PlayersFolder:FindFirstChild("Killers")
-    if killers then
-        for _, m in ipairs(killers:GetChildren()) do
-            if m:FindFirstChild("Humanoid") then
-                createESP(m, Color3.new(1,0,0), Color3.new(1,0.3,0.3))
-            end
-        end
-    end
-
-    local survivors = PlayersFolder:FindFirstChild("Survivors")
-    if survivors then
-        for _, m in ipairs(survivors:GetChildren()) do
-            if m:FindFirstChild("Humanoid") then
-                createESP(m, Color3.new(0,1,0), Color3.new(0.4,1,0.4))
-            end
-        end
-    end
-
-    local genFolder = workspace.Map.Ingame.Map
-    for _, obj in ipairs(genFolder:GetChildren()) do
-        if obj.Name == "Generator" then
-            createESP(obj, Color3.new(1,1,0), Color3.new(1,1,0.4))
-        end
-    end
-end
-
--- Nút bật ESP
-espButton.MouseButton1Click:Connect(function()
-    espEnabled = not espEnabled
-    espButton.Text = "ESP: " .. (espEnabled and "ON" or "OFF")
-
-    if espEnabled then
-        enableFullBright()
-        applyESP()
-    else
-        disableFullBright()
-        clearESP()
-    end
-end)
-
--- Auto refresh ESP
-task.spawn(function()
-    while task.wait(1) do
-        if espEnabled then
-            enableFullBright()
-            clearESP()
-            applyESP()
-        end
-    end
-end)
-
--- Variables
-local enabled = false
-local cooldown = false
-local lastTarget = nil
-local range = 4
-local daggerRemote = ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("RemoteEvent")
-local killerNames = { "Slasher", "Jason", "c00lkidd", "JohnDoe", "1x1x1x1", "Noli", "Nosferatu", "Sixer" }
-local killersFolder = workspace:WaitForChild("Players"):WaitForChild("Killers")
-
--- Infinite Stamina Setup
 local infStaminaEnabled = false
-local rs = cloneref(ReplicatedStorage)
-local sprint = rs.Systems.Character.Game.Sprinting
-local m = require(sprint)
+
+local infStaminaBtn = Instance.new("TextButton")
+infStaminaBtn.Size = UDim2.new(0, 120, 0, 25)
+infStaminaBtn.Position = UDim2.new(0, 135, 0, 105)
+infStaminaBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+infStaminaBtn.BorderColor3 = Color3.fromRGB(255, 0, 0)
+infStaminaBtn.BorderSizePixel = 2
+infStaminaBtn.TextColor3 = Color3.fromRGB(255,255,255)
+infStaminaBtn.Font = Enum.Font.SourceSans
+infStaminaBtn.TextSize = 16
+infStaminaBtn.Text = "Inf Stamina: OFF"
+infStaminaBtn.Parent = ScreenGui   -- bạn chỉnh Frame hay ScreenGui gì tùy bạn
+
+local rs = cloneref(game:GetService("ReplicatedStorage"))
+local sprintModule = rs:WaitForChild("Systems").Character.Game:WaitForChild("Sprinting")
+local sprint = require(sprintModule)
+
 task.spawn(function()
-    while task.wait(1) do
-        if infStaminaEnabled and m.Stamina < 100 then
-            m.Stamina = 100
+    while task.wait(0.5) do
+        if infStaminaEnabled then
+            pcall(function()
+                if sprint.Stamina < 100 then
+                    sprint.Stamina = 100
+                end
+            end)
         end
     end
 end)
+
+infStaminaBtn.MouseButton1Click:Connect(function()
+    infStaminaEnabled = not infStaminaEnabled
+    infStaminaBtn.Text = infStaminaEnabled and "Inf Stamina: ON" or "Inf Stamina: OFF"
+end)
+        
+    
+-- ESP Toggle Button    
+local Lighting = game:GetService("Lighting")    
+local PlayersFolder = workspace:WaitForChild("Players")    
+    
+local espEnabled = false    
+local espButton = Instance.new("TextButton")    
+espButton.Size = UDim2.new(0, 120, 0, 25)    
+espButton.Position = UDim2.new(0, 135, 0, 135)    
+espButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)    
+espButton.BorderColor3 = Color3.fromRGB(255, 0, 0)    
+espButton.BorderSizePixel = 2    
+espButton.TextColor3 = Color3.fromRGB(255, 255, 255)    
+espButton.Font = Enum.Font.SourceSansBold    
+espButton.TextSize = 16    
+espButton.Text = "ESP: OFF"    
+espButton.Parent = screenGui    
+    
+local oldAmbient = Lighting.Ambient    
+local oldOutdoor = Lighting.OutdoorAmbient    
+local oldBrightness = Lighting.Brightness    
+local oldFogEnd = Lighting.FogEnd    
+local oldFogStart = Lighting.FogStart    
+    
+local function enableFullBright()    
+    Lighting.Ambient = Color3.new(1,1,1)    
+    Lighting.OutdoorAmbient = Color3.new(1,1,1)    
+    Lighting.Brightness = 4    
+    Lighting.FogEnd = 100000    
+    Lighting.FogStart = 0    
+end    
+    
+local function disableFullBright()    
+    Lighting.Ambient = oldAmbient    
+    Lighting.OutdoorAmbient = oldOutdoor    
+    Lighting.Brightness = oldBrightness    
+    Lighting.FogEnd = oldFogEnd    
+    Lighting.FogStart = oldFogStart    
+end    
+    
+-- Highlight ESP    
+local function createESP(model, outline, fill)    
+    local h = Instance.new("Highlight")    
+    h.Parent = model    
+    h.Adornee = model    
+    h.FillTransparency = 0.75    
+    h.FillColor = fill    
+    h.OutlineColor = outline    
+end    
+    
+local function clearESP()    
+    for _, grp in ipairs(PlayersFolder:GetChildren()) do    
+        for _, plr in ipairs(grp:GetChildren()) do    
+            for _, obj in ipairs(plr:GetChildren()) do    
+                if obj:IsA("Highlight") then obj:Destroy() end    
+            end    
+        end    
+    end    
+end    
+    
+local function applyESP()    
+    local killers = PlayersFolder:FindFirstChild("Killers")    
+    if killers then    
+        for _, m in ipairs(killers:GetChildren()) do    
+            if m:FindFirstChild("Humanoid") then    
+                createESP(m, Color3.new(1,0,0), Color3.new(1,0.3,0.3))    
+            end    
+        end    
+    end    
+    
+    local survivors = PlayersFolder:FindFirstChild("Survivors")    
+    if survivors then    
+        for _, m in ipairs(survivors:GetChildren()) do    
+            if m:FindFirstChild("Humanoid") then    
+                createESP(m, Color3.new(0,1,0), Color3.new(0.4,1,0.4))    
+            end    
+        end    
+    end    
+    
+    local genFolder = workspace.Map.Ingame.Map    
+    for _, obj in ipairs(genFolder:GetChildren()) do    
+        if obj.Name == "Generator" then    
+            createESP(obj, Color3.new(1,1,0), Color3.new(1,1,0.4))    
+        end    
+    end    
+end    
+    
+-- Nút bật ESP    
+espButton.MouseButton1Click:Connect(function()    
+    espEnabled = not espEnabled    
+    espButton.Text = "ESP: " .. (espEnabled and "ON" or "OFF")    
+    
+    if espEnabled then    
+        enableFullBright()    
+        applyESP()    
+    else    
+        disableFullBright()    
+        clearESP()    
+    end    
+end)    
+    
+-- Auto refresh ESP    
+task.spawn(function()    
+    while task.wait(1) do    
+        if espEnabled then    
+            enableFullBright()    
+            clearESP()    
+            applyESP()    
+        end    
+    end    
+end)    
 
     -- Setup saved flags
     local toggleFlag = getBoolFlag("AutoBlockToggle")
@@ -336,7 +337,7 @@ RunService.Heartbeat:Connect(function()
                         local id = anim and anim.AnimationId and string.match(anim.AnimationId, "%d+")
                         if id and animationIds[id] and not clickedTracks[track] then
                             if strictRangeOn and not facing then
-                                -- strict requires facing; skip if not facing
+                                
                                 continue
                             end
                             clickedTracks[track] = true
