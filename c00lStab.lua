@@ -245,7 +245,7 @@ local function isBehindTarget(hrp, targetHRP)
     else
         local direction = -targetHRP.CFrame.LookVector
         local toPlayer = (hrp.Position - targetHRP.Position)
-        return toPlayer:Dot(direction) > 0.5
+        return toPlayer:Dot(direction) > 0.3
     end
 end
 
@@ -267,7 +267,7 @@ RunService.Heartbeat:Connect(function()
                 lastTarget = killer
 
                 -- Teleport ra sau lưng
-                local behindPos = kHRP.Position - (kHRP.CFrame.LookVector * 1.8)
+                local behindPos = kHRP.Position - (kHRP.CFrame.LookVector * 2.8)
                 hrp.CFrame = CFrame.new(behindPos, kHRP.Position)
 
                 -- **Auto Dagger ngay sau 0.02s như AutoBlock**
@@ -277,7 +277,7 @@ RunService.Heartbeat:Connect(function()
                     
                 local startTime = tick()
                 local conn; conn = RunService.Heartbeat:Connect(function()
-                    if tick() - startTime > 0.4 then
+                    if tick() - startTime > 0.2 then
                         conn:Disconnect()
                         return
                     end
