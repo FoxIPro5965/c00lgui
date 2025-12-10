@@ -125,7 +125,7 @@ local function createToggleGui()
 
 local infStamButton = Instance.new("TextButton")
 infStamButton.Size = UDim2.new(0, 120, 0, 25)
-infStamButton.Position = UDim2.new(0, 10, 0, 130)
+infStamButton.Position = UDim2.new(0, 10, 0, 105)
 infStamButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 infStamButton.BorderColor3 = Color3.fromRGB(255, 0, 0)
 infStamButton.BorderSizePixel = 2
