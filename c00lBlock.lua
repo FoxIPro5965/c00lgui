@@ -95,7 +95,7 @@ local function createToggleGui()
     local function makeBtn(text, y)
         local b = Instance.new("TextButton")
         b.Size = UDim2.new(0, 120, 0, 30)
-        b.Position = UDim2.new(0, 135, 0, y)
+        b.Position = UDim2.new(0, 10, 0, y)
         b.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
         b.BorderColor3 = Color3.fromRGB(255, 0, 0)
         b.BorderSizePixel = 2
@@ -112,7 +112,7 @@ local function createToggleGui()
 
     rangeBox = Instance.new("TextBox")
     rangeBox.Size = UDim2.new(0, 120, 0, 20)
-    rangeBox.Position = UDim2.new(0, 135, 0, 80)
+    rangeBox.Position = UDim2.new(0, 10, 0, 80)
     rangeBox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     rangeBox.BorderColor3 = Color3.fromRGB(255, 0, 0)
     rangeBox.BorderSizePixel = 2
@@ -123,42 +123,33 @@ local function createToggleGui()
     rangeBox.ClearTextOnFocus = false
     rangeBox.Parent = screenGui
 
+local infStamButton = Instance.new("TextButton")
+infStamButton.Size = UDim2.new(0, 120, 0, 25)
+infStamButton.Position = UDim2.new(0, 10, 0, 130)
+infStamButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+infStamButton.BorderColor3 = Color3.fromRGB(255, 0, 0)
+infStamButton.BorderSizePixel = 2
+infStamButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+infStamButton.Font = Enum.Font.SourceSans
+infStamButton.TextSize = 16
+infStamButton.Text = "Inf Stamina: OFF"
+infStamButton.Parent = screenGui
 local infStaminaEnabled = false
-
-local infStaminaBtn = Instance.new("TextButton")
-infStaminaBtn.Size = UDim2.new(0, 120, 0, 25)
-infStaminaBtn.Position = UDim2.new(0, 135, 0, 105)
-infStaminaBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-infStaminaBtn.BorderColor3 = Color3.fromRGB(255, 0, 0)
-infStaminaBtn.BorderSizePixel = 2
-infStaminaBtn.TextColor3 = Color3.fromRGB(255,255,255)
-infStaminaBtn.Font = Enum.Font.SourceSans
-infStaminaBtn.TextSize = 16
-infStaminaBtn.Text = "Inf Stamina: OFF"
-infStaminaBtn.Parent = ScreenGui   -- bạn chỉnh Frame hay ScreenGui gì tùy bạn
-
-local rs = cloneref(game:GetService("ReplicatedStorage"))
-local sprintModule = rs:WaitForChild("Systems").Character.Game:WaitForChild("Sprinting")
-local sprint = require(sprintModule)
-
+local rs = cloneref(ReplicatedStorage)
+local sprint = rs.Systems.Character.Game.Sprinting
+local m = require(sprint)
 task.spawn(function()
-    while task.wait(0.5) do
-        if infStaminaEnabled then
-            pcall(function()
-                if sprint.Stamina < 100 then
-                    sprint.Stamina = 100
-                end
-            end)
+    while task.wait(1) do
+        if infStaminaEnabled and m.Stamina < 100 then
+            m.Stamina = 100
         end
     end
 end)
-
-infStaminaBtn.MouseButton1Click:Connect(function()
+infStamButton.MouseButton1Click:Connect(function()
     infStaminaEnabled = not infStaminaEnabled
-    infStaminaBtn.Text = infStaminaEnabled and "Inf Stamina: ON" or "Inf Stamina: OFF"
+    infStamButton.Text = "Inf Stamina: " .. (infStaminaEnabled and "ON" or "OFF")
 end)
         
-    
 -- ESP Toggle Button    
 local Lighting = game:GetService("Lighting")    
 local PlayersFolder = workspace:WaitForChild("Players")    
@@ -166,7 +157,7 @@ local PlayersFolder = workspace:WaitForChild("Players")
 local espEnabled = false    
 local espButton = Instance.new("TextButton")    
 espButton.Size = UDim2.new(0, 120, 0, 25)    
-espButton.Position = UDim2.new(0, 135, 0, 135)    
+espButton.Position = UDim2.new(0, 10, 0, 135)    
 espButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)    
 espButton.BorderColor3 = Color3.fromRGB(255, 0, 0)    
 espButton.BorderSizePixel = 2    
