@@ -77,6 +77,54 @@ infStamButton.TextSize = 16
 infStamButton.Text = "Inf Stamina: OFF"
 infStamButton.Parent = screenGui
 
+-- ESP Toggle Button
+local espEnabled = true
+local espButton = Instance.new("TextButton")
+espButton.Size = UDim2.new(0, 120, 0, 25)
+espButton.Position =  UDim2.new(0, 10, 0, 160) 
+espButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+espButton.BorderColor3 = Color3.fromRGB(255, 0, 0)
+espButton.BorderSizePixel = 2
+espButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+espButton.Font = Enum.Font.SourceSansBold
+espButton.TextSize = 16
+espButton.Text = "ESP: ON"
+espButton.Parent = screenGui
+
+-- Function to clear all ESP Highlights
+local function clearESP()
+    for _, obj in pairs(workspace.Players:GetChildren()) do
+        if obj:IsA("Model") and obj:FindFirstChild("Humanoid") then
+            for _, h in ipairs(obj:GetChildren()) do
+                if h:IsA("Highlight") then
+                    h:Destroy()
+                end
+            end
+        end
+    end
+end
+
+-- Toggle ESP Logic
+espButton.MouseButton1Click:Connect(function()
+    espEnabled = not espEnabled
+    espButton.Text = "ESP: " .. (espEnabled and "ON" or "OFF")
+
+    if not espEnabled then
+        clearESP()
+    end
+end)
+
+-- Hook vào vòng lặp ESP có sẵn
+task.spawn(function()
+    while task.wait(1) do
+        if espEnabled then
+            pcall(function()
+                updateESP()
+            end)
+        end
+    end
+end)
+
 -- Variables
 local enabled = false
 local cooldown = false
