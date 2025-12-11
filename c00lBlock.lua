@@ -404,7 +404,7 @@ local function detectAttack(char)
             local id = string.match(d.SoundId or "", "%d+")
             if id and attackIds[id] then
                 checked[char] = true
-                task.delay(0.08, function()
+                task.spawn(function()
                     checked[char] = nil
                 end)
                 return true
