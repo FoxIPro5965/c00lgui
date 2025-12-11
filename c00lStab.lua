@@ -299,14 +299,14 @@ RunService.Heartbeat:Connect(function()
                 hrp.CFrame = CFrame.new(behindPos, kHRP.Position)
 
                 -- Dùng skill bằng UI click
-                task.delay(0.2, function()
+                task.delay(0.05, function()
                     clickDaggerButton()
                 end)
 
                 -- Giữ ở sau lưng
                 local startTime = tick()
                 local conn; conn = RunService.Heartbeat:Connect(function()
-                    if tick() - startTime > 0.08 then
+                    if tick() - startTime > 0.35 then
                         conn:Disconnect()
                         return
                     end
