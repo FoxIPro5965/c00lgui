@@ -46,7 +46,7 @@ rangeBox.BorderSizePixel = 2
 rangeBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 rangeBox.Font = Enum.Font.SourceSans
 rangeBox.TextSize = 16
-rangeBox.PlaceholderText = "1-10 recommended 8"
+rangeBox.PlaceholderText = "1-16 recommended 8"
 rangeBox.Text = "8"
 rangeBox.ClearTextOnFocus = false
 rangeBox.Parent = screenGui
@@ -235,7 +235,7 @@ end
 local enabled = false
 local cooldown = false
 local lastTarget = nil
-local range = 4
+local range = 8
 local killerNames = { "Slasher", "Jason", "c00lkidd", "JohnDoe", "1x1x1x1", "Noli", "Nosferatu", "Sixer" }
 local killersFolder = workspace:WaitForChild("Players"):WaitForChild("Killers")
 
@@ -247,7 +247,7 @@ end)
 
 rangeBox.FocusLost:Connect(function()
     local input = tonumber(rangeBox.Text)
-    if input and input >= 1 and input <= 10 then
+    if input and input >= 1 and input <= 16 then
         range = input
     else
         rangeBox.Text = tostring(range)
@@ -299,14 +299,14 @@ RunService.Heartbeat:Connect(function()
                 hrp.CFrame = CFrame.new(behindPos, kHRP.Position)
 
                 -- Dùng skill bằng UI click
-                task.delay(0.08, function()
+                task.delay(0.2, function()
                     clickDaggerButton()
                 end)
 
                 -- Giữ ở sau lưng
                 local startTime = tick()
                 local conn; conn = RunService.Heartbeat:Connect(function()
-                    if tick() - startTime > 0.2 then
+                    if tick() - startTime > 0.08 then
                         conn:Disconnect()
                         return
                     end
