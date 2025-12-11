@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
 local lp = Players.LocalPlayer
 
 -- GUI Setup
@@ -78,7 +79,6 @@ infStamButton.Text = "Inf Stamina: OFF"
 infStamButton.Parent = screenGui
 
 -- ESP Toggle Button
-local Lighting = game:GetService("Lighting")
 local PlayersFolder = workspace:WaitForChild("Players")
 
 local espEnabled = false
@@ -188,29 +188,58 @@ task.spawn(function()
     end
 end)
 
+-- Infinite Stamina
+local infStaminaEnabled = false
+local rs = cloneref(ReplicatedStorage)
+local sprint = rs.Systems.Character.Game.Sprinting
+local staminaModule = require(sprint)
+
+task.spawn(function()
+    while task.wait(1) do
+        if infStaminaEnabled and staminaModule.Stamina < 100 then
+            staminaModule.Stamina = 100
+        end
+    end
+end)
+
+-- Auto click UI Dagger (thay cho FireServer)
+local function clickDaggerButton()
+    local gui = lp:FindFirstChild("PlayerGui")
+    if not gui then return end
+
+    local mainUI = gui:FindFirstChild("MainUI")
+    if not mainUI then return end
+
+    local container = mainUI:FindFirstChild("AbilityContainer")
+    if not container then return end
+
+    local daggerButton = container:FindFirstChild("Dagger")
+    if not daggerButton or not daggerButton:IsA("ImageButton") then return end
+
+    -- Cooldown check
+    if daggerButton.BackgroundTransparency == 0 then return end
+
+    -- Click all connections
+    for _, conn in ipairs(getconnections(daggerButton.MouseButton1Click)) do
+        pcall(function()
+            conn:Fire()
+        end)
+    end
+
+    pcall(function()
+        daggerButton:Activate()
+    end)
+end
+
 -- Variables
 local enabled = false
 local cooldown = false
 local lastTarget = nil
 local range = 4
-local daggerRemote = ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("RemoteEvent")
 local killerNames = { "Slasher", "Jason", "c00lkidd", "JohnDoe", "1x1x1x1", "Noli", "Nosferatu", "Sixer" }
 local killersFolder = workspace:WaitForChild("Players"):WaitForChild("Killers")
 
--- Infinite Stamina Setup
-local infStaminaEnabled = false
-local rs = cloneref(ReplicatedStorage)
-local sprint = rs.Systems.Character.Game.Sprinting
-local m = require(sprint)
-task.spawn(function()
-    while task.wait(1) do
-        if infStaminaEnabled and m.Stamina < 100 then
-            m.Stamina = 100
-        end
-    end
-end)
-
--- GUI Button Logic
+-- GUI logic
 toggleButton.MouseButton1Click:Connect(function()
     enabled = not enabled
     toggleButton.Text = "Backstab: " .. (enabled and "ON" or "OFF")
@@ -235,21 +264,20 @@ infStamButton.MouseButton1Click:Connect(function()
     infStamButton.Text = "Inf Stamina: " .. (infStaminaEnabled and "ON" or "OFF")
 end)
 
--- Helper function
 local function isBehindTarget(hrp, targetHRP)
     local distance = (hrp.Position - targetHRP.Position).Magnitude
     if distance > range then return false end
 
     if mode == "Around" then
         return true
-    else
-        local direction = -targetHRP.CFrame.LookVector
-        local toPlayer = (hrp.Position - targetHRP.Position)
-        return toPlayer:Dot(direction) > 0.3
     end
+
+    local direction = -targetHRP.CFrame.LookVector
+    local toPlayer = (hrp.Position - targetHRP.Position)
+    return toPlayer:Dot(direction) > 0.3
 end
 
--- Main Backstab Loop (giữ nguyên y như cũ, chỉ sửa cách dagger giống AutoBlock)
+-- Main Backstab 
 RunService.Heartbeat:Connect(function()
     if not enabled or cooldown then return end
 
@@ -266,15 +294,16 @@ RunService.Heartbeat:Connect(function()
                 cooldown = true
                 lastTarget = killer
 
-                -- Teleport ra sau lưng
+                -- Teleport ra sau
                 local behindPos = kHRP.Position - (kHRP.CFrame.LookVector * 2.8)
                 hrp.CFrame = CFrame.new(behindPos, kHRP.Position)
 
-                -- **Auto Dagger ngay sau 0.02s như AutoBlock**
+                -- Dùng skill bằng UI click
                 task.delay(0.02, function()
-                    daggerRemote:FireServer("UseActorAbility", "Dagger")
+                    clickDaggerButton()
                 end)
-                    
+
+                -- Giữ ở sau lưng
                 local startTime = tick()
                 local conn; conn = RunService.Heartbeat:Connect(function()
                     if tick() - startTime > 0.2 then
@@ -289,7 +318,6 @@ RunService.Heartbeat:Connect(function()
                     hrp.CFrame = CFrame.new(pos, kHRP.Position)
                 end)
 
-                
                 task.spawn(function()
                     repeat RunService.Heartbeat:Wait()
                     until not isBehindTarget(hrp, kHRP)
