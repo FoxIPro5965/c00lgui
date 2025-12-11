@@ -274,7 +274,7 @@ local function isBehindTarget(hrp, targetHRP)
 
     local direction = -targetHRP.CFrame.LookVector
     local toPlayer = (hrp.Position - targetHRP.Position)
-    return toPlayer:Dot(direction) > 0.3
+    return toPlayer:Dot(direction) > 0.5
 end
 
 -- Main Backstab 
@@ -295,11 +295,11 @@ RunService.Heartbeat:Connect(function()
                 lastTarget = killer
 
                 -- Teleport ra sau
-                local behindPos = kHRP.Position - (kHRP.CFrame.LookVector * 2.8)
+                local behindPos = kHRP.Position - (kHRP.CFrame.LookVector * 0.3)
                 hrp.CFrame = CFrame.new(behindPos, kHRP.Position)
 
                 -- Dùng skill bằng UI click
-                task.delay(0.02, function()
+                task.delay(0.08, function()
                     clickDaggerButton()
                 end)
 
@@ -314,7 +314,7 @@ RunService.Heartbeat:Connect(function()
                         conn:Disconnect()
                         return
                     end
-                    local pos = kHRP.Position - (kHRP.CFrame.LookVector * 1.8)
+                    local pos = kHRP.Position - (kHRP.CFrame.LookVector * 0.3)
                     hrp.CFrame = CFrame.new(pos, kHRP.Position)
                 end)
 
