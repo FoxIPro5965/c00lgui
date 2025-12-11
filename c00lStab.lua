@@ -295,18 +295,18 @@ RunService.Heartbeat:Connect(function()
                 lastTarget = killer
 
                 -- Teleport ra sau
-                local behindPos = kHRP.Position - (kHRP.CFrame.LookVector * 0.3)
+                local behindPos = kHRP.Position - (kHRP.CFrame.LookVector * 0.35)
                 hrp.CFrame = CFrame.new(behindPos, kHRP.Position)
 
                 -- Dùng skill bằng UI click
-                task.delay(0.05, function()
+                task.delay(0.002, function()
                     clickDaggerButton()
                 end)
 
                 -- Giữ ở sau lưng
                 local startTime = tick()
                 local conn; conn = RunService.Heartbeat:Connect(function()
-                    if tick() - startTime > 0.35 then
+                    if tick() - startTime > 0.3 then
                         conn:Disconnect()
                         return
                     end
@@ -314,7 +314,7 @@ RunService.Heartbeat:Connect(function()
                         conn:Disconnect()
                         return
                     end
-                    local pos = kHRP.Position - (kHRP.CFrame.LookVector * 0.3)
+                    local pos = kHRP.Position - (kHRP.CFrame.LookVector * 0.4)
                     hrp.CFrame = CFrame.new(pos, kHRP.Position)
                 end)
 
