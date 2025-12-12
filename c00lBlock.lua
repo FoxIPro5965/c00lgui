@@ -32,9 +32,12 @@ local antiFlickBaseOffset=2.7
 local Dspeed=8.6
 local Ddelay=0
 local flingPunchOn=false
-local flingPower=16
+local flingPower=10000
 local aimPunch=false
 local predictionValue=1
+
+local infStamina=false
+local espEnabled=false
 
 local killerNames={"c00lkidd","Jason","JohnDoe","1x1x1x1","Noli","Slasher","Sixer","Nosferatu"}
 local triggerSounds={["102228729296384"]=true,["140242176732868"]=true,["112809109188560"]=true,["136323728355613"]=true,["115026634746636"]=true,["84116622032112"]=true,["108907358619313"]=true,["127793641088496"]=true,["86174610237192"]=true,["95079963655241"]=true,["101199185291628"]=true,["119942598489800"]=true,["84307400688050"]=true,["113037804008732"]=true,["105200830849301"]=true,["75330693422988"]=true,["82221759983649"]=true,["81702359653578"]=true,["108610718831698"]=true,["112395455254818"]=true,["109431876587852"]=true,["109348678063422"]=true,["85853080745515"]=true,["12222216"]=true,["105840448036441"]=true,["114742322778642"]=true,["119583605486352"]=true,["79980897195554"]=true,["71805956520207"]=true,["79391273191671"]=true,["89004992452376"]=true,["101553872555606"]=true,["101698569375359"]=true,["106300477136129"]=true,["116581754553533"]=true,["117231507259853"]=true,["119089145505438"]=true,["121954639447247"]=true,["125213046326879"]=true,["131406927389838"]=true}
@@ -80,26 +83,116 @@ TechTab:CreateToggle({Name="HDT",Callback=function(v)hitboxDraggingTech=v end})
 TechTab:CreateInput({Name="HDT Speed",PlaceholderText="5.6",Callback=function(t)Dspeed=tonumber(t)or 5.6 end})
 TechTab:CreateInput({Name="HDT Delay",PlaceholderText="0",Callback=function(t)Ddelay=tonumber(t)or 0 end})
 
-OtherTab:CreateButton({
-	Name="Infinite Stamina",
-	Callback=function()
-		loadstring(game:HttpGet("https://raw.githubusercontent.com/skibidi399/Auto-block-script/main/infstam"))()
-	end
-})
+OtherTab:CreateButton({Name="Fake Block",Callback=function()loadstring(game:HttpGet("https://raw.githubusercontent.com/skibidi399/Auto-block-script/main/fakeblock"))()end})
+OtherTab:CreateToggle({Name="Infinite Stamina",Callback=function(v)infStamina=v end})
+OtherTab:CreateToggle({Name="ESP Killers",Callback=function(v)espEnabled=v end})
 
-OtherTab:CreateButton({
-	Name="ESP",
-	Callback=function()
-		loadstring(game:HttpGet("https://raw.githubusercontent.com/skibidi399/Auto-block-script/main/esp"))()
-	end
-})
+local oldAmbient = Lighting.Ambient
+local oldOutdoor = Lighting.OutdoorAmbient
+local oldBrightness = Lighting.Brightness
+local oldFogEnd = Lighting.FogEnd
+local oldFogStart = Lighting.FogStart
 
-OtherTab:CreateButton({
-	Name="Fake Block",
-	Callback=function()
-		loadstring(game:HttpGet("https://raw.githubusercontent.com/skibidi399/Auto-block-script/main/fakeblock"))()
-	end
-})
+local function enableFullBright()
+    Lighting.Ambient = Color3.new(1,1,1)
+    Lighting.OutdoorAmbient = Color3.new(1,1,1)
+    Lighting.Brightness = 4
+    Lighting.FogEnd = 100000
+    Lighting.FogStart = 0
+end
+
+local function disableFullBright()
+    Lighting.Ambient = oldAmbient
+    Lighting.OutdoorAmbient = oldOutdoor
+    Lighting.Brightness = oldBrightness
+    Lighting.FogEnd = oldFogEnd
+    Lighting.FogStart = oldFogStart
+end
+
+local function createESP(model, outline, fill)
+    if not model:FindFirstChildOfClass("Highlight") then
+        local h = Instance.new("Highlight")
+        h.Parent = model
+        h.Adornee = model
+        h.FillTransparency = 0.75
+        h.FillColor = fill
+        h.OutlineColor = outline
+    end
+end
+
+local function clearESP()
+    local PlayersFolder = workspace:FindFirstChild("Players")
+    if PlayersFolder then
+        for _, grp in ipairs(PlayersFolder:GetChildren()) do
+            for _, plr in ipairs(grp:GetChildren()) do
+                for _, obj in ipairs(plr:GetChildren()) do
+                    if obj:IsA("Highlight") then obj:Destroy() end
+                end
+            end
+        end
+    end
+    local mapFolder = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Ingame") and workspace.Map.Ingame:FindFirstChild("Map")
+    if mapFolder then
+        for _, obj in ipairs(mapFolder:GetChildren()) do
+            for _, item in ipairs(obj:GetChildren()) do
+                if item:IsA("Highlight") then item:Destroy() end
+            end
+        end
+    end
+end
+
+local function applyESP()
+    local PlayersFolder = workspace:FindFirstChild("Players")
+    local killers = PlayersFolder and PlayersFolder:FindFirstChild("Killers")
+    if killers then
+        for _, m in ipairs(killers:GetChildren()) do
+            if m:FindFirstChild("Humanoid") then
+                createESP(m, Color3.new(1,0,0), Color3.new(1,0.3,0.3))
+            end
+        end
+    end
+    local survivors = PlayersFolder and PlayersFolder:FindFirstChild("Survivors")
+    if survivors then
+        for _, m in ipairs(survivors:GetChildren()) do
+            if m:FindFirstChild("Humanoid") then
+                createESP(m, Color3.new(0,1,0), Color3.new(0.4,1,0.4))
+            end
+        end
+    end
+    local mapFolder = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Ingame") and workspace.Map.Ingame:FindFirstChild("Map")
+    if mapFolder then
+        for _, obj in ipairs(mapFolder:GetChildren()) do
+            if obj.Name == "Generator" then
+                createESP(obj, Color3.new(1,1,0), Color3.new(1,1,0.4))
+            elseif obj.Name == "BloxyCola" or obj.Name == "Medkit" then
+                createESP(obj, Color3.fromRGB(0,255,255), Color3.fromRGB(0,200,255))
+            end
+        end
+    end
+end
+
+task.spawn(function()
+    local sprintModule = ReplicatedStorage:WaitForChild("Systems"):WaitForChild("Character"):WaitForChild("Game"):WaitForChild("Sprinting")
+    local sprintReq = require(sprintModule)
+    while task.wait(0.5) do
+        if infStamina then
+            if sprintReq.Stamina < 100 then sprintReq.Stamina=100 end
+        end
+    end
+end)
+
+task.spawn(function()
+    while task.wait(1) do
+        if espEnabled then
+            enableFullBright()
+            clearESP()
+            applyESP()
+        else
+            disableFullBright()
+            clearESP()
+        end
+    end
+end)
 
 local killerState={}
 RunService.RenderStepped:Connect(function(dt)
@@ -198,8 +291,7 @@ end
 end
 
 if aimPunch then
-local h=lp.Character:FindFirstChildOfClass("Humanoid")
-if h then h.AutoRotate=false end
+lp.Character:FindFirstChildOfClass("Humanoid").AutoRotate=false
 for _,n in ipairs(killerNames)do
 local k=KillersFolder:FindFirstChild(n)
 if k and k:FindFirstChild("HumanoidRootPart")then
