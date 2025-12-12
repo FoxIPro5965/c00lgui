@@ -1,3 +1,4 @@
+-- Services
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local StarterGui = game:GetService("StarterGui")
@@ -7,6 +8,7 @@ local workspace = workspace
 
 local localPlayer = Players.LocalPlayer
 
+-- Rayfield UI
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 local Window = Rayfield:CreateWindow({
     Name = "c00lBlock",
@@ -20,7 +22,9 @@ local AutoBlockTab = Window:CreateTab("Auto Block")
 local MiscTab = Window:CreateTab("Misc")
 local AutoPunchTab = Window:CreateTab("Auto Punch")
 
+-- Attack IDs / Sound IDs
 local attackIds = {
+    -- Animation IDs
     ["126830014841198"]=true,["126355327951215"]=true,["121086746534252"]=true,
     ["18885909645"]=true,["98456918873918"]=true,["105458270463374"]=true,
     ["83829782357897"]=true,["125403313786645"]=true,["118298475669935"]=true,
@@ -29,15 +33,17 @@ local attackIds = {
     ["126896426760253"]=true,["109667959938617"]=true,["126681776859538"]=true,
     ["129976080405072"]=true,["121293883585738"]=true,["81639435858902"]=true,
     ["137314737492715"]=true,["92173139187970"]=true,
+    -- Sound IDs
     ["102228729296384"]=true,["140242176732868"]=true,["112809109188560"]=true,
     ["136323728355613"]=true,["115026634746636"]=true,["84116622032112"]=true,
     ["108907358619313"]=true,["127793641088496"]=true,["86174610237192"]=true,
     ["95079963655241"]=true,["101199185291628"]=true,["119942598489800"]=true
 }
 
+-- ===================== Variables =====================
 local autoBlockAnim = false
 local autoBlockAudio = false
-local detectionRange = 12
+local detectionRange = 18
 local strictRange = false
 local espEnabled = false
 local infStaminaEnabled = false
@@ -47,6 +53,7 @@ local aimPunch = true
 local predictionValue = 4
 local killerList = {"Slasher","Jason","c00lkidd","JohnDoe","Noli","1x1x1x1","Sixer","Nosferatu"}
 
+-- ===================== Functions =====================
 local function notify(text)
     pcall(function()
         StarterGui:SetCore("SendNotification",{Title="c00lBlock",Text=text,Duration=1.5})
@@ -55,7 +62,7 @@ end
 
 local function clickBlockButton()
     local gui = localPlayer:FindFirstChild("PlayerGui")
-    if not gui then return false end
+    if not gui then return end
     local mainUI = gui:FindFirstChild("MainUI")
     local container = mainUI and mainUI:FindFirstChild("AbilityContainer")
     local blockButton = container and container:FindFirstChild("Block")
@@ -66,21 +73,20 @@ local function clickBlockButton()
                 pcall(function() conn:Fire() end)
             end
         end)
-        return true
     end
-    return false
 end
 
 local function isFacing(localRoot, targetRoot)
     if not localRoot or not targetRoot then return false end
-    local dir = (localRoot.Position - targetRoot.Position)
-    if dir.Magnitude == 0 then return false end
-    dir = dir.Unit
+    local direction = (localRoot.Position - targetRoot.Position)
+    if direction.Magnitude == 0 then return false end
+    direction = direction.Unit
     local facing = targetRoot.CFrame.LookVector
-    return facing:Dot(dir) > 0
+    return facing:Dot(direction) > 0
 end
 
-local function detectAttackByChar(char)
+local function detectAttack(char)
+    -- Animation
     if autoBlockAnim then
         local humanoid = char:FindFirstChildOfClass("Humanoid")
         if humanoid then
@@ -90,6 +96,7 @@ local function detectAttackByChar(char)
             end
         end
     end
+    -- Audio
     if autoBlockAudio then
         for _, d in ipairs(char:GetDescendants()) do
             if d:IsA("Sound") and d.IsPlaying then
@@ -101,52 +108,7 @@ local function detectAttackByChar(char)
     return false
 end
 
-local punchRemote = nil
-task.spawn(function()
-    local ok, remote = pcall(function()
-        return ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("RemoteEvent")
-    end)
-    if ok then punchRemote = remote end
-end)
-
-local function firePunch()
-    if punchRemote then
-        pcall(function()
-            punchRemote:FireServer("UseActorAbility", {"Punch"})
-        end)
-    end
-end
-
-local function isPunching(humanoid)
-    for _, track in ipairs(humanoid:GetPlayingAnimationTracks()) do
-        local ok, id = pcall(function() return track.Animation and track.Animation.AnimationId end)
-        if ok and id and tostring(id):lower():find("punch") then
-            return true
-        end
-    end
-    return false
-end
-
-local function aimAtTargetDuring(duration, targetRoot)
-    local char = localPlayer.Character
-    if not char then return end
-    local humanoid = char:FindFirstChildOfClass("Humanoid")
-    local root = char:FindFirstChild("HumanoidRootPart")
-    if not humanoid or not root or not targetRoot then return end
-    humanoid.AutoRotate = false
-    local start = tick()
-    task.spawn(function()
-        while tick() - start < duration do
-            if root and targetRoot then
-                local pred = targetRoot.Position + (targetRoot.CFrame.LookVector * predictionValue)
-                root.CFrame = CFrame.lookAt(root.Position, pred)
-            end
-            task.wait()
-        end
-        if humanoid then humanoid.AutoRotate = true end
-    end)
-end
-
+-- ===================== Auto Block Loop =====================
 RunService.Heartbeat:Connect(function()
     local char = localPlayer.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
@@ -155,21 +117,12 @@ RunService.Heartbeat:Connect(function()
         if plr ~= localPlayer and plr.Character then
             local targetRoot = plr.Character:FindFirstChild("HumanoidRootPart")
             local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
-            if targetRoot and humanoid and humanoid.Health > 0 then
+            if targetRoot and humanoid and humanoid.Health>0 then
                 local dist = (targetRoot.Position - root.Position).Magnitude
                 if dist <= detectionRange then
-                    if strictRange and not isFacing(root, targetRoot) then goto cont end
-                    if detectAttackByChar(plr.Character) then
-                        local didBlock = clickBlockButton()
-                        if didBlock and autoPunchOn then
-                            task.delay(0.04, function()
-                                if aimPunch then
-                                    aimAtTargetDuring(0.45, targetRoot)
-                                end
-                                firePunch()
-                            end)
-                        end
-                        ::cont::
+                    if strictRange and not isFacing(root,targetRoot) then continue end
+                    if detectAttack(plr.Character) then
+                        clickBlockButton()
                     end
                 end
             end
@@ -177,174 +130,133 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
-local function getNearestKiller()
-    local fold = workspace:FindFirstChild("Players")
-    if not fold then return nil end
-    local killers = fold:FindFirstChild("Killers")
-    if not killers then return nil end
-    local best, bestDist = nil, math.huge
-    local myRoot = localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if not myRoot then return nil end
-    for _, name in ipairs(killerList) do
-        local k = killers:FindFirstChild(name)
-        if k and k:FindFirstChild("HumanoidRootPart") then
-            local d = (k.HumanoidRootPart.Position - myRoot.Position).Magnitude
-            if d < bestDist then bestDist = d best = k end
-        end
-    end
-    return best
-end
-
+-- ===================== Auto Punch Loop =====================
 RunService.RenderStepped:Connect(function()
     if not autoPunchOn then return end
     local char = localPlayer.Character
-    if not char then return end
-    local root = char:FindFirstChild("HumanoidRootPart")
-    local humanoid = char:FindFirstChildOfClass("Humanoid")
-    if not root or not humanoid then return end
-    local killer = getNearestKiller()
-    if not killer then return end
-    local kRoot = killer:FindFirstChild("HumanoidRootPart")
-    if not kRoot then return end
-    local dist = (kRoot.Position - root.Position).Magnitude
-    if dist > 12 then return end
-    -- autoPunch here is manual fallback: if user enabled autoPunch and no block-triggered punch happened, we can also punch periodically
-    -- keep it subtle to avoid spam
-    firePunch()
-    if aimPunch then
-        local started = tick()
-        while tick() - started < 0.2 do
-            if kRoot and root then
-                local pred = kRoot.Position + (kRoot.CFrame.LookVector * predictionValue)
-                root.CFrame = CFrame.lookAt(root.Position, pred)
-            end
-            task.wait()
-        end
-    end
-    task.wait(0.1)
-end)
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+    local KillersFolder = workspace:FindFirstChild("Players") and workspace.Players:FindFirstChild("Killers")
+    if not KillersFolder then return end
 
-local oldAmbient = Lighting.Ambient
-local oldOutdoor = Lighting.OutdoorAmbient
-local oldBrightness = Lighting.Brightness
-local oldFogEnd = Lighting.FogEnd
-local oldFogStart = Lighting.FogStart
-
-local function enableFullBright()
-    Lighting.Ambient = Color3.new(1,1,1)
-    Lighting.OutdoorAmbient = Color3.new(1,1,1)
-    Lighting.Brightness = 4
-    Lighting.FogEnd = 100000
-    Lighting.FogStart = 0
-end
-
-local function disableFullBright()
-    Lighting.Ambient = oldAmbient
-    Lighting.OutdoorAmbient = oldOutdoor
-    Lighting.Brightness = oldBrightness
-    Lighting.FogEnd = oldFogEnd
-    Lighting.FogStart = oldFogStart
-end
-
-local function createESP(model, outline, fill)
-    if not model:FindFirstChildOfClass("Highlight") then
-        local h = Instance.new("Highlight")
-        h.Parent = model
-        h.Adornee = model
-        h.FillTransparency = 0.75
-        h.FillColor = fill
-        h.OutlineColor = outline
-    end
-end
-
-local function clearESP()
-    local PlayersFolder = workspace:FindFirstChild("Players")
-    if PlayersFolder then
-        for _, grp in ipairs(PlayersFolder:GetChildren()) do
-            for _, plr in ipairs(grp:GetChildren()) do
-                for _, obj in ipairs(plr:GetChildren()) do
-                    if obj:IsA("Highlight") then obj:Destroy() end
+    for _, name in ipairs(killerList) do
+        local killer = KillersFolder:FindFirstChild(name)
+        if killer and killer:FindFirstChild("HumanoidRootPart") then
+            local kRoot = killer.HumanoidRootPart
+            local dist = (kRoot.Position - root.Position).Magnitude
+            if dist <= 12 then
+                -- Fire Punch
+                local ok, testRemote = pcall(function() return ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("RemoteEvent") end)
+                if ok then
+                    pcall(function() testRemote:FireServer("UseActorAbility",{"Punch"}) end)
                 end
-            end
-        end
-    end
-    local mapFolder = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Ingame") and workspace.Map.Ingame:FindFirstChild("Map")
-    if mapFolder then
-        for _, obj in ipairs(mapFolder:GetChildren()) do
-            for _, item in ipairs(obj:GetChildren()) do
-                if item:IsA("Highlight") then item:Destroy() end
-            end
-        end
-    end
-end
 
-local function applyESP()
-    local PlayersFolder = workspace:FindFirstChild("Players")
-    local killers = PlayersFolder and PlayersFolder:FindFirstChild("Killers")
-    if killers then
-        for _, m in ipairs(killers:GetChildren()) do
-            if m:FindFirstChild("Humanoid") then
-                createESP(m, Color3.new(1,0,0), Color3.new(1,0.3,0.3))
+                -- Aim Punch
+                if aimPunch then
+                    local humanoid = char:FindFirstChildOfClass("Humanoid")
+                    if humanoid then humanoid.AutoRotate=false end
+                    task.spawn(function()
+                        local start = tick()
+                        while tick()-start<0.5 do
+                            if root and killer:FindFirstChild("HumanoidRootPart") then
+                                local pred = kRoot.Position + kRoot.CFrame.LookVector*predictionValue
+                                root.CFrame = CFrame.lookAt(root.Position,pred)
+                            end
+                            task.wait()
+                        end
+                        if humanoid then humanoid.AutoRotate=true end
+                    end)
+                end
+                task.wait(0.35)
+                return
             end
         end
     end
-    local survivors = PlayersFolder and PlayersFolder:FindFirstChild("Survivors")
-    if survivors then
-        for _, m in ipairs(survivors:GetChildren()) do
-            if m:FindFirstChild("Humanoid") then
-                createESP(m, Color3.new(0,1,0), Color3.new(0.4,1,0.4))
-            end
-        end
-    end
-    local mapFolder = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Ingame") and workspace.Map.Ingame:FindFirstChild("Map")
-    if mapFolder then
-        for _, obj in ipairs(mapFolder:GetChildren()) do
-            if obj.Name == "Generator" then
-                createESP(obj, Color3.new(1,1,0), Color3.new(1,1,0.4))
-            elseif obj.Name == "BloxyCola" or obj.Name == "Medkit" then
-                createESP(obj, Color3.fromRGB(0,255,255), Color3.fromRGB(0,200,255))
-            end
-        end
-    end
-end
+end)
 
-task.spawn(function()
-    while task.wait(0.5) do
+-- ===================== GUI =====================
+-- Auto Block Tab
+AutoBlockTab:CreateToggle({
+    Name="Auto Block (Animation)",
+    CurrentValue=false,
+    Callback=function(v) autoBlockAnim=v end
+})
+
+AutoBlockTab:CreateToggle({
+    Name="Auto Block (Audio)",
+    CurrentValue=false,
+    Callback=function(v) autoBlockAudio=v end
+})
+
+AutoBlockTab:CreateInput({
+    Name="Detection Range",
+    PlaceholderText=tostring(detectionRange),
+    Callback=function(v)
+        local num = tonumber(v)
+        if num then detectionRange = math.clamp(num,1,1000) end
+    end
+})
+
+AutoBlockTab:CreateToggle({
+    Name="Strict Range (Facing Only)",
+    CurrentValue=false,
+    Callback=function(v) strictRange=v end
+})
+
+-- Auto Punch Tab
+AutoPunchTab:CreateToggle({
+    Name="Auto Punch",
+    CurrentValue=false,
+    Callback=function(v) autoPunchOn=v end
+})
+
+AutoPunchTab:CreateToggle({
+    Name="Punch Aimbot",
+    CurrentValue=true,
+    Callback=function(v) aimPunch=v end
+})
+
+AutoPunchTab:CreateSlider({
+    Name="Aim Prediction",
+    Range={0,10},
+    CurrentValue=predictionValue,
+    Increment=0.1,
+    Callback=function(v) predictionValue=v end
+})
+
+-- Misc Tab
+MiscTab:CreateToggle({
+    Name="Infinite Stamina",
+    CurrentValue=false,
+    Callback=function(v) infStaminaEnabled=v end
+})
+
+MiscTab:CreateToggle({
+    Name="Killer/Survivor ESP",
+    CurrentValue=false,
+    Callback=function(v)
+        espEnabled=v
         if espEnabled then
-            enableFullBright()
-            clearESP()
-            applyESP()
+            Lighting.Ambient = Color3.new(1,1,1)
+            Lighting.OutdoorAmbient = Color3.new(1,1,1)
+            Lighting.Brightness = 4
         else
-            disableFullBright()
-            clearESP()
+            Lighting.Ambient = Color3.new(0.5,0.5,0.5)
+            Lighting.OutdoorAmbient = Color3.new(0.5,0.5,0.5)
+            Lighting.Brightness = 2
         end
     end
-end)
+})
 
+-- ===================== Infinite Stamina Loop =====================
 task.spawn(function()
-    local ok, sprintModule = pcall(function()
-        return ReplicatedStorage:WaitForChild("Systems"):WaitForChild("Character"):WaitForChild("Game"):WaitForChild("Sprinting")
-    end)
-    if not ok then return end
-    local ok2, sprintReq = pcall(function() return require(sprintModule) end)
-    if not ok2 then return end
+    local sprintModule = ReplicatedStorage:WaitForChild("Systems"):WaitForChild("Character"):WaitForChild("Game"):WaitForChild("Sprinting")
+    local sprintReq = require(sprintModule)
     while task.wait(0.5) do
-        if infStaminaEnabled and sprintReq then
-            if sprintReq.Stamina < 100 then sprintReq.Stamina = 100 end
+        if infStaminaEnabled then
+            if sprintReq.Stamina < 100 then sprintReq.Stamina=100 end
         end
     end
 end)
-
-AutoBlockTab:CreateToggle({Name="Auto Block (Animation)",CurrentValue=false,Callback=function(v) autoBlockAnim=v end})
-AutoBlockTab:CreateToggle({Name="Auto Block (Audio)",CurrentValue=false,Callback=function(v) autoBlockAudio=v end})
-AutoBlockTab:CreateInput({Name="Detection Range",PlaceholderText=tostring(detectionRange),Callback=function(v) local num = tonumber(v) if num then detectionRange = math.clamp(num,1,1000) end end})
-AutoBlockTab:CreateToggle({Name="Strict Range (Facing Only)",CurrentValue=false,Callback=function(v) strictRange=v end})
-
-AutoPunchTab:CreateToggle({Name="Auto Punch (on block)",CurrentValue=false,Callback=function(v) autoPunchOn=v end})
-AutoPunchTab:CreateToggle({Name="Punch Aimbot (aim when punching)",CurrentValue=true,Callback=function(v) aimPunch=v end})
-AutoPunchTab:CreateSlider({Name="Aim Prediction",Range={0,10},CurrentValue=predictionValue,Increment=0.1,Callback=function(v) predictionValue=v end})
-
-MiscTab:CreateToggle({Name="Infinite Stamina",CurrentValue=false,Callback=function(v) infStaminaEnabled=v end})
-MiscTab:CreateToggle({Name="ESP: Killers/Survivors/Items",CurrentValue=false,Callback=function(v) espEnabled=v end})
 
 Rayfield:LoadConfiguration()
