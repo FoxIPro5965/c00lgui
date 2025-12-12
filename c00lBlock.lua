@@ -155,7 +155,7 @@ local oldFogStart = Lighting.FogStart
 local function enableFB()
     Lighting.Ambient = Color3.new(1,1,1)
     Lighting.OutdoorAmbient = Color3.new(1,1,1)
-    Lighting.Brightness = 5
+    Lighting.Brightness = 6
     Lighting.FogEnd = 100000
     Lighting.FogStart = 0
 end
@@ -207,7 +207,7 @@ local function applyESP()
 end
 
 OtherTab:CreateToggle({
-    Name = "ESP + FullBright",
+    Name = "ESP",
     CurrentValue = false,
     Callback = function(v)
         espEnabled = v
@@ -238,7 +238,7 @@ OtherTab:CreateButton({
         pcall(function()
             local gui = PlayerGui:FindFirstChild("FakeBlockGui")
             if not gui then
-                loadstring(game:HttpGet("https://pastebin.com/raw/ztnYv27k"))()
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/skibidi399/Auto-block-script/main/fakeblock"))()
             else
                 gui.Enabled = true
             end
