@@ -57,7 +57,7 @@ local attackIds = {
 
 local autoBlockOn = false
 local strictRangeOn = false
-local detectionRange = 11.8
+local detectionRange = 12
 
 local predictiveBlockOn = false
 local predictiveDetectionRange = 10
@@ -91,7 +91,7 @@ AutoBlockTab:CreateToggle({
 
 AutoBlockTab:CreateInput({
     Name = "Detection Range",
-    PlaceholderText = "18",
+    PlaceholderText = "12",
     Callback = function(txt) detectionRange = tonumber(txt) or detectionRange end
 })
 
@@ -135,7 +135,7 @@ AutoPunchTab:CreateSlider({
     Name = "Aim Prediction",
     Range = {0,10},
     Increment = 0.1,
-    CurrentValue = 4,
+    CurrentValue = 0.8,
     Suffix = "studs",
     Callback = function(v) predictionValue = v end
 })
