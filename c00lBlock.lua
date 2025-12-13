@@ -100,7 +100,7 @@ local oldFogStart = Lighting.FogStart
 AutoBlockTab:CreateToggle({Name = "Auto Block", CurrentValue = false, Callback = function(v) autoBlockOn = v end})
 AutoBlockTab:CreateToggle({Name = "Strict Range", CurrentValue = false, Callback = function(v) strictRangeOn = v end})
 AutoBlockTab:CreateToggle({Name = "Enable Facing Check", CurrentValue = true, Callback = function(v) facingCheckEnabled = v end})
-AutoBlockTab:CreateInput({Name = "Detection Range", PlaceholderText = "18", Callback = function(txt) detectionRange = tonumber(txt) or detectionRange end})
+AutoBlockTab:CreateInput({Name = "Detection Range", PlaceholderText = "12", Callback = function(txt) detectionRange = tonumber(txt) or detectionRange end})
 
 PredictiveTab:CreateToggle({Name = "Predictive Auto Block", CurrentValue = false, Callback = function(v) predictiveBlockOn = v end})
 PredictiveTab:CreateInput({Name = "Detection Range", PlaceholderText = "10", Callback = function(txt) local n = tonumber(txt) if n then predictiveDetectionRange = n end end})
@@ -108,7 +108,7 @@ PredictiveTab:CreateSlider({Name = "Edge Killer", Range = {0,7}, Increment = 0.1
 
 AutoPunchTab:CreateToggle({Name = "Auto Punch", CurrentValue = false, Callback = function(v) autoPunchOn = v end})
 AutoPunchTab:CreateToggle({Name = "Punch Aimbot", CurrentValue = false, Callback = function(v) aimPunch = v end})
-AutoPunchTab:CreateSlider({Name = "Aim Prediction", Range = {0,10}, Increment = 0.1, CurrentValue = 4, Suffix = "studs", Callback = function(v) predictionValue = v end})
+AutoPunchTab:CreateSlider({Name = "Aim Prediction", Range = {0,10}, Increment = 0.1, CurrentValue = 1, Suffix = "studs", Callback = function(v) predictionValue = v end})
 
 OtherTab:CreateToggle({Name = "Infinite Stamina", CurrentValue = false, Callback = function(v) infStaminaEnabled = v end})
 
@@ -178,9 +178,9 @@ OtherTab:CreateButton({Name = "Load Fake Block", Callback = function()
 end})
 
 HitboxDragTab:CreateToggle({Name = "Hitbox Drag Tech", CurrentValue = false, Callback = function(v) hitboxDraggingTech = v end})
-HitboxDragTab:CreateSlider({Name = "Drag Speed", Range = {1, 30}, Increment = 0.1, CurrentValue = Dspeed, Callback = function(v) Dspeed = v end})
-HitboxDragTab:CreateSlider({Name = "Drag Delay", Range = {0, 1}, Increment = 0.01, CurrentValue = Ddelay, Suffix = "s", Callback = function(v) Ddelay = v end})
-HitboxDragTab:CreateSlider({Name = "Detect Radius", Range = {3, 15}, Increment = 0.5, CurrentValue = HITBOX_DETECT_RADIUS, Suffix = " studs", Callback = function(v) HITBOX_DETECT_RADIUS = v end})
+HitboxDragTab:CreateSlider({Name = "Drag Speed", Range = {1, 100}, Increment = 16, CurrentValue = Dspeed, Callback = function(v) Dspeed = v end})
+HitboxDragTab:CreateSlider({Name = "Drag Delay", Range = {0, 5}, Increment = 0.01, CurrentValue = Ddelay, Suffix = "s", Callback = function(v) Ddelay = v end})
+HitboxDragTab:CreateSlider({Name = "Detect Radius", Range = {1, 100}, Increment = 30, CurrentValue = HITBOX_DETECT_RADIUS, Suffix = " studs", Callback = function(v) HITBOX_DETECT_RADIUS = v end})
 HitboxDragTab:CreateSlider({Name = "Drag Duration", Range = {0.3, 3}, Increment = 0.1, CurrentValue = HITBOX_DRAG_DURATION, Suffix = "s", Callback = function(v) HITBOX_DRAG_DURATION = v end})
 
 local function clickBlockButton()
@@ -225,7 +225,7 @@ local function detectAttack(char)
             local id = tostring(d.SoundId):match("%d+")
             if id and attackIds[id] then
                 checked[char] = true
-                task.delay(0.5, function() checked[char] = nil end)
+                task.delay(0.08, function() checked[char] = nil end)
                 return true
             end
         end
@@ -295,7 +295,7 @@ local function beginDragIntoKiller(killerModel)
         if not targetHRP then _hitboxDraggingDebounce = false return end
         local toTarget = (targetHRP.Position - hrp.Position)
         local horiz = Vector3.new(toTarget.X, 0, toTarget.Z)
-        if horiz.Magnitude > 0.5 then
+        if horiz.Magnitude > 0.3 then
             bv.Velocity = horiz.Unit * Dspeed
         else
             bv.Velocity = Vector3.zero
