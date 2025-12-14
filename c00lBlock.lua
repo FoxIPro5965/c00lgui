@@ -112,8 +112,11 @@ local autoPunchOn = false
 local aimPunch = false  
 local predictionValue = 0.8  
   
-local facingCheckEnabled = true  
-  
+local facingCheckEnabled = true
+
+local hitboxEnabled=false
+local HitboxModule=nil
+
 AutoBlockTab:CreateToggle({  
     Name = "Auto Block",  
     CurrentValue = false,  
@@ -289,7 +292,30 @@ task.spawn(function()
             applyESP()  
         end  
     end  
-end)  
+end)
+OtherTab:CreateToggle({
+    Name="Hitbox Extender",
+    CurrentValue=false,
+    Callback=function(v)
+        hitboxEnabled=v
+        if v then
+            if not HitboxModule then
+                HitboxModule=loadstring(game:HttpGet("https://raw.githubusercontent.com/FoxIPro5965/c00lgui/main/Hitbox.lua"))()
+            end
+            pcall(function()
+                HitboxModule:StopExtendingHitbox()
+                HitboxModule:ExtendHitbox(2,9e9)
+            end)
+        else
+            if HitboxModule then
+                pcall(function()
+                    HitboxModule:StopExtendingHitbox()
+                end)
+            end
+        end
+    end
+})
+
   
 OtherTab:CreateButton({  
     Name = "Load Fake Block",  
