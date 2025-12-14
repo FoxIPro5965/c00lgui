@@ -217,7 +217,7 @@ local oldFogStart = Lighting.FogStart
 local function enableFB()  
     Lighting.Ambient = Color3.new(1,1,1)  
     Lighting.OutdoorAmbient = Color3.new(1,1,1)  
-    Lighting.Brightness = 6  
+    Lighting.Brightness = 8
     Lighting.FogEnd = 100000  
     Lighting.FogStart = 0  
 end  
@@ -234,7 +234,7 @@ local function highlight(m,o,f)
     local h = Instance.new("Highlight")  
     h.Parent = m  
     h.Adornee = m  
-    h.FillTransparency = 0.75  
+    h.FillTransparency = 0.65  
     h.FillColor = f  
     h.OutlineColor = o  
 end  
@@ -304,7 +304,7 @@ OtherTab:CreateToggle({
             end
             pcall(function()
                 HitboxModule:StopExtendingHitbox()
-                HitboxModule:ExtendHitbox(1,2e2)
+                HitboxModule:ExtendHitbox(1.2,3e3)
             end)
         else
             if HitboxModule then
