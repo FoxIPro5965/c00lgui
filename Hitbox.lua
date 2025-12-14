@@ -4,7 +4,7 @@ getgenv().emergency_stop = false
 end
 
 function StudsIntoPower(studs)
-return (studs * 1.5)
+return (studs * 1)
 end
 
 function hit:ExtendHitbox(studs, time)
