@@ -304,7 +304,7 @@ OtherTab:CreateToggle({
             end
             pcall(function()
                 HitboxModule:StopExtendingHitbox()
-                HitboxModule:ExtendHitbox(1.2,5e5)
+                HitboxModule:ExtendHitbox(1,2e2)
             end)
         else
             if HitboxModule then
