@@ -1,7 +1,3 @@
--- Merged Script: c00lSaken with Rayfield UI
--- Tabs: Auto Block, Auto Backstab, OTHER
--- Merged logic from provided scripts without missing or altering core logic
-
 local ReplicatedStorage = game:GetService("ReplicatedStorage")  
 local RunService = game:GetService("RunService")  
 local Players = game:GetService("Players")  
