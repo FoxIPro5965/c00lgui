@@ -10,7 +10,7 @@ local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 local Window = Rayfield:CreateWindow({  
     Name = "c00lSaken",  
     LoadingTitle = "c00lSaken Script",  
-    LoadingSubtitle = "by FoxOfficial",  
+    LoadingSubtitle = "by Fox",  
     ConfigurationSaving = {  
         Enabled = true,  
         FolderName = "c00lSaken",  
@@ -115,7 +115,7 @@ AutoBlockTab:CreateToggle({
   
 AutoBlockTab:CreateInput({  
     Name = "Range",  
-    PlaceholderText = "11.5",  
+    PlaceholderText = "12",  
     Callback = function(txt) detectionRange = tonumber(txt) or detectionRange end  
 })  
   
@@ -146,7 +146,7 @@ AutoBlockTab:CreateSlider({
     Callback = function(v) predictionValue = v end  
 })  
   
--- Auto Backstab Tab Elements  
+-- Auto Backstab Tab Elements (from backstab script)  
 local autoBackstabOn = false  
 local backstabRange = 8  
 local backstabMode = "Behind"  
@@ -180,10 +180,14 @@ local HitboxModule = nil
 OtherTab:CreateToggle({  
     Name = "ESP",  
     CurrentValue = false,  
-    Callback = function(v)   
+    Callback = function(v)  
         espEnabled = v  
-        if not v then  
-            disableFB()  
+        if v then  
+            pcall(enableFB)  
+            clearESP()  
+            applyESP()  
+        else  
+            pcall(disableFB)  
             clearESP()  
         end  
     end  
@@ -251,7 +255,7 @@ task.spawn(function()
     end  
 end)  
   
--- ESP and FullBright Logic  
+-- ESP and FullBright Logic (Fixed with pcall, no initial enable)  
 local oldAmbient = Lighting.Ambient  
 local oldOutdoor = Lighting.OutdoorAmbient  
 local oldBrightness = Lighting.Brightness  
@@ -259,19 +263,23 @@ local oldFogEnd = Lighting.FogEnd
 local oldFogStart = Lighting.FogStart  
   
 local function enableFB()  
-    Lighting.Ambient = Color3.new(1,1,1)  
-    Lighting.OutdoorAmbient = Color3.new(1,1,1)  
-    Lighting.Brightness = 8  
-    Lighting.FogEnd = 100000  
-    Lighting.FogStart = 0  
+    pcall(function()  
+        Lighting.Ambient = Color3.new(1,1,1)  
+        Lighting.OutdoorAmbient = Color3.new(1,1,1)  
+        Lighting.Brightness = 8  
+        Lighting.FogEnd = 100000  
+        Lighting.FogStart = 0  
+    end)  
 end  
   
 local function disableFB()  
-    Lighting.Ambient = oldAmbient  
-    Lighting.OutdoorAmbient = oldOutdoor  
-    Lighting.Brightness = oldBrightness  
-    Lighting.FogEnd = oldFogEnd  
-    Lighting.FogStart = oldFogStart  
+    pcall(function()  
+        Lighting.Ambient = oldAmbient  
+        Lighting.OutdoorAmbient = oldOutdoor  
+        Lighting.Brightness = oldBrightness  
+        Lighting.FogEnd = oldFogEnd  
+        Lighting.FogStart = oldFogStart  
+    end)  
 end  
   
 local function highlight(m, o, f)  
@@ -321,7 +329,7 @@ end
 task.spawn(function()  
     while task.wait(1) do  
         if espEnabled then  
-            enableFB()  
+            pcall(enableFB)  
             clearESP()  
             applyESP()  
         end  
@@ -392,7 +400,7 @@ local function detectAttack(char)
     return false  
 end  
   
--- Auto Backstab Functions  
+-- Auto Backstab Functions (from backstab script)  
 local cooldown = false  
 local lastTarget = nil  
 local killerNames = { "Slasher", "c00lkidd", "Jason", "JohnDoe", "1x1x1x1", "Noli", "Nosferatu", "Sixer" }  
@@ -437,47 +445,25 @@ local function isBehindTarget(hrp, targetHRP)
     return toPlayer:Dot(direction) > 0.5  
 end  
   
--- Autogen Logic (alternative: tp to nearest gen, fire prompt with hold)  
-local function findNearestIncompleteGen()  
-    local map = workspace.Map.Ingame:FindFirstChild("Map")  
-    if not map then return nil end  
-    local char = lp.Character  
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")  
-    if not hrp then return nil end  
-  
-    local nearest = nil  
-    local minDist = math.huge  
-  
-    for _, obj in ipairs(map:GetChildren()) do  
-        if obj.Name == "Generator" and obj:IsA("Model") then  
-            -- Assume incomplete if prompt exists or some check; here assume all need interaction  
-            local prompt = obj:FindFirstChildOfClass("ProximityPrompt")  
-            if prompt then  
-                local dist = (hrp.Position - obj.PrimaryPart.Position).Magnitude  
-                if dist < minDist then  
-                    minDist = dist  
-                    nearest = obj  
-                end  
-            end  
-        end  
-    end  
-    return nearest  
-end  
-  
+-- AutoGen Logic (Fixed for Forsaken: Finds Generators, teleports if needed, fires prompt)  
 task.spawn(function()  
     while task.wait(2.5) do  
-        if autoGenEnabled then  
-            local gen = findNearestIncompleteGen()  
-            if gen then  
-                local char = lp.Character  
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")  
-                if hrp then  
-                    -- TP to gen  
-                    hrp.CFrame = gen.PrimaryPart.CFrame + Vector3.new(0, 5, 0)  -- Above to interact  
-                    task.wait(0.1)  -- Wait for tp  
-                    local prompt = gen:FindFirstChildOfClass("ProximityPrompt")  
+        if autoGenEnabled and workspace.Map.Ingame:FindFirstChild("Map") then  
+            local char = lp.Character  
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")  
+            if not hrp then continue end  
+              
+            for _, obj in ipairs(workspace.Map.Ingame.Map:GetChildren()) do  
+                if obj.Name == "Generator" and obj:IsA("Model") then  
+                    local prompt = obj:FindFirstChildOfClass("ProximityPrompt")  
                     if prompt then  
-                        fireproximityprompt(prompt, true)  -- Respect hold duration  
+                        -- Teleport near if far  
+                        local dist = (hrp.Position - obj.PrimaryPart.Position).Magnitude  
+                        if dist > 10 then  
+                            hrp.CFrame = obj.PrimaryPart.CFrame + Vector3.new(0, 5, 0)  
+                            task.wait(0.1)  
+                        end  
+                        fireproximityprompt(prompt)  
                     end  
                 end  
             end  
@@ -485,7 +471,7 @@ task.spawn(function()
     end  
 end)  
   
--- Main RenderStepped Loop  
+-- Main RenderStepped Loop (merged all logics)  
 RunService.RenderStepped:Connect(function()  
     local char = lp.Character  
     if not char then return end  
@@ -559,7 +545,7 @@ RunService.RenderStepped:Connect(function()
                         cooldown = true  
                         lastTarget = killer  
   
-                        local behindPos = kHRP.Position - (kHRP.CFrame.LookVector * 2)  
+                        local behindPos = kHRP.Position - (kHRP.CFrame.LookVector * 0.35)  
                         myRoot.CFrame = CFrame.new(behindPos, kHRP.Position)  
   
                         task.delay(0.002, function()  
@@ -568,24 +554,23 @@ RunService.RenderStepped:Connect(function()
   
                         local startTime = tick()  
                         local conn; conn = RunService.Heartbeat:Connect(function()  
-                            if tick() - startTime > 1.5 then  
+                            if tick() - startTime > 0.3 then  
                                 conn:Disconnect()  
-                                task.delay(30, function()  
-                                    cooldown = false  
-                                    lastTarget = nil  
-                                end)  
                                 return  
                             end  
                             if not killer.Parent then  
                                 conn:Disconnect()  
-                                task.delay(30, function()  
-                                    cooldown = false  
-                                    lastTarget = nil  
-                                end)  
                                 return  
                             end  
-                            local pos = kHRP.Position - (kHRP.CFrame.LookVector * 2)  
+                            local pos = kHRP.Position - (kHRP.CFrame.LookVector * 0.4)  
                             myRoot.CFrame = CFrame.new(pos, kHRP.Position)  
+                        end)  
+  
+                        task.spawn(function()  
+                            repeat RunService.Heartbeat:Wait()  
+                            until not isBehindTarget(myRoot, kHRP)  
+                            cooldown = false  
+                            lastTarget = nil  
                         end)  
   
                         break  
