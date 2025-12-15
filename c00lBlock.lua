@@ -243,6 +243,16 @@ local function applyVisual()
     end
 end
 
+local infStaminaEnabled = false
+local staminaModule
+
+pcall(function()
+    local sprint = ReplicatedStorage:WaitForChild("Systems")
+        :WaitForChild("Character")
+        :WaitForChild("Game")
+        :WaitForChild("Sprinting")
+    staminaModule = require(sprint)
+end)
 VisualTab:CreateToggle({
     Name="Highlight On / Off",
     Callback=function(v)
@@ -280,6 +290,13 @@ OtherTab:CreateToggle({
         end
     end
 })
+OtherTab:CreateToggle({
+    Name = "Infinite Stamina",
+    CurrentValue = false,
+    Callback = function(v)
+        infStaminaEnabled = v
+    end
+})
 
 OtherTab:CreateButton({
     Name="Load Fake Block",
@@ -287,6 +304,13 @@ OtherTab:CreateButton({
         loadstring(game:HttpGet("https://raw.githubusercontent.com/skibidi399/Auto-block-script/main/fakeblock"))()
     end
 })
+task.spawn(function()
+    while task.wait(1) do
+        if infStaminaEnabled and staminaModule and staminaModule.Stamina then
+            staminaModule.Stamina = staminaModule.MaxStamina or 100
+        end
+    end
+end)
 
 --------------------------------------------------
 -- CORE LOGIC
