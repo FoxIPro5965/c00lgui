@@ -184,7 +184,7 @@ local oldFogStart=Lighting.FogStart
 local function enableBright()
 Lighting.Ambient=Color3.new(1,1,1)
 Lighting.OutdoorAmbient=Color3.new(1,1,1)
-Lighting.Brightness=12
+Lighting.Brightness=20
 Lighting.FogEnd=1e6
 Lighting.FogStart=0
 end
@@ -201,7 +201,7 @@ local function addHL(obj,color)
 if obj:FindFirstChild("VisualHL")then return end
 local h=Instance.new("Highlight")
 h.Name="VisualHL"
-h.FillTransparency=0.18
+h.FillTransparency=0.10
 h.FillColor=color
 h.OutlineColor=color
 h.Parent=obj
@@ -321,7 +321,7 @@ end
 
 local HintSystem={}
 function HintSystem:DrawSolutionOneByOne(puzzle,delay)
-delay=delay or 0.04
+delay=delay or 0.035
 if not puzzle or not puzzle.Solution then return end
 for colorIndex=1,#puzzle.Solution do
 local path=puzzle.Solution[colorIndex]
@@ -351,7 +351,7 @@ oldFlowNew=oldFlowNew or FlowGameModule.new
 FlowGameModule.new=function(...)
 local puzzle=oldFlowNew(...)
 task.spawn(function()
-if autoGen then HintSystem:DrawSolutionOneByOne(puzzle,0.12)end
+if autoGen then HintSystem:DrawSolutionOneByOne(puzzle,0.1)end
 end)
 return puzzle
 end
