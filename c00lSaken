@@ -321,7 +321,7 @@ end
 
 local HintSystem={}
 function HintSystem:DrawSolutionOneByOne(puzzle,delay)
-delay=delay or 0.04
+delay=delay or 0.2
 if not puzzle or not puzzle.Solution then return end
 for colorIndex=1,#puzzle.Solution do
 local path=puzzle.Solution[colorIndex]
@@ -351,7 +351,7 @@ oldFlowNew=oldFlowNew or FlowGameModule.new
 FlowGameModule.new=function(...)
 local puzzle=oldFlowNew(...)
 task.spawn(function()
-if autoGen then HintSystem:DrawSolutionOneByOne(puzzle,0.02)end
+if autoGen then HintSystem:DrawSolutionOneByOne(puzzle,0.2)end
 end)
 return puzzle
 end
