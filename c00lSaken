@@ -1,44 +1,36 @@
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
-local Lighting = game:GetService("Lighting")
-local lp = Players.LocalPlayer
-local PlayerGui = lp:WaitForChild("PlayerGui")
+local Players=game:GetService("Players")
+local ReplicatedStorage=game:GetService("ReplicatedStorage")
+local RunService=game:GetService("RunService")
+local Lighting=game:GetService("Lighting")
+local lp=Players.LocalPlayer
+local PlayerGui=lp:WaitForChild("PlayerGui")
 
-local attackIds = {
-    ["126830014841198"]=true,["126355327951215"]=true,["121086746534252"]=true,
-    ["18885909645"]=true,["98456918873918"]=true,["105458270463374"]=true,
-    ["83829782357897"]=true,["125403313786645"]=true,["118298475669935"]=true,
-    ["82113744478546"]=true,["70371667919898"]=true,["99135633258223"]=true,
-    ["97167027849946"]=true,["109230267448394"]=true,["139835501033932"]=true,
-    ["126896426760253"]=true,["109667959938617"]=true,["126681776859538"]=true,
-    ["129976080405072"]=true,["121293883585738"]=true,["81639435858902"]=true,
-    ["137314737492715"]=true,["92173139187970"]=true,["122709416391"]=true,
-    ["122709416391"]=true,["879895330952"]=true
+local attackIds={
+["126830014841198"]=true,["126355327951215"]=true,["121086746534252"]=true,
+["18885909645"]=true,["98456918873918"]=true,["105458270463374"]=true,
+["83829782357897"]=true,["125403313786645"]=true,["118298475669935"]=true,
+["82113744478546"]=true,["70371667919898"]=true,["99135633258223"]=true,
+["97167027849946"]=true,["109230267448394"]=true,["139835501033932"]=true,
+["126896426760253"]=true,["109667959938617"]=true,["126681776859538"]=true,
+["129976080405072"]=true,["121293883585738"]=true,["81639435858902"]=true,
+["137314737492715"]=true,["92173139187970"]=true,["122709416391"]=true,
+["879895330952"]=true
 }
 
-local killerNames = {
-    "Slasher","Jason","c00lkidd","JohnDoe",
-    "1x1x1x1","Noli","Nosferatu","Sixer"
-}
-
-local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
-local Window = Rayfield:CreateWindow({
-    Name="c00lSaken",
-    LoadingTitle="c00lSaken",
-    LoadingSubtitle="by FoxOfficial",
-    ConfigurationSaving={Enabled=true,FolderName="c00lSaken",FileName="Config"},
-    KeySystem=false
+local Rayfield=loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
+local Window=Rayfield:CreateWindow({
+Name="c00lSaken",
+LoadingTitle="c00lSaken",
+LoadingSubtitle="by FoxOfficial",
+ConfigurationSaving={Enabled=true,FolderName="c00lSaken",FileName="Config"},
+KeySystem=false
 })
 
-local AutoBlockTab = Window:CreateTab("Autoblock",4483362458)
-local BackstabTab  = Window:CreateTab("AutoBackstab",4483362458)
-local VisualTab    = Window:CreateTab("Visuals",4483362458)
-local OtherTab     = Window:CreateTab("Other",4483362458)
+local AutoBlockTab=Window:CreateTab("Autoblock",4483362458)
+local BackstabTab=Window:CreateTab("AutoBackstab",4483362458)
+local VisualTab=Window:CreateTab("Visuals",4483362458)
+local OtherTab=Window:CreateTab("Other",4483362458)
 
---------------------------------------------------
--- STATE
---------------------------------------------------
 local autoBlock=false
 local range=11
 local facingCheck=true
@@ -50,205 +42,228 @@ local backstab=false
 local backstabRange=8
 local backstabMode="Behind"
 
-local visual=false
-local showK=false
-local showS=false
-local showG=false
-local showI=false
+local visualEnabled=false
+local showKiller=false
+local showSurvivor=false
+local showItems=false
+local showGen=false
 
 local infStamina=false
 local jumpEnabled=false
 local hitbox=false
 local HitboxModule
 
---------------------------------------------------
--- UI (NO LOGIC)
---------------------------------------------------
-AutoBlockTab:CreateToggle({Name="Autoblock",Callback=function(v) autoBlock=v end})
-AutoBlockTab:CreateInput({Name="Range",PlaceholderText="12",Callback=function(v) range=tonumber(v) or range end})
-AutoBlockTab:CreateToggle({Name="Facing Check",Callback=function(v) facingCheck=v end})
-AutoBlockTab:CreateToggle({Name="Autopunch",Callback=function(v) autoPunch=v end})
-AutoBlockTab:CreateToggle({Name="Aimpunch",Callback=function(v) aimPunch=v end})
-AutoBlockTab:CreateSlider({
-    Name="Prediction",
-    Range={0,5},Increment=0.1,CurrentValue=0.8,
-    Callback=function(v) aimPrediction=v end
-})
+AutoBlockTab:CreateToggle({Name="Autoblock",Callback=function(v)autoBlock=v end})
+AutoBlockTab:CreateInput({Name="Range",PlaceholderText="12",Callback=function(v)range=tonumber(v)or range end})
+AutoBlockTab:CreateToggle({Name="Facing Check",Callback=function(v)facingCheck=v end})
+AutoBlockTab:CreateToggle({Name="Autopunch",Callback=function(v)autoPunch=v end})
+AutoBlockTab:CreateToggle({Name="Aimpunch",Callback=function(v)aimPunch=v end})
+AutoBlockTab:CreateSlider({Name="Prediction",Range={0,5},Increment=0.1,CurrentValue=0.8,Callback=function(v)aimPrediction=v end})
 
-BackstabTab:CreateToggle({Name="AutoBackstab",Callback=function(v) backstab=v end})
-BackstabTab:CreateInput({Name="Range",PlaceholderText="8",Callback=function(v) backstabRange=tonumber(v) or backstabRange end})
-BackstabTab:CreateDropdown({
-    Name="Mode",
-    Options={"Behind","Around"},
-    CurrentOption="Behind",
-    Callback=function(v) backstabMode=v end
-})
+BackstabTab:CreateToggle({Name="AutoBackstab",Callback=function(v)backstab=v end})
+BackstabTab:CreateInput({Name="Range",PlaceholderText="8",Callback=function(v)backstabRange=tonumber(v)or backstabRange end})
+BackstabTab:CreateDropdown({Name="Mode",Options={"Behind","Around"},CurrentOption="Behind",Callback=function(v)backstabMode=v end})
 
-VisualTab:CreateToggle({Name="Highlight",Callback=function(v) visual=v end})
-VisualTab:CreateToggle({Name="Killer",Callback=function(v) showK=v end})
-VisualTab:CreateToggle({Name="Survivor",Callback=function(v) showS=v end})
-VisualTab:CreateToggle({Name="Generator",Callback=function(v) showG=v end})
-VisualTab:CreateToggle({Name="Medkit & BloxyCola",Callback=function(v) showI=v end})
+VisualTab:CreateToggle({Name="Highlight",Callback=function(v)visualEnabled=v end})
+VisualTab:CreateToggle({Name="Killer",Callback=function(v)showKiller=v end})
+VisualTab:CreateToggle({Name="Survivor",Callback=function(v)showSurvivor=v end})
+VisualTab:CreateToggle({Name="Generator",Callback=function(v)showGen=v end})
+VisualTab:CreateToggle({Name="Medkit & BloxyCola",Callback=function(v)showItems=v end})
 
-OtherTab:CreateToggle({Name="INF STAMINA",Callback=function(v) infStamina=v end})
-OtherTab:CreateToggle({Name="Jump",Callback=function(v) jumpEnabled=v end})
+OtherTab:CreateToggle({Name="INF STAMINA",Callback=function(v)infStamina=v end})
+OtherTab:CreateToggle({Name="Jump",Callback=function(v)jumpEnabled=v end})
 OtherTab:CreateToggle({
-    Name="Hitbox",
-    Callback=function(v)
-        hitbox=v
-        if v then
-            HitboxModule=HitboxModule or loadstring(game:HttpGet("https://raw.githubusercontent.com/FoxIPro5965/c00lgui/main/Hitbox.lua"))()
-            HitboxModule:ExtendHitbox(1.3,3e3)
-        elseif HitboxModule then
-            HitboxModule:StopExtendingHitbox()
-        end
-    end
+Name="Hitbox",
+Callback=function(v)
+hitbox=v
+if v then
+HitboxModule=HitboxModule or loadstring(game:HttpGet("https://raw.githubusercontent.com/FoxIPro5965/c00lgui/main/Hitbox.lua"))()
+HitboxModule:ExtendHitbox(1.2,2000)
+elseif HitboxModule then
+HitboxModule:StopExtendingHitbox()
+end
+end
 })
 OtherTab:CreateButton({
-    Name="Load FakeBlock",
-    Callback=function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/skibidi399/Auto-block-script/main/fakeblock"))()
-    end
+Name="Load FakeBlock",
+Callback=function()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/skibidi399/Auto-block-script/main/fakeblock"))()
+end
 })
 
---------------------------------------------------
--- CORE FUNCTIONS
---------------------------------------------------
 local function click(btnName)
-    local ui=PlayerGui:FindFirstChild("MainUI")
-    local btn=ui and ui:FindFirstChild("AbilityContainer") and ui.AbilityContainer:FindFirstChild(btnName)
-    if not btn then return end
-    for _,c in ipairs(getconnections(btn.MouseButton1Click)) do pcall(function() c:Fire() end) end
+local ui=PlayerGui:FindFirstChild("MainUI")
+local btn=ui and ui:FindFirstChild("AbilityContainer") and ui.AbilityContainer:FindFirstChild(btnName)
+if not btn then return end
+for _,c in ipairs(getconnections(btn.MouseButton1Click))do pcall(function()c:Fire()end)end
 end
 
 local function detectAttack(char)
-    local hum=char:FindFirstChildOfClass("Humanoid")
-    if not hum then return false end
-    for _,tr in ipairs(hum:GetPlayingAnimationTracks()) do
-        local id=tr.Animation and tr.Animation.AnimationId:match("%d+")
-        if id and attackIds[id] then return true end
-    end
-    return false
+local hum=char:FindFirstChildOfClass("Humanoid")
+if not hum then return false end
+for _,tr in ipairs(hum:GetPlayingAnimationTracks())do
+local id=tr.Animation and tr.Animation.AnimationId:match("%d+")
+if id and attackIds[id]then return true end
+end
+return false
 end
 
---------------------------------------------------
--- AUTOBLOCK / AUTOPUNCH
---------------------------------------------------
 RunService.RenderStepped:Connect(function()
-    if not autoBlock and not autoPunch then return end
-    local char=lp.Character
-    local hrp=char and char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-
-    for _,p in ipairs(Players:GetPlayers()) do
-        if p~=lp and p.Character then
-            local r=p.Character:FindFirstChild("HumanoidRootPart")
-            local h=p.Character:FindFirstChildOfClass("Humanoid")
-            if r and h and h.Health>0 then
-                if (r.Position-hrp.Position).Magnitude<=range then
-                    if detectAttack(p.Character) then
-                        if autoBlock then click("Block") end
-                        if autoPunch then click("Punch") end
-                    end
-                end
-            end
-        end
-    end
+if not autoBlock and not autoPunch then return end
+local char=lp.Character
+local hrp=char and char:FindFirstChild("HumanoidRootPart")
+if not hrp then return end
+for _,p in ipairs(Players:GetPlayers())do
+if p~=lp and p.Character then
+local r=p.Character:FindFirstChild("HumanoidRootPart")
+local h=p.Character:FindFirstChildOfClass("Humanoid")
+if r and h and h.Health>0 then
+if(r.Position-hrp.Position).Magnitude<=range then
+if detectAttack(p.Character)then
+if autoBlock then click("Block")end
+if autoPunch then click("Punch")end
+end
+end
+end
+end
+end
 end)
 
---------------------------------------------------
--- AUTOBACKSTAB
---------------------------------------------------
 local killersFolder=workspace:WaitForChild("Players"):WaitForChild("Killers")
 local lastBackstab=0
-local COOLDOWN=10
+local COOLDOWN=30
 local HOLD=0.3
-local DIST=2
+local DIST=2.2
 
 local function isBehind(hrp,khrp)
-    if (hrp.Position-khrp.Position).Magnitude>backstabRange then return false end
-    if backstabMode=="Around" then return true end
-    return (hrp.Position-khrp.Position):Dot(-khrp.CFrame.LookVector)>0.5
+if(hrp.Position-khrp.Position).Magnitude>backstabRange then return false end
+if backstabMode=="Around" then return true end
+return(hrp.Position-khrp.Position):Dot(-khrp.CFrame.LookVector)>0.5
 end
 
 RunService.Heartbeat:Connect(function()
-    if not backstab then return end
-    if tick()-lastBackstab<COOLDOWN then return end
-    local char=lp.Character
-    local hrp=char and char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-
-    for _,k in ipairs(killersFolder:GetChildren()) do
-        local khrp=k:FindFirstChild("HumanoidRootPart")
-        if khrp and isBehind(hrp,khrp) then
-            lastBackstab=tick()
-            click("Dagger")
-            local start=tick()
-            local conn
-            conn=RunService.Heartbeat:Connect(function()
-                if tick()-start>HOLD then conn:Disconnect() return end
-                hrp.CFrame=CFrame.new(khrp.Position-khrp.CFrame.LookVector*DIST,khrp.Position)
-            end)
-            break
-        end
-    end
+if not backstab then return end
+if tick()-lastBackstab<COOLDOWN then return end
+local char=lp.Character
+local hrp=char and char:FindFirstChild("HumanoidRootPart")
+if not hrp then return end
+for _,k in ipairs(killersFolder:GetChildren())do
+local khrp=k:FindFirstChild("HumanoidRootPart")
+if khrp and isBehind(hrp,khrp)then
+lastBackstab=tick()
+click("Dagger")
+local start=tick()
+local conn
+conn=RunService.Heartbeat:Connect(function()
+if tick()-start>HOLD then conn:Disconnect()return end
+hrp.CFrame=CFrame.new(khrp.Position-khrp.CFrame.LookVector*DIST,khrp.Position)
+end)
+break
+end
+end
 end)
 
---------------------------------------------------
--- VISUALS
---------------------------------------------------
-local old={A=Lighting.Ambient,O=Lighting.OutdoorAmbient,B=Lighting.Brightness,FE=Lighting.FogEnd,FS=Lighting.FogStart}
+local oldAmbient=Lighting.Ambient
+local oldOutdoor=Lighting.OutdoorAmbient
+local oldBrightness=Lighting.Brightness
+local oldFogEnd=Lighting.FogEnd
+local oldFogStart=Lighting.FogStart
 
-local function bright(on)
-    if on then
-        Lighting.Ambient=Color3.new(1,1,1)
-        Lighting.OutdoorAmbient=Color3.new(1,1,1)
-        Lighting.Brightness=10
-        Lighting.FogEnd=1e6
-        Lighting.FogStart=0
-    else
-        for i,v in pairs(old) do Lighting[i]=v end
-    end
+local function enableBright()
+Lighting.Ambient=Color3.new(1,1,1)
+Lighting.OutdoorAmbient=Color3.new(1,1,1)
+Lighting.Brightness=12
+Lighting.FogEnd=1000000
+Lighting.FogStart=0
+end
+
+local function disableBright()
+Lighting.Ambient=oldAmbient
+Lighting.OutdoorAmbient=oldOutdoor
+Lighting.Brightness=oldBrightness
+Lighting.FogEnd=oldFogEnd
+Lighting.FogStart=oldFogStart
+end
+
+local function addHL(obj,color)
+if obj:FindFirstChild("VisualHL")then return end
+local h=Instance.new("Highlight")
+h.Name="VisualHL"
+h.FillTransparency=0.25
+h.FillColor=color
+h.OutlineColor=color
+h.Parent=obj
+h.Adornee=obj
+end
+
+local function clearVisual()
+for _,v in ipairs(workspace:GetDescendants())do
+if v:IsA("Highlight")and v.Name=="VisualHL"then
+v:Destroy()
+end
+end
+end
+
+local function applyVisual()
+clearVisual()
+if not visualEnabled then return end
+enableBright()
+local pf=workspace:FindFirstChild("Players")
+if pf then
+if showKiller and pf:FindFirstChild("Killers")then
+for _,k in ipairs(pf.Killers:GetChildren())do
+if k:FindFirstChild("Humanoid")then
+addHL(k,Color3.fromRGB(255,0,0))
+end
+end
+end
+if showSurvivor and pf:FindFirstChild("Survivors")then
+for _,s in ipairs(pf.Survivors:GetChildren())do
+if s:FindFirstChild("Humanoid")then
+addHL(s,Color3.fromRGB(0,255,0))
+end
+end
+end
+end
+if showItems then
+for _,i in ipairs(workspace:GetDescendants())do
+if i.Name=="Medkit"or i.Name=="BloxyCola"then
+addHL(i,Color3.fromRGB(170,0,255))
+end
+end
+end
+if showGen then
+for _,g in ipairs(workspace:GetDescendants())do
+if string.lower(g.Name):find("generator")then
+addHL(g,Color3.fromRGB(255,255,0))
+end
+end
+end
 end
 
 task.spawn(function()
-    while task.wait(1) do
-        if visual then
-            bright(true)
-            for _,v in ipairs(workspace:GetDescendants()) do
-                if v:IsA("Highlight") then v:Destroy() end
-            end
-            local pf=workspace.Players
-            if showK then for _,k in ipairs(pf.Killers:GetChildren()) do Instance.new("Highlight",k) end end
-            if showS then for _,s in ipairs(pf.Survivors:GetChildren()) do Instance.new("Highlight",s) end end
-            if showI then
-                for _,i in ipairs(workspace:GetDescendants()) do
-                    if i.Name=="Medkit" or i.Name=="BloxyCola" then Instance.new("Highlight",i) end
-                end
-            end
-            if showG then
-                for _,g in ipairs(workspace:GetDescendants()) do
-                    if g.Name:lower():find("generator") then Instance.new("Highlight",g) end
-                end
-            end
-        else
-            bright(false)
-        end
-    end
+while task.wait(0.5)do
+if visualEnabled then
+applyVisual()
+else
+clearVisual()
+disableBright()
+end
+end
 end)
 
 task.spawn(function()
-    local sprint=require(ReplicatedStorage.Systems.Character.Game.Sprinting)
-    while task.wait(1) do
-        if infStamina then sprint.Stamina=sprint.MaxStamina or 100 end
-    end
+local sprint=require(ReplicatedStorage.Systems.Character.Game.Sprinting)
+while task.wait(1)do
+if infStamina then sprint.Stamina=sprint.MaxStamina or 100 end
+end
 end)
 
 task.spawn(function()
-    while task.wait(0.5) do
-        local hum=lp.Character and lp.Character:FindFirstChildOfClass("Humanoid")
-        if hum then
-            hum.JumpPower = jumpEnabled and 50 or 0
-        end
-    end
+while task.wait(0.5)do
+local hum=lp.Character and lp.Character:FindFirstChildOfClass("Humanoid")
+if hum then
+hum.JumpPower=jumpEnabled and 60 or 0
+end
+end
 end)
