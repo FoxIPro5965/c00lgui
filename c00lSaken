@@ -53,6 +53,7 @@ local jumpEnabled=false
 local hitbox=false
 local HitboxModule
 local autoGen=false
+local autoGenSpeed=0.035
 
 AutoBlockTab:CreateToggle({Name="Autoblock",Callback=function(v)autoBlock=v end})
 AutoBlockTab:CreateInput({Name="Range",PlaceholderText="12",Callback=function(v)range=tonumber(v)or range end})
@@ -73,6 +74,7 @@ VisualTab:CreateToggle({Name="Medkit & BloxyCola",Callback=function(v)showItems=
 
 OtherTab:CreateToggle({Name="INF STAMINA",Callback=function(v)infStamina=v end})
 OtherTab:CreateToggle({Name="Jump",Callback=function(v)jumpEnabled=v end})
+
 OtherTab:CreateToggle({
 Name="Hitbox",
 Callback=function(v)
@@ -85,6 +87,7 @@ HitboxModule:StopExtendingHitbox()
 end
 end
 })
+
 OtherTab:CreateToggle({
 Name="Auto gen",
 Callback=function(v)
@@ -96,6 +99,17 @@ disableAutoGen()
 end
 end
 })
+
+OtherTab:CreateSlider({
+Name="Gen Speed",
+Range={0.01,0.5},
+Increment=0.005,
+CurrentValue=0.035,
+Callback=function(v)
+autoGenSpeed=v
+end
+})
+
 OtherTab:CreateButton({
 Name="Load FakeBlock",
 Callback=function()
@@ -321,7 +335,7 @@ end
 
 local HintSystem={}
 function HintSystem:DrawSolutionOneByOne(puzzle,delay)
-delay=delay or 0.035
+delay=delay or autoGenSpeed
 if not puzzle or not puzzle.Solution then return end
 for colorIndex=1,#puzzle.Solution do
 local path=puzzle.Solution[colorIndex]
@@ -351,7 +365,7 @@ oldFlowNew=oldFlowNew or FlowGameModule.new
 FlowGameModule.new=function(...)
 local puzzle=oldFlowNew(...)
 task.spawn(function()
-if autoGen then HintSystem:DrawSolutionOneByOne(puzzle,0.1)end
+if autoGen then HintSystem:DrawSolutionOneByOne(puzzle,autoGenSpeed)end
 end)
 return puzzle
 end
