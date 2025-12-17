@@ -53,7 +53,7 @@ local jumpEnabled=false
 local hitbox=false
 local HitboxModule
 local autoGen=false
-local autoGenSpeed=0.125
+local autoGenSpeed=0.115
 
 AutoBlockTab:CreateToggle({Name="Autoblock",Callback=function(v)autoBlock=v end})
 AutoBlockTab:CreateInput({Name="Range",PlaceholderText="12",Callback=function(v)range=tonumber(v)or range end})
@@ -81,7 +81,7 @@ Callback=function(v)
 hitbox=v
 if v then
 HitboxModule=HitboxModule or loadstring(game:HttpGet("https://raw.githubusercontent.com/FoxIPro5965/c00lgui/main/Hitbox.lua"))()
-HitboxModule:ExtendHitbox(1.2,1e3)
+HitboxModule:ExtendHitbox(1.15,1e2)
 elseif HitboxModule then
 HitboxModule:StopExtendingHitbox()
 end
@@ -104,7 +104,7 @@ OtherTab:CreateSlider({
 Name="Gen Speed",
 Range={0.01,0.5},
 Increment=0.005,
-CurrentValue=0.125,
+CurrentValue=0.115,
 Callback=function(v)
 autoGenSpeed=v
 end
@@ -198,8 +198,8 @@ local oldFogStart=Lighting.FogStart
 local function enableBright()
 Lighting.Ambient=Color3.new(1,1,1)
 Lighting.OutdoorAmbient=Color3.new(1,1,1)
-Lighting.Brightness=30
-Lighting.FogEnd=1e8
+Lighting.Brightness=8
+Lighting.FogEnd=0
 Lighting.FogStart=0
 end
 
@@ -215,7 +215,7 @@ local function addHL(obj,color)
 if obj:FindFirstChild("VisualHL")then return end
 local h=Instance.new("Highlight")
 h.Name="VisualHL"
-h.FillTransparency=0.10
+h.FillTransparency=0.1
 h.FillColor=color
 h.OutlineColor=color
 h.Parent=obj
@@ -260,7 +260,7 @@ end
 end
 
 task.spawn(function()
-while task.wait(0.5)do
+while task.wait(0.6)do
 if visualEnabled then
 applyVisual()
 else
@@ -278,9 +278,9 @@ end
 end)
 
 task.spawn(function()
-while task.wait(0.5)do
+while task.wait(0.2)do
 local hum=lp.Character and lp.Character:FindFirstChildOfClass("Humanoid")
-if hum then hum.JumpPower=jumpEnabled and 50 or 0 end
+if hum then hum.JumpPower=jumpEnabled and 60 or 0 end
 end
 end)
 
