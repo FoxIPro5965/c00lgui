@@ -12,9 +12,9 @@ local attackIds={
 ["82113744478546"]=true,["70371667919898"]=true,["99135633258223"]=true,
 ["97167027849946"]=true,["109230267448394"]=true,["139835501033932"]=true,
 ["126896426760253"]=true,["109667959938617"]=true,["126681776859538"]=true,
-["129976080405072"]=true,["121293883585738"]=true,["81639435858902"]=true,
-["137314737492715"]=true,["92173139187970"]=true,["122709416391"]=true,
-["879895330952"]=true
+["129976080405072"]=true,["121293883585738"]=true,
+["81639435858902"]=true,["137314737492715"]=true,["92173139187970"]=true,
+["122709416391"]=true,["879895330952"]=true
 }
 
 local Rayfield=loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
@@ -81,7 +81,7 @@ Callback=function(v)
 hitbox=v
 if v then
 HitboxModule=HitboxModule or loadstring(game:HttpGet("https://raw.githubusercontent.com/FoxIPro5965/c00lgui/main/Hitbox.lua"))()
-HitboxModule:ExtendHitbox(1.15,1e2)
+HitboxModule:ExtendHitbox(1.15,600)
 elseif HitboxModule then
 HitboxModule:StopExtendingHitbox()
 end
@@ -92,11 +92,7 @@ OtherTab:CreateToggle({
 Name="Auto gen",
 Callback=function(v)
 autoGen=v
-if autoGen then
-enableAutoGen()
-else
-disableAutoGen()
-end
+if autoGen then enableAutoGen() else disableAutoGen() end
 end
 })
 
@@ -105,9 +101,7 @@ Name="Gen Speed",
 Range={0.01,0.5},
 Increment=0.005,
 CurrentValue=0.115,
-Callback=function(v)
-autoGenSpeed=v
-end
+Callback=function(v)autoGenSpeed=v end
 })
 
 OtherTab:CreateButton({
@@ -122,44 +116,49 @@ local ui=PlayerGui:FindFirstChild("MainUI")
 local btn=ui and ui:FindFirstChild("AbilityContainer") and ui.AbilityContainer:FindFirstChild(btnName)
 if not btn then return end
 for _,c in ipairs(getconnections(btn.MouseButton1Click))do pcall(function()c:Fire()end)end
+pcall(function()btn:Activate()end)
 end
 
-local function detectAttack(char)
-local hum=char:FindFirstChildOfClass("Humanoid")
-if not hum then return false end
-for _,tr in ipairs(hum:GetPlayingAnimationTracks())do
-local id=tr.Animation and tr.Animation.AnimationId:match("%d+")
-if id and attackIds[id]then return true end
-end
-return false
+local function isFacing(my,enemy)
+local dir=(my.Position-enemy.Position).Unit
+return enemy.CFrame.LookVector:Dot(dir)>0.45
 end
 
-RunService.RenderStepped:Connect(function()
+local function hookCharacter(char)
+local hum=char:WaitForChild("Humanoid",5)
+local root=char:WaitForChild("HumanoidRootPart",5)
+if not hum or not root then return end
+hum.AnimationPlayed:Connect(function(track)
 if not autoBlock and not autoPunch then return end
-local char=lp.Character
-local hrp=char and char:FindFirstChild("HumanoidRootPart")
-if not hrp then return end
-for _,p in ipairs(Players:GetPlayers())do
-if p~=lp and p.Character then
-local r=p.Character:FindFirstChild("HumanoidRootPart")
-local h=p.Character:FindFirstChildOfClass("Humanoid")
-if r and h and h.Health>0 then
-if(r.Position-hrp.Position).Magnitude<=range then
-if detectAttack(p.Character)then
-if autoBlock then click("Block")end
+local id=track.Animation and track.Animation.AnimationId:match("%d+")
+if id and attackIds[id] then
+local my=lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
+if my and (root.Position-my.Position).Magnitude<=range then
+if not facingCheck or isFacing(my,root) then
+click("Block")
 if autoPunch then click("Punch")end
 end
 end
 end
+end)
+end
+
+for _,p in ipairs(Players:GetPlayers())do
+if p~=lp then
+if p.Character then hookCharacter(p.Character)end
+p.CharacterAdded:Connect(hookCharacter)
 end
 end
+
+Players.PlayerAdded:Connect(function(p)
+if p~=lp then p.CharacterAdded:Connect(hookCharacter)end
 end)
 
 local killersFolder=workspace:WaitForChild("Players"):WaitForChild("Killers")
 local lastBackstab=0
 local COOLDOWN=30
 local HOLD=0.285
-local DIST=2.6
+local DIST=2.8
 
 local function isBehind(hrp,khrp)
 if(hrp.Position-khrp.Position).Magnitude>backstabRange then return false end
@@ -168,20 +167,18 @@ return(hrp.Position-khrp.Position):Dot(-khrp.CFrame.LookVector)>0.5
 end
 
 RunService.Heartbeat:Connect(function()
-if not backstab then return end
-if tick()-lastBackstab<COOLDOWN then return end
-local char=lp.Character
-local hrp=char and char:FindFirstChild("HumanoidRootPart")
+if not backstab or tick()-lastBackstab<COOLDOWN then return end
+local hrp=lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
 if not hrp then return end
 for _,k in ipairs(killersFolder:GetChildren())do
 local khrp=k:FindFirstChild("HumanoidRootPart")
 if khrp and isBehind(hrp,khrp)then
 lastBackstab=tick()
 click("Dagger")
-local start=tick()
-local conn
-conn=RunService.Heartbeat:Connect(function()
-if tick()-start>HOLD then conn:Disconnect()return end
+local s=tick()
+local c
+c=RunService.Heartbeat:Connect(function()
+if tick()-s>HOLD then c:Disconnect()return end
 hrp.CFrame=CFrame.new(khrp.Position-khrp.CFrame.LookVector*DIST,khrp.Position)
 end)
 break
@@ -189,34 +186,28 @@ end
 end
 end)
 
-local oldAmbient=Lighting.Ambient
-local oldOutdoor=Lighting.OutdoorAmbient
-local oldBrightness=Lighting.Brightness
-local oldFogEnd=Lighting.FogEnd
-local oldFogStart=Lighting.FogStart
+local oldA,oldO,oldB,oldF=Lighting.Ambient,Lighting.OutdoorAmbient,Lighting.Brightness,Lighting.FogEnd
 
-local function enableBright()
+local function bright(on)
+if on then
 Lighting.Ambient=Color3.new(1,1,1)
 Lighting.OutdoorAmbient=Color3.new(1,1,1)
-Lighting.Brightness=8
+Lighting.Brightness=6
 Lighting.FogEnd=0
-Lighting.FogStart=0
+else
+Lighting.Ambient=oldA
+Lighting.OutdoorAmbient=oldO
+Lighting.Brightness=oldB
+Lighting.FogEnd=oldF
 end
-
-local function disableBright()
-Lighting.Ambient=oldAmbient
-Lighting.OutdoorAmbient=oldOutdoor
-Lighting.Brightness=oldBrightness
-Lighting.FogEnd=oldFogEnd
-Lighting.FogStart=oldFogStart
 end
 
 local function addHL(obj,color)
 if obj:FindFirstChild("VisualHL")then return end
 local h=Instance.new("Highlight")
 h.Name="VisualHL"
-h.FillTransparency=0.1
-h.FillColor=color
+h.FillTransparency=1
+h.OutlineTransparency=0
 h.OutlineColor=color
 h.Parent=obj
 h.Adornee=obj
@@ -224,63 +215,38 @@ end
 
 local function clearVisual()
 for _,v in ipairs(workspace:GetDescendants())do
-if v:IsA("Highlight")and v.Name=="VisualHL"then
-v:Destroy()
-end
+if v:IsA("Highlight")and v.Name=="VisualHL"then v:Destroy()end
 end
 end
 
-local function applyVisual()
+task.spawn(function()
+while task.wait(0.9)do
+if not visualEnabled then clearVisual()bright(false)continue end
+bright(true)
 clearVisual()
-if not visualEnabled then return end
-enableBright()
 local pf=workspace:FindFirstChild("Players")
 if pf then
 if showKiller and pf:FindFirstChild("Killers")then
 for _,k in ipairs(pf.Killers:GetChildren())do
-if k:FindFirstChild("Humanoid")then addHL(k,Color3.fromRGB(255,0,0))end
+if k:FindFirstChild("Humanoid")then addHL(k,Color3.fromRGB(255,70,70))end
 end
 end
 if showSurvivor and pf:FindFirstChild("Survivors")then
 for _,s in ipairs(pf.Survivors:GetChildren())do
-if s:FindFirstChild("Humanoid")then addHL(s,Color3.fromRGB(0,255,0))end
+if s:FindFirstChild("Humanoid")then addHL(s,Color3.fromRGB(70,255,70))end
 end
 end
 end
 if showItems then
 for _,i in ipairs(workspace:GetDescendants())do
-if i.Name=="Medkit"or i.Name=="BloxyCola"then addHL(i,Color3.fromRGB(170,0,255))end
+if i.Name=="Medkit"or i.Name=="BloxyCola"then addHL(i,Color3.fromRGB(180,0,255))end
 end
 end
 if showGen then
 for _,g in ipairs(workspace:GetDescendants())do
-if string.lower(g.Name):find("generator")then addHL(g,Color3.fromRGB(255,255,0))end
+if g.Name:lower():find("generator")then addHL(g,Color3.fromRGB(255,255,0))end
 end
 end
-end
-
-task.spawn(function()
-while task.wait(0.6)do
-if visualEnabled then
-applyVisual()
-else
-clearVisual()
-disableBright()
-end
-end
-end)
-
-task.spawn(function()
-local sprint=require(ReplicatedStorage.Systems.Character.Game.Sprinting)
-while task.wait(1)do
-if infStamina then sprint.Stamina=sprint.MaxStamina or 100 end
-end
-end)
-
-task.spawn(function()
-while task.wait(0.2)do
-local hum=lp.Character and lp.Character:FindFirstChildOfClass("Humanoid")
-if hum then hum.JumpPower=jumpEnabled and 60 or 0 end
 end
 end)
 
@@ -376,3 +342,17 @@ function disableAutoGen()
 if FlowGameModule and oldFlowNew then FlowGameModule.new=oldFlowNew end
 hooked=false
 end
+
+task.spawn(function()
+local sprint=require(ReplicatedStorage.Systems.Character.Game.Sprinting)
+while task.wait(1)do
+if infStamina then sprint.Stamina=sprint.MaxStamina or 100 end
+end
+end)
+
+task.spawn(function()
+while task.wait(0.2)do
+local hum=lp.Character and lp.Character:FindFirstChildOfClass("Humanoid")
+if hum then hum.JumpPower=jumpEnabled and 60 or 0 end
+end
+end)
