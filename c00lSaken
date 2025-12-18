@@ -2,7 +2,6 @@ local Players=game:GetService("Players")
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local RunService=game:GetService("RunService")
 local Lighting=game:GetService("Lighting")
-local VirtualInputManager=game:GetService("VirtualInputManager")
 local lp=Players.LocalPlayer
 local PlayerGui=lp:WaitForChild("PlayerGui")
 
@@ -41,7 +40,7 @@ local aimPrediction=0.8
 
 local backstab=false
 local backstabRange=8
-local backstabMode="Behind"
+local backstabMode="Around"
 
 local visualEnabled=false
 local showKiller=false
@@ -58,7 +57,6 @@ local autoGenSpeed=0.115
 
 local anti1x1=false
 local undetectedMode=false
-local antiFakeNoli=false
 
 AutoBlockTab:CreateToggle({Name="Autoblock",Callback=function(v)autoBlock=v end})
 AutoBlockTab:CreateInput({Name="Range",PlaceholderText="12",Callback=function(v)range=tonumber(v)or range end})
@@ -69,7 +67,7 @@ AutoBlockTab:CreateSlider({Name="Prediction",Range={0,5},Increment=0.1,CurrentVa
 
 BackstabTab:CreateToggle({Name="AutoBackstab",Callback=function(v)backstab=v end})
 BackstabTab:CreateInput({Name="Range",PlaceholderText="8",Callback=function(v)backstabRange=tonumber(v)or backstabRange end})
-BackstabTab:CreateDropdown({Name="Mode",Options={"Behind","Around"},CurrentOption="Behind",Callback=function(v)backstabMode=v end})
+BackstabTab:CreateDropdown({Name="Mode",Options={"Behind","Around"},CurrentOption="Around",Callback=function(v)backstabMode=v end})
 
 VisualTab:CreateToggle({Name="Highlight",Callback=function(v)visualEnabled=v end})
 VisualTab:CreateToggle({Name="Killer",Callback=function(v)showKiller=v end})
@@ -98,7 +96,6 @@ OtherTab:CreateSlider({Name="Gen Speed",Range={0.01,0.5},Increment=0.005,Current
 
 OtherTab:CreateToggle({Name="Anti 1x1 Pop-up",Callback=function(v)anti1x1=v end})
 OtherTab:CreateToggle({Name="Undetected Mode",Callback=function(v)undetectedMode=v end})
-OtherTab:CreateToggle({Name="Anti Fake Noli",Callback=function(v)antiFakeNoli=v end})
 
 local function click(btnName)
 local ui=PlayerGui:FindFirstChild("MainUI")
@@ -239,16 +236,15 @@ end
 end)
 
 task.spawn(function()
-while task.wait(0.1) do
+while task.wait(0.3) do
 if not anti1x1 then continue end
-local temp=lp.PlayerGui:FindFirstChild("TemporaryUI")
+local temp=PlayerGui:FindFirstChild("TemporaryUI")
 if temp then
 for _,i in ipairs(temp:GetChildren()) do
 if i.Name=="1x1x1x1Popup" then
-local cx=i.AbsolutePosition.X+i.AbsoluteSize.X/2
-local cy=i.AbsolutePosition.Y+i.AbsoluteSize.Y/2
-VirtualInputManager:SendMouseButtonEvent(cx,cy,0,true,lp.PlayerGui,1)
-VirtualInputManager:SendMouseButtonEvent(cx,cy,0,false,lp.PlayerGui,1)
+i.Enabled=false
+i.Visible=false
+i.Parent=nil
 end
 end
 end
@@ -256,7 +252,6 @@ end
 end)
 
 task.spawn(function()
-local Notify=loadstring(game:HttpGet("https://raw.githubusercontent.com/Gazer-Ha/NOT-MINE/refs/heads/main/AkaliNotify"))()
 local Undetectable=require(ReplicatedStorage.Modules.StatusEffects.Undetectable)
 local animationId="rbxassetid://75804462760596"
 local loadedAnim=nil
@@ -285,124 +280,78 @@ return oR(d)
 end
 end)
 
-task.spawn(function()
-while task.wait(0.8) do
-if not antiFakeNoli then continue end
-for _,m in ipairs(workspace:GetChildren()) do
-if m:IsA("Model") then
-local n=m.Name:lower()
-local hum=m:FindFirstChildOfClass("Humanoid")
-local hrp=m:FindFirstChild("HumanoidRootPart")
-local k=n:find("illusion") or n:find("fake") or n:find("decoy") or n:find("clone") or n:find("noli")
-local f=false
-if hum and hum.Health<=0 then f=true end
-if hum and hum.MaxHealth<=1 then f=true end
-if not hum and hrp then f=true end
-if k and f then pcall(function()m:Destroy()end) end
-end
-end
-end
-end)
-
 local FlowGameModule
 local oldNew
-local hookedGen = false
-
-local function getDirection(r1,c1,r2,c2)
-	if r2<r1 then return"up" end
-	if r2>r1 then return"down" end
-	if c2<c1 then return"left" end
-	if c2>c1 then return"right" end
-end
+local hookedGen=false
 
 local function isNeighbour(r1,c1,r2,c2)
-	if r2==r1-1 and c2==c1 then return true end
-	if r2==r1+1 and c2==c1 then return true end
-	if r2==r1 and c2==c1-1 then return true end
-	if r2==r1 and c2==c1+1 then return true end
-	return false
+if r2==r1-1 and c2==c1 then return true end
+if r2==r1+1 and c2==c1 then return true end
+if r2==r1 and c2==c1-1 then return true end
+if r2==r1 and c2==c1+1 then return true end
+return false
 end
 
 local function key(n)
-	return n.row .. "-" .. n.col
+return n.row.."-"..n.col
 end
 
-local function orderPath(path, endpoints)
-	if not path or #path == 0 then return path end
-
-	local start = endpoints and endpoints[1] or path[1]
-	local pool = {}
-	for _,n in ipairs(path) do
-		pool[key(n)] = {row=n.row,col=n.col}
-	end
-
-	local ordered = {}
-	local cur = {row=start.row,col=start.col}
-	table.insert(ordered, cur)
-	pool[key(cur)] = nil
-
-	while next(pool) do
-		local found = false
-		for k,n in pairs(pool) do
-			if isNeighbour(cur.row,cur.col,n.row,n.col) then
-				table.insert(ordered, n)
-				pool[k] = nil
-				cur = n
-				found = true
-				break
-			end
-		end
-		if not found then break end
-	end
-
-	return ordered
+local function orderPath(path,endpoints)
+if not path or #path==0 then return path end
+local start=endpoints and endpoints[1] or path[1]
+local pool={}
+for _,n in ipairs(path)do pool[key(n)]={row=n.row,col=n.col}end
+local ordered={}
+local cur={row=start.row,col=start.col}
+table.insert(ordered,cur)
+pool[key(cur)]=nil
+while next(pool)do
+local found=false
+for k,n in pairs(pool)do
+if isNeighbour(cur.row,cur.col,n.row,n.col)then
+table.insert(ordered,n)
+pool[k]=nil
+cur=n
+found=true
+break
+end
+end
+if not found then break end
+end
+return ordered
 end
 
-local HintSystem = {}
-
+local HintSystem={}
 function HintSystem:Draw(puzzle)
-	if not puzzle or not puzzle.Solution then return end
-
-	for i=1,#puzzle.Solution do
-		local path = puzzle.Solution[i]
-		local ends = puzzle.targetPairs[i]
-		local ordered = orderPath(path, ends)
-
-		puzzle.paths[i] = {}
-		for _,node in ipairs(ordered) do
-			if not autoGen then return end
-			table.insert(puzzle.paths[i], {row=node.row,col=node.col})
-			puzzle:updateGui()
-			task.wait(autoGenSpeed)
-		end
-		puzzle:checkForWin()
-	end
+if not puzzle or not puzzle.Solution then return end
+for i=1,#puzzle.Solution do
+local path=puzzle.Solution[i]
+local ends=puzzle.targetPairs[i]
+local ordered=orderPath(path,ends)
+puzzle.paths[i]={}
+for _,node in ipairs(ordered)do
+if not autoGen then return end
+table.insert(puzzle.paths[i],{row=node.row,col=node.col})
+puzzle:updateGui()
+task.wait(autoGenSpeed)
+end
+puzzle:checkForWin()
+end
 end
 
 local function hookAutoGen()
-	if hookedGen then return end
-
-	local mod = ReplicatedStorage:WaitForChild("Modules"):FindFirstChild("Misc")
-	if not mod then return end
-	mod = mod:FindFirstChild("FlowGameManager")
-	if not mod then return end
-	mod = mod:FindFirstChild("FlowGame")
-	if not mod then return end
-
-	FlowGameModule = require(mod)
-	oldNew = oldNew or FlowGameModule.new
-
-	FlowGameModule.new = function(...)
-		local puzzle = oldNew(...)
-		task.spawn(function()
-			if autoGen then
-				HintSystem:Draw(puzzle)
-			end
-		end)
-		return puzzle
-	end
-
-	hookedGen = true
+if hookedGen then return end
+local mod=ReplicatedStorage.Modules.Misc.FlowGameManager.FlowGame
+FlowGameModule=require(mod)
+oldNew=oldNew or FlowGameModule.new
+FlowGameModule.new=function(...)
+local puzzle=oldNew(...)
+task.spawn(function()
+if autoGen then HintSystem:Draw(puzzle) end
+end)
+return puzzle
+end
+hookedGen=true
 end
 
 hookAutoGen()
