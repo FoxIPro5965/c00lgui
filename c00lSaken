@@ -146,7 +146,7 @@ end)
 local killersFolder=workspace:WaitForChild("Players"):WaitForChild("Killers")
 local lastBackstab=0
 local COOLDOWN=30
-local HOLD=0.285
+local HOLD=0.29
 local DIST=2.8
 
 local function isBehind(hrp,khrp)
@@ -303,6 +303,109 @@ end
 end
 end
 end)
+
+local FlowGameModule
+local oldNew
+local hookedGen = false
+
+local function getDirection(r1,c1,r2,c2)
+	if r2<r1 then return"up" end
+	if r2>r1 then return"down" end
+	if c2<c1 then return"left" end
+	if c2>c1 then return"right" end
+end
+
+local function isNeighbour(r1,c1,r2,c2)
+	if r2==r1-1 and c2==c1 then return true end
+	if r2==r1+1 and c2==c1 then return true end
+	if r2==r1 and c2==c1-1 then return true end
+	if r2==r1 and c2==c1+1 then return true end
+	return false
+end
+
+local function key(n)
+	return n.row .. "-" .. n.col
+end
+
+local function orderPath(path, endpoints)
+	if not path or #path == 0 then return path end
+
+	local start = endpoints and endpoints[1] or path[1]
+	local pool = {}
+	for _,n in ipairs(path) do
+		pool[key(n)] = {row=n.row,col=n.col}
+	end
+
+	local ordered = {}
+	local cur = {row=start.row,col=start.col}
+	table.insert(ordered, cur)
+	pool[key(cur)] = nil
+
+	while next(pool) do
+		local found = false
+		for k,n in pairs(pool) do
+			if isNeighbour(cur.row,cur.col,n.row,n.col) then
+				table.insert(ordered, n)
+				pool[k] = nil
+				cur = n
+				found = true
+				break
+			end
+		end
+		if not found then break end
+	end
+
+	return ordered
+end
+
+local HintSystem = {}
+
+function HintSystem:Draw(puzzle)
+	if not puzzle or not puzzle.Solution then return end
+
+	for i=1,#puzzle.Solution do
+		local path = puzzle.Solution[i]
+		local ends = puzzle.targetPairs[i]
+		local ordered = orderPath(path, ends)
+
+		puzzle.paths[i] = {}
+		for _,node in ipairs(ordered) do
+			if not autoGen then return end
+			table.insert(puzzle.paths[i], {row=node.row,col=node.col})
+			puzzle:updateGui()
+			task.wait(autoGenSpeed)
+		end
+		puzzle:checkForWin()
+	end
+end
+
+local function hookAutoGen()
+	if hookedGen then return end
+
+	local mod = ReplicatedStorage:WaitForChild("Modules"):FindFirstChild("Misc")
+	if not mod then return end
+	mod = mod:FindFirstChild("FlowGameManager")
+	if not mod then return end
+	mod = mod:FindFirstChild("FlowGame")
+	if not mod then return end
+
+	FlowGameModule = require(mod)
+	oldNew = oldNew or FlowGameModule.new
+
+	FlowGameModule.new = function(...)
+		local puzzle = oldNew(...)
+		task.spawn(function()
+			if autoGen then
+				HintSystem:Draw(puzzle)
+			end
+		end)
+		return puzzle
+	end
+
+	hookedGen = true
+end
+
+hookAutoGen()
 
 task.spawn(function()
 local sprint=require(ReplicatedStorage.Systems.Character.Game.Sprinting)
