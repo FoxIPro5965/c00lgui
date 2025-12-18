@@ -2,6 +2,7 @@ local Players=game:GetService("Players")
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local RunService=game:GetService("RunService")
 local Lighting=game:GetService("Lighting")
+local VirtualInputManager=game:GetService("VirtualInputManager")
 local lp=Players.LocalPlayer
 local PlayerGui=lp:WaitForChild("PlayerGui")
 
@@ -55,6 +56,10 @@ local HitboxModule
 local autoGen=false
 local autoGenSpeed=0.115
 
+local anti1x1=false
+local undetectedMode=false
+local antiFakeNoli=false
+
 AutoBlockTab:CreateToggle({Name="Autoblock",Callback=function(v)autoBlock=v end})
 AutoBlockTab:CreateInput({Name="Range",PlaceholderText="12",Callback=function(v)range=tonumber(v)or range end})
 AutoBlockTab:CreateToggle({Name="Facing Check",Callback=function(v)facingCheck=v end})
@@ -88,28 +93,12 @@ end
 end
 })
 
-OtherTab:CreateToggle({
-Name="Auto gen",
-Callback=function(v)
-autoGen=v
-if autoGen then enableAutoGen() else disableAutoGen() end
-end
-})
+OtherTab:CreateToggle({Name="Auto gen",Callback=function(v)autoGen=v end})
+OtherTab:CreateSlider({Name="Gen Speed",Range={0.01,0.5},Increment=0.005,CurrentValue=0.115,Callback=function(v)autoGenSpeed=v end})
 
-OtherTab:CreateSlider({
-Name="Gen Speed",
-Range={0.01,0.5},
-Increment=0.005,
-CurrentValue=0.115,
-Callback=function(v)autoGenSpeed=v end
-})
-
-OtherTab:CreateButton({
-Name="Load FakeBlock",
-Callback=function()
-loadstring(game:HttpGet("https://raw.githubusercontent.com/skibidi399/Auto-block-script/main/fakeblock"))()
-end
-})
+OtherTab:CreateToggle({Name="Anti 1x1 Pop-up",Callback=function(v)anti1x1=v end})
+OtherTab:CreateToggle({Name="Undetected Mode",Callback=function(v)undetectedMode=v end})
+OtherTab:CreateToggle({Name="Anti Fake Noli",Callback=function(v)antiFakeNoli=v end})
 
 local function click(btnName)
 local ui=PlayerGui:FindFirstChild("MainUI")
@@ -187,7 +176,6 @@ end
 end)
 
 local oldA,oldO,oldB,oldF=Lighting.Ambient,Lighting.OutdoorAmbient,Lighting.Brightness,Lighting.FogEnd
-
 local function bright(on)
 if on then
 Lighting.Ambient=Color3.new(1,1,1)
@@ -220,7 +208,7 @@ end
 end
 
 task.spawn(function()
-while task.wait(0.9)do
+while task.wait(0.6)do
 if not visualEnabled then clearVisual()bright(false)continue end
 bright(true)
 clearVisual()
@@ -250,98 +238,71 @@ end
 end
 end)
 
-local function getDirection(r1,c1,r2,c2)
-if r2<r1 then return"up"end
-if r2>r1 then return"down"end
-if c2<c1 then return"left"end
-if c2>c1 then return"right"end
-end
-
-local function isNeighbourLocal(r1,c1,r2,c2)
-if r2==r1-1 and c2==c1 then return"up"end
-if r2==r1+1 and c2==c1 then return"down"end
-if r2==r1 and c2==c1-1 then return"left"end
-if r2==r1 and c2==c1+1 then return"right"end
-return false
-end
-
-local function coordKey(n)return n.row.."-"..n.col end
-
-local function orderPathFromEndpoints(path,endpoints)
-if not path or #path==0 then return path end
-local start
-for _,ep in endpoints or{}do
-for _,n in path do
-if n.row==ep.row and n.col==ep.col then start={row=ep.row,col=ep.col}break end
-end
-if start then break end
-end
-if not start then start={row=path[1].row,col=path[1].col}end
-local remaining={}
-for _,n in path do remaining[coordKey(n)]={row=n.row,col=n.col}end
-local ordered={}
-local current={row=start.row,col=start.col}
-table.insert(ordered,current)
-remaining[coordKey(current)]=nil
-while next(remaining)do
-local found=false
-for k,n in pairs(remaining)do
-if isNeighbourLocal(current.row,current.col,n.row,n.col)then
-table.insert(ordered,n)
-remaining[k]=nil
-current=n
-found=true
-break
-end
-end
-if not found then return path end
-end
-return ordered
-end
-
-local HintSystem={}
-function HintSystem:DrawSolutionOneByOne(puzzle,delay)
-delay=delay or autoGenSpeed
-if not puzzle or not puzzle.Solution then return end
-for colorIndex=1,#puzzle.Solution do
-local path=puzzle.Solution[colorIndex]
-local endpoints=puzzle.targetPairs[colorIndex]
-local ordered=orderPathFromEndpoints(path,endpoints)
-puzzle.paths[colorIndex]={}
-for _,node in ordered do
-table.insert(puzzle.paths[colorIndex],{row=node.row,col=node.col})
-puzzle:updateGui()
-task.wait(delay)
-end
-puzzle:checkForWin()
-end
-end
-
-local FlowGameModule
-local oldFlowNew
-local hooked=false
-
-function enableAutoGen()
-if hooked then return end
-local bb=ReplicatedStorage:WaitForChild("Modules"):FindFirstChild("Misc")
-if bb then bb=bb:FindFirstChild("FlowGameManager")if bb then bb=bb:FindFirstChild("FlowGame")end end
-if not bb then return end
-FlowGameModule=require(bb)
-oldFlowNew=oldFlowNew or FlowGameModule.new
-FlowGameModule.new=function(...)
-local puzzle=oldFlowNew(...)
 task.spawn(function()
-if autoGen then HintSystem:DrawSolutionOneByOne(puzzle,autoGenSpeed)end
+while task.wait(0.1) do
+if not anti1x1 then continue end
+local temp=lp.PlayerGui:FindFirstChild("TemporaryUI")
+if temp then
+for _,i in ipairs(temp:GetChildren()) do
+if i.Name=="1x1x1x1Popup" then
+local cx=i.AbsolutePosition.X+i.AbsoluteSize.X/2
+local cy=i.AbsolutePosition.Y+i.AbsoluteSize.Y/2
+VirtualInputManager:SendMouseButtonEvent(cx,cy,0,true,lp.PlayerGui,1)
+VirtualInputManager:SendMouseButtonEvent(cx,cy,0,false,lp.PlayerGui,1)
+end
+end
+end
+end
 end)
-return puzzle
-end
-hooked=true
-end
 
-function disableAutoGen()
-if FlowGameModule and oldFlowNew then FlowGameModule.new=oldFlowNew end
-hooked=false
+task.spawn(function()
+local Notify=loadstring(game:HttpGet("https://raw.githubusercontent.com/Gazer-Ha/NOT-MINE/refs/heads/main/AkaliNotify"))()
+local Undetectable=require(ReplicatedStorage.Modules.StatusEffects.Undetectable)
+local animationId="rbxassetid://75804462760596"
+local loadedAnim=nil
+local function play(char)
+local hum=char and char:FindFirstChildOfClass("Humanoid")
+if hum then
+local anim=Instance.new("Animation")
+anim.AnimationId=animationId
+loadedAnim=hum:LoadAnimation(anim)
+loadedAnim:Play()
+loadedAnim:AdjustSpeed(0)
 end
+end
+local function stop()
+if loadedAnim then loadedAnim:Stop() loadedAnim=nil end
+end
+local oA=Undetectable.Applied
+local oR=Undetectable.Removed
+Undetectable.Applied=function(d)
+if undetectedMode and d.Player==lp then play(d.Character or d.Player.Character) end
+return oA(d)
+end
+Undetectable.Removed=function(d)
+if undetectedMode and d.Player==lp then stop() end
+return oR(d)
+end
+end)
+
+task.spawn(function()
+while task.wait(0.8) do
+if not antiFakeNoli then continue end
+for _,m in ipairs(workspace:GetChildren()) do
+if m:IsA("Model") then
+local n=m.Name:lower()
+local hum=m:FindFirstChildOfClass("Humanoid")
+local hrp=m:FindFirstChild("HumanoidRootPart")
+local k=n:find("illusion") or n:find("fake") or n:find("decoy") or n:find("clone") or n:find("noli")
+local f=false
+if hum and hum.Health<=0 then f=true end
+if hum and hum.MaxHealth<=1 then f=true end
+if not hum and hrp then f=true end
+if k and f then pcall(function()m:Destroy()end) end
+end
+end
+end
+end)
 
 task.spawn(function()
 local sprint=require(ReplicatedStorage.Systems.Character.Game.Sprinting)
