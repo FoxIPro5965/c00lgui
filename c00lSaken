@@ -5,7 +5,7 @@ local Lighting=game:GetService("Lighting")
 local lp=Players.LocalPlayer
 local PlayerGui=lp:WaitForChild("PlayerGui")
 
-local attackIds={
+local attackIds = {
 ["126830014841198"]=true,["126355327951215"]=true,["121086746534252"]=true,
 ["18885909645"]=true,["98456918873918"]=true,["105458270463374"]=true,
 ["83829782357897"]=true,["125403313786645"]=true,["118298475669935"]=true,
@@ -31,17 +31,17 @@ local BackstabTab=Window:CreateTab("AutoBackstab",4483362458)
 local VisualTab=Window:CreateTab("Visuals",4483362458)
 local OtherTab=Window:CreateTab("Other",4483362458)
 
-local autoBlockOn=false
-local detectionRange=12
-local strictRangeOn=false
-local facingCheckEnabled=true
-local autoBlockMode="Block"
+local autoBlockOn = false
+local strictRangeOn = false
+local facingCheckEnabled = true
+local detectionRange = 12
+local autoPunchOn = false
+local aimPunch = false
+local predictionValue = 0.8
 
 local backstab=false
 local backstabRange=8
 local backstabMode="Around"
-local dashStab=false
-local glideStab=false
 
 local visualEnabled=false
 local showKiller=false
@@ -49,19 +49,22 @@ local showSurvivor=false
 local showItems=false
 local showGen=false
 
-local infStamina=false
+local infStamina=true
 local jumpEnabled=false
 local hitbox=false
 local HitboxModule
-local autoGen=false
-local autoGenSpeed=0.115
+local autoGen=true
+local autoGenSpeed=0.1
 local undetectedMode=false
 
-AutoBlockTab:CreateToggle({Name="Autoblock",Callback=function(v)autoBlockOn=v end})
-AutoBlockTab:CreateInput({Name="Range",PlaceholderText="12",Callback=function(v)detectionRange=tonumber(v)or detectionRange end})
-AutoBlockTab:CreateToggle({Name="Strict Range",Callback=function(v)strictRangeOn=v end})
-AutoBlockTab:CreateToggle({Name="Facing Check",Callback=function(v)facingCheckEnabled=v end})
-AutoBlockTab:CreateDropdown({Name="Mode",Options={"Block","Clone"},CurrentOption="Block",Callback=function(v)autoBlockMode=v end})
+AutoBlockTab:CreateToggle({Name="Autoblock",Callback=function(v)autoBlock=v end})
+AutoBlockTab:CreateInput({Name="Range",PlaceholderText="12",Callback=function(v)range=tonumber(v)or range end})
+AutoBlockTab:CreateToggle({Name="Strict Range",CurrentValue=false,Callback=function(v)strictRangeOn=v end})
+AutoBlockTab:CreateToggle({Name="Facing Check",CurrentValue=true,Callback=function(v)facingCheckEnabled=v end})
+
+AutoBlockTab:CreateToggle({Name="Autopunch",Callback=function(v)autoPunch=v end})
+AutoBlockTab:CreateToggle({Name="Aimpunch",Callback=function(v)aimPunch=v end})
+AutoBlockTab:CreateSlider({Name="Prediction",Range={0,5},Increment=0.1,CurrentValue=0.8,Callback=function(v)aimPrediction=v end})
 
 BackstabTab:CreateToggle({Name="AutoBackstab",Callback=function(v)backstab=v end})
 BackstabTab:CreateInput({Name="Range",PlaceholderText="8",Callback=function(v)backstabRange=tonumber(v)or backstabRange end})
@@ -69,31 +72,35 @@ BackstabTab:CreateDropdown({Name="Mode",Options={"Behind","Around"},CurrentOptio
 
 VisualTab:CreateToggle({Name="Highlight",Callback=function(v)visualEnabled=v end})
 VisualTab:CreateToggle({Name="Killer",Callback=function(v)showKiller=v end})
-VisualTab:CreateToggle({Name="Survivor",Callback=function(v)showSurvivor=v end})
+VisualTab:CreateToggle({Name="Survivor"Callback=function(v)showSurvivor=v end})
 VisualTab:CreateToggle({Name="Generator",Callback=function(v)showGen=v end})
 VisualTab:CreateToggle({Name="Medkit & BloxyCola",Callback=function(v)showItems=v end})
 
 OtherTab:CreateToggle({Name="INF STAMINA",Callback=function(v)infStamina=v end})
 OtherTab:CreateToggle({Name="Jump",Callback=function(v)jumpEnabled=v end})
-OtherTab:CreateToggle({Name="Hitbox",Callback=function(v)
+
+OtherTab:CreateToggle({
+Name="Hitbox",
+Callback=function(v)
 hitbox=v
 if v then
 HitboxModule=HitboxModule or loadstring(game:HttpGet("https://raw.githubusercontent.com/FoxIPro5965/c00lgui/main/Hitbox.lua"))()
-HitboxModule:ExtendHitbox(1.2,500)
+HitboxModule:ExtendHitbox(1.25,580)
 elseif HitboxModule then
 HitboxModule:StopExtendingHitbox()
 end
-end})
+end
+})
+
 OtherTab:CreateToggle({Name="Auto gen",Callback=function(v)autoGen=v end})
-OtherTab:CreateSlider({Name="Gen Speed",Range={0.01,0.5},Increment=0.005,CurrentValue=0.115,Callback=function(v)autoGenSpeed=v end})
+OtherTab:CreateSlider({Name="Gen Speed",Range={0.01,0.5},Increment=0.005,CurrentValue=0.1,Callback=function(v)autoGenSpeed=v end})
 OtherTab:CreateToggle({Name="Undetected Mode",Callback=function(v)undetectedMode=v end})
 
-local function clickSkill(name)
+local function click(btnName)
 local ui=PlayerGui:FindFirstChild("MainUI")
-local c=ui and ui:FindFirstChild("AbilityContainer")
-local btn=c and c:FindFirstChild(name)
+local btn=ui and ui:FindFirstChild("AbilityContainer") and ui.AbilityContainer:FindFirstChild(btnName)
 if not btn then return end
-for _,con in ipairs(getconnections(btn.MouseButton1Click))do pcall(function()con:Fire()end)end
+for _,c in ipairs(getconnections(btn.MouseButton1Click))do pcall(function()c:Fire()end)end
 pcall(function()btn:Activate()end)
 end
 
@@ -102,35 +109,46 @@ local function detectAttack(char)
 if checked[char] then return false end
 local hum=char:FindFirstChildOfClass("Humanoid")
 if hum then
-for _,tr in ipairs(hum:GetPlayingAnimationTracks())do
+for _,tr in ipairs(hum:GetPlayingAnimationTracks()) do
 local id=tr.Animation and tr.Animation.AnimationId:match("%d+")
 if id and attackIds[id] then
 checked[char]=true
-task.delay(0.08,function()checked[char]=nil end)
+task.delay(0.08,function() checked[char]=nil end)
 return true
 end
 end
 end
 end
 
+local function clickBlock()
+local ui=PlayerGui:FindFirstChild("MainUI")
+local btn=ui and ui:FindFirstChild("AbilityContainer") and ui.AbilityContainer:FindFirstChild("Block")
+if btn then
+for _,c in ipairs(getconnections(btn.MouseButton1Click)) do c:Fire() end
+end
+end
+
 RunService.RenderStepped:Connect(function()
-if not autoBlockOn then return end
 local char=lp.Character
 local root=char and char:FindFirstChild("HumanoidRootPart")
 if not root then return end
-for _,p in ipairs(Players:GetPlayers())do
-if p~=lp and p.Character then
-local r=p.Character:FindFirstChild("HumanoidRootPart")
-local h=p.Character:FindFirstChildOfClass("Humanoid")
-if r and h and h.Health>0 then
-if (r.Position-root.Position).Magnitude<=detectionRange then
-if detectAttack(p.Character) then
-if autoBlockMode=="Clone" then clickSkill("Clone") else clickSkill("Block") end
+
+if autoBlockOn then  
+    for _,p in ipairs(Players:GetPlayers()) do  
+        if p~=lp and p.Character then  
+            local r=p.Character:FindFirstChild("HumanoidRootPart")  
+            local h=p.Character:FindFirstChildOfClass("Humanoid")  
+            if r and h and h.Health>0 then  
+                if (r.Position-root.Position).Magnitude<=detectionRange then  
+                    if detectAttack(p.Character) then  
+                        clickBlock()  
+                    end  
+                end  
+            end  
+        end  
+    end  
 end
-end
-end
-end
-end
+
 end)
 
 local killersFolder=workspace:WaitForChild("Players"):WaitForChild("Killers")
@@ -269,7 +287,9 @@ if r2==r1 and c2==c1+1 then return true end
 return false
 end
 
-local function key(n)return n.row.."-"..n.col end
+local function key(n)
+return n.row.."-"..n.col
+end
 
 local function orderPath(path,endpoints)
 if not path or #path==0 then return path end
