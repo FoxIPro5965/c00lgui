@@ -5,25 +5,25 @@ local Lighting=game:GetService("Lighting")
 local lp=Players.LocalPlayer
 local PlayerGui=lp:WaitForChild("PlayerGui")
 
-local attackIds = {
-    ["126830014841198"]=true,["126355327951215"]=true,["121086746534252"]=true,
-    ["18885909645"]=true,["98456918873918"]=true,["105458270463374"]=true,
-    ["83829782357897"]=true,["125403313786645"]=true,["118298475669935"]=true,
-    ["82113744478546"]=true,["70371667919898"]=true,["99135633258223"]=true,
-    ["97167027849946"]=true,["109230267448394"]=true,["139835501033932"]=true,
-    ["126896426760253"]=true,["109667959938617"]=true,["126681776859538"]=true,
-    ["129976080405072"]=true,["121293883585738"]=true,["81639435858902"]=true,
-    ["137314737492715"]=true,["92173139187970"]=true,["122709416391"]=true,
-    ["879895330952"]=true,
+local attackIds={
+["126830014841198"]=true,["126355327951215"]=true,["121086746534252"]=true,
+["18885909645"]=true,["98456918873918"]=true,["105458270463374"]=true,
+["83829782357897"]=true,["125403313786645"]=true,["118298475669935"]=true,
+["82113744478546"]=true,["70371667919898"]=true,["99135633258223"]=true,
+["97167027849946"]=true,["109230267448394"]=true,["139835501033932"]=true,
+["126896426760253"]=true,["109667959938617"]=true,["126681776859538"]=true,
+["129976080405072"]=true,["121293883585738"]=true,["81639435858902"]=true,
+["137314737492715"]=true,["92173139187970"]=true,["122709416391"]=true,
+["879895330952"]=true,
 }
 
 local Rayfield=loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 local Window=Rayfield:CreateWindow({
-    Name="c00lSaken",
-    LoadingTitle="c00lSaken",
-    LoadingSubtitle="by FoxOfficial",
-    ConfigurationSaving={Enabled=true,FolderName="c00lSaken",FileName="Config"},
-    KeySystem=false
+Name="c00lSaken",
+LoadingTitle="c00lSaken",
+LoadingSubtitle="by FoxOfficial",
+ConfigurationSaving={Enabled=true,FolderName="c00lSaken",FileName="Config"},
+KeySystem=false
 })
 
 local AutoBlockTab=Window:CreateTab("Autoblock",4483362458)
@@ -31,18 +31,17 @@ local BackstabTab=Window:CreateTab("AutoBackstab",4483362458)
 local VisualTab=Window:CreateTab("Visuals",4483362458)
 local OtherTab=Window:CreateTab("Other",4483362458)
 
--- ===== VARIABLES =====
 local autoBlockOn=false
 local detectionRange=12
 local strictRangeOn=false
 local facingCheckEnabled=true
-
-local autoBlockMode="Block" -- Block | Clone
+local autoBlockMode="Block"
 
 local backstab=false
 local backstabRange=8
 local backstabMode="Around"
 local dashStab=false
+local glideStab=false
 
 local visualEnabled=false
 local showKiller=false
@@ -58,20 +57,15 @@ local autoGen=false
 local autoGenSpeed=0.115
 local undetectedMode=false
 
--- ===== UI =====
 AutoBlockTab:CreateToggle({Name="Autoblock",Callback=function(v)autoBlockOn=v end})
 AutoBlockTab:CreateInput({Name="Range",PlaceholderText="12",Callback=function(v)detectionRange=tonumber(v)or detectionRange end})
 AutoBlockTab:CreateToggle({Name="Strict Range",Callback=function(v)strictRangeOn=v end})
 AutoBlockTab:CreateToggle({Name="Facing Check",Callback=function(v)facingCheckEnabled=v end})
-AutoBlockTab:CreateDropdown({
-    Name="Mode",
-    Options={"Block","Clone"},
-    CurrentOption="Block",
-    Callback=function(v)autoBlockMode=v end
-})
+AutoBlockTab:CreateDropdown({Name="Mode",Options={"Block","Clone"},CurrentOption="Block",Callback=function(v)autoBlockMode=v end})
 
 BackstabTab:CreateToggle({Name="AutoBackstab",Callback=function(v)backstab=v end})
 BackstabTab:CreateToggle({Name="DashStab",Callback=function(v)dashStab=v end})
+BackstabTab:CreateToggle({Name="GlideStab",Callback=function(v)glideStab=v end})
 BackstabTab:CreateInput({Name="Range",PlaceholderText="8",Callback=function(v)backstabRange=tonumber(v)or backstabRange end})
 BackstabTab:CreateDropdown({Name="Mode",Options={"Behind","Around"},CurrentOption="Around",Callback=function(v)backstabMode=v end})
 
@@ -83,143 +77,147 @@ VisualTab:CreateToggle({Name="Medkit & BloxyCola",Callback=function(v)showItems=
 
 OtherTab:CreateToggle({Name="INF STAMINA",Callback=function(v)infStamina=v end})
 OtherTab:CreateToggle({Name="Jump",Callback=function(v)jumpEnabled=v end})
-OtherTab:CreateToggle({
-    Name="Hitbox",
-    Callback=function(v)
-        hitbox=v
-        if v then
-            HitboxModule=HitboxModule or loadstring(game:HttpGet("https://raw.githubusercontent.com/FoxIPro5965/c00lgui/main/Hitbox.lua"))()
-            HitboxModule:ExtendHitbox(1.15,600)
-        elseif HitboxModule then
-            HitboxModule:StopExtendingHitbox()
-        end
-    end
-})
+OtherTab:CreateToggle({Name="Hitbox",Callback=function(v)
+hitbox=v
+if v then
+HitboxModule=HitboxModule or loadstring(game:HttpGet("https://raw.githubusercontent.com/FoxIPro5965/c00lgui/main/Hitbox.lua"))()
+HitboxModule:ExtendHitbox(1.15,600)
+elseif HitboxModule then
+HitboxModule:StopExtendingHitbox()
+end
+end})
 OtherTab:CreateToggle({Name="Auto gen",Callback=function(v)autoGen=v end})
 OtherTab:CreateSlider({Name="Gen Speed",Range={0.01,0.5},Increment=0.005,CurrentValue=0.115,Callback=function(v)autoGenSpeed=v end})
 OtherTab:CreateToggle({Name="Undetected Mode",Callback=function(v)undetectedMode=v end})
 
 local function clickSkill(name)
-    local ui=PlayerGui:FindFirstChild("MainUI")
-    local c=ui and ui:FindFirstChild("AbilityContainer")
-    local btn=c and c:FindFirstChild(name)
-    if not btn then return end
-    for _,con in ipairs(getconnections(btn.MouseButton1Click))do pcall(function()con:Fire()end)end
-    pcall(function()btn:Activate()end)
+local ui=PlayerGui:FindFirstChild("MainUI")
+local c=ui and ui:FindFirstChild("AbilityContainer")
+local btn=c and c:FindFirstChild(name)
+if not btn then return end
+for _,con in ipairs(getconnections(btn.MouseButton1Click))do pcall(function()con:Fire()end)end
+pcall(function()btn:Activate()end)
 end
 
--- ===== AUTOBLOCK =====
 local checked={}
 local function detectAttack(char)
-    if checked[char] then return false end
-    local hum=char:FindFirstChildOfClass("Humanoid")
-    if hum then
-        for _,tr in ipairs(hum:GetPlayingAnimationTracks())do
-            local id=tr.Animation and tr.Animation.AnimationId:match("%d+")
-            if id and attackIds[id] then
-                checked[char]=true
-                task.delay(0.08,function()checked[char]=nil end)
-                return true
-            end
-        end
-    end
+if checked[char] then return false end
+local hum=char:FindFirstChildOfClass("Humanoid")
+if hum then
+for _,tr in ipairs(hum:GetPlayingAnimationTracks())do
+local id=tr.Animation and tr.Animation.AnimationId:match("%d+")
+if id and attackIds[id] then
+checked[char]=true
+task.delay(0.08,function()checked[char]=nil end)
+return true
+end
+end
+end
 end
 
 RunService.RenderStepped:Connect(function()
-    if not autoBlockOn then return end
-    local char=lp.Character
-    local root=char and char:FindFirstChild("HumanoidRootPart")
-    if not root then return end
-
-    for _,p in ipairs(Players:GetPlayers())do
-        if p~=lp and p.Character then
-            local r=p.Character:FindFirstChild("HumanoidRootPart")
-            local h=p.Character:FindFirstChildOfClass("Humanoid")
-            if r and h and h.Health>0 then
-                if (r.Position-root.Position).Magnitude<=detectionRange then
-                    if detectAttack(p.Character) then
-                        if autoBlockMode=="Clone" then
-                            clickSkill("Clone")
-                        else
-                            clickSkill("Block")
-                        end
-                    end
-                end
-            end
-        end
-    end
+if not autoBlockOn then return end
+local char=lp.Character
+local root=char and char:FindFirstChild("HumanoidRootPart")
+if not root then return end
+for _,p in ipairs(Players:GetPlayers())do
+if p~=lp and p.Character then
+local r=p.Character:FindFirstChild("HumanoidRootPart")
+local h=p.Character:FindFirstChildOfClass("Humanoid")
+if r and h and h.Health>0 then
+if (r.Position-root.Position).Magnitude<=detectionRange then
+if detectAttack(p.Character) then
+if autoBlockMode=="Clone" then clickSkill("Clone") else clickSkill("Block") end
+end
+end
+end
+end
+end
 end)
 
--- ===== AUTO BACKSTAB (CONTINUOUS TP VERSION) =====
+local killersFolder=workspace:WaitForChild("Players"):WaitForChild("Killers")
+local COOLDOWN=10
+local HOLD_NORMAL=2.9
+local HOLD_GLIDE=3
+local TP_DIST=2.8
+local GLIDE_WINDOW=8
+local lastBackstab=0
+local isStabbing=false
+local lastCrouchTime=0
 
-local killersFolder = workspace:WaitForChild("Players"):WaitForChild("Killers")
-
-local lastBackstab = 0
-local COOLDOWN = 10
-local HOLD_TIME = 2.9
-local TP_DIST = 2.5
+task.spawn(function()
+while task.wait(0.05)do
+local ui=PlayerGui:FindFirstChild("MainUI")
+local c=ui and ui:FindFirstChild("AbilityContainer")
+local crouch=c and c:FindFirstChild("Crouch")
+if crouch then
+for _,con in ipairs(getconnections(crouch.MouseButton1Click))do con:Disable()end
+crouch.MouseButton1Click:Connect(function()
+lastCrouchTime=tick()
+end)
+break
+end
+end
+end)
 
 local function validKiller(k)
-    local hum = k:FindFirstChildOfClass("Humanoid")
-    local hrp = k:FindFirstChild("HumanoidRootPart")
-    return hum and hrp and hum.Health > 0
+local hum=k:FindFirstChildOfClass("Humanoid")
+local hrp=k:FindFirstChild("HumanoidRootPart")
+return hum and hrp and hum.Health>0
 end
 
-local function inRange(hrp, khrp)
-    return (hrp.Position - khrp.Position).Magnitude <= backstabRange
+local function isBehind(hrp,khrp)
+if (hrp.Position-khrp.Position).Magnitude>backstabRange then return false end
+if backstabMode=="Around" then return true end
+return (hrp.Position-khrp.Position):Dot(-khrp.CFrame.LookVector)>0.5
 end
 
-local function behindOrAround(hrp, khrp)
-    if backstabMode == "Around" then
-        return true
-    end
-    return (hrp.Position - khrp.Position):Dot(-khrp.CFrame.LookVector) > 0.5
+local function tpBehind(hrp,khrp)
+hrp.CFrame=CFrame.new(khrp.Position-khrp.CFrame.LookVector*TP_DIST,khrp.Position)
 end
 
-local function tpBehind(hrp, khrp)
-    hrp.CFrame = CFrame.new(
-        khrp.Position - khrp.CFrame.LookVector * TP_DIST,
-        khrp.Position
-    )
+local function holdTP(hrp,khrp,time)
+local s=tick()
+local c
+c=RunService.Heartbeat:Connect(function()
+if tick()-s>=time then c:Disconnect() return end
+tpBehind(hrp,khrp)
+end)
 end
 
 RunService.Heartbeat:Connect(function()
-    if not backstab then return end
-    if tick() - lastBackstab < COOLDOWN then return end
-
-    local char = lp.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-
-    for _, killer in ipairs(killersFolder:GetChildren()) do
-        if validKiller(killer) then
-            local khrp = killer.HumanoidRootPart
-
-            if inRange(hrp, khrp) and behindOrAround(hrp, khrp) then
-                lastBackstab = tick()
-
-                -- DASHSTAB
-                if dashStab then
-                    clickSkill("Crouch")
-                    task.wait(0.02)
-                end
-                clickSkill("Dagger")
-                local start = tick()
-                local conn
-                conn = RunService.Heartbeat:Connect(function()
-                    if tick() - start >= HOLD_TIME then
-                        conn:Disconnect()
-                        return
-                    end
-                    if hrp and khrp then
-                        tpBehind(hrp, khrp)
-                    end
-                end)
-
-                break
-            end
-        end
-    end
+if not backstab then return end
+if isStabbing then return end
+if tick()-lastBackstab<COOLDOWN then return end
+local hrp=lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
+if not hrp then return end
+for _,k in ipairs(killersFolder:GetChildren())do
+if validKiller(k) then
+local khrp=k.HumanoidRootPart
+if isBehind(hrp,khrp) then
+isStabbing=true
+lastBackstab=tick()
+if glideStab and tick()-lastCrouchTime<=GLIDE_WINDOW then
+clickSkill("Dagger")
+holdTP(hrp,khrp,HOLD_GLIDE)
+task.delay(HOLD_GLIDE,function()isStabbing=false end)
+break
+end
+if dashStab then
+clickSkill("Crouch")
+task.wait(0.02)
+clickSkill("Dagger")
+holdTP(hrp,khrp,HOLD_NORMAL)
+task.delay(HOLD_NORMAL,function()isStabbing=false end)
+break
+end
+clickSkill("Dagger")
+holdTP(hrp,khrp,HOLD_NORMAL)
+task.delay(HOLD_NORMAL,function()isStabbing=false end)
+break
+end
+end
+end
 end)
 
 local oldA,oldO,oldB,oldF=Lighting.Ambient,Lighting.OutdoorAmbient,Lighting.Brightness,Lighting.FogEnd
@@ -326,9 +324,7 @@ if r2==r1 and c2==c1+1 then return true end
 return false
 end
 
-local function key(n)
-return n.row.."-"..n.col
-end
+local function key(n)return n.row.."-"..n.col end
 
 local function orderPath(path,endpoints)
 if not path or #path==0 then return path end
