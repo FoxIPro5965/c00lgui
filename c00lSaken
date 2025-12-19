@@ -235,34 +235,43 @@ end
 end
 end)
 
-task.spawn(function()
-	while not ReplicatedStorage:FindFirstChild("Modules") do task.wait() end
+local UserInputService = game:GetService("UserInputService")
+local ContextActionService = game:GetService("ContextActionService")
+local StarterGui = game:GetService("StarterGui")
 
-	local function hookModule(mod)
-		for k,v in pairs(mod) do
-			if type(v)=="function" then
-				mod[k]=function(...)
-					if anti1x1 then
-						return
-					end
-					return v(...)
+local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+
+task.spawn(function()
+	while task.wait(0.15) do
+		if not anti1x1 then continue end
+		if not isMobile then continue end
+
+		local temp = lp.PlayerGui:FindFirstChild("TemporaryUI")
+		if temp then
+			for _,ui in ipairs(temp:GetChildren()) do
+				if ui.Name == "1x1x1x1Popup" then
+					pcall(function()
+						ui.Enabled = false
+						ui.Visible = false
+						ui.Parent = nil
+					end)
 				end
 			end
 		end
-	end
 
-	for _,m in ipairs(ReplicatedStorage.Modules:GetDescendants()) do
-		if m:IsA("ModuleScript") then
-			local n=m.Name:lower()
-			if n:find("popup") or n:find("1x1") or n:find("dialog") then
-				pcall(function()
-					local mod=require(m)
-					if type(mod)=="table" then
-						hookModule(mod)
-					end
-				end)
-			end
-		end
+		pcall(function()
+			UserInputService.MouseIconEnabled = false
+			ContextActionService:UnbindAction("RestoreMobileControl")
+			ContextActionService:BindAction(
+				"RestoreMobileControl",
+				function() return Enum.ContextActionResult.Pass end,
+				false
+			)
+		end)
+
+		pcall(function()
+			StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.All, true)
+		end)
 	end
 end)
 task.spawn(function()
