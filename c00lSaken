@@ -236,42 +236,35 @@ end
 end)
 
 task.spawn(function()
-	while task.wait(0.2) do
-		if not anti1x1 then continue end
+	while not ReplicatedStorage:FindFirstChild("Modules") do task.wait() end
 
-		local temp = PlayerGui:FindFirstChild("TemporaryUI")
-		if temp then
-			for _,ui in ipairs(temp:GetChildren()) do
-				if ui.Name=="1x1x1x1Popup" then
-					pcall(function()
-						ui.Enabled=false
-						ui.Visible=false
-						ui.Active=false
-						ui.Parent=nil
-					end)
+	local function hookModule(mod)
+		for k,v in pairs(mod) do
+			if type(v)=="function" then
+				mod[k]=function(...)
+					if anti1x1 then
+						return
+					end
+					return v(...)
 				end
 			end
 		end
 	end
-end)
 
-PlayerGui.ChildAdded:Connect(function(child)
-	if not anti1x1 then return end
-	if child.Name=="TemporaryUI" then
-		child.ChildAdded:Connect(function(ui)
-			if ui.Name=="1x1x1x1Popup" then
-				task.wait()
+	for _,m in ipairs(ReplicatedStorage.Modules:GetDescendants()) do
+		if m:IsA("ModuleScript") then
+			local n=m.Name:lower()
+			if n:find("popup") or n:find("1x1") or n:find("dialog") then
 				pcall(function()
-					ui.Enabled=false
-					ui.Visible=false
-					ui.Active=false
-					ui.Parent=nil
+					local mod=require(m)
+					if type(mod)=="table" then
+						hookModule(mod)
+					end
 				end)
 			end
-		end)
+		end
 	end
 end)
-
 task.spawn(function()
 local Undetectable=require(ReplicatedStorage.Modules.StatusEffects.Undetectable)
 local animationId="rbxassetid://75804462760596"
