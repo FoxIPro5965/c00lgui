@@ -61,7 +61,7 @@ AutoBlockTab:CreateToggle({Name="Autoblock",Callback=function(v)autoBlock=v end}
 AutoBlockTab:CreateInput({Name="Range",PlaceholderText="12",Callback=function(v)range=tonumber(v)or range end})
 AutoBlockTab:CreateToggle({Name="Strict Range",CurrentValue=false,Callback=function(v)strictRangeOn=v end})
 AutoBlockTab:CreateToggle({Name="Facing Check",CurrentValue=true,Callback=function(v)facingCheckEnabled=v end})
-AutoBlockTab:CreateToggle({Name="Facing Check",Callback=function(v)facingCheck=v end})
+
 AutoBlockTab:CreateToggle({Name="Autopunch",Callback=function(v)autoPunch=v end})
 AutoBlockTab:CreateToggle({Name="Aimpunch",Callback=function(v)aimPunch=v end})
 AutoBlockTab:CreateSlider({Name="Prediction",Range={0,5},Increment=0.1,CurrentValue=0.8,Callback=function(v)aimPrediction=v end})
@@ -72,7 +72,7 @@ BackstabTab:CreateDropdown({Name="Mode",Options={"Behind","Around"},CurrentOptio
 
 VisualTab:CreateToggle({Name="Highlight",Callback=function(v)visualEnabled=v end})
 VisualTab:CreateToggle({Name="Killer",Callback=function(v)showKiller=v end})
-VisualTab:CreateToggle({Name="Survivor",Callback=function(v)showSurvivor=v end})
+VisualTab:CreateToggle({Name="Survivor"Callback=function(v)showSurvivor=v end})
 VisualTab:CreateToggle({Name="Generator",Callback=function(v)showGen=v end})
 VisualTab:CreateToggle({Name="Medkit & BloxyCola",Callback=function(v)showItems=v end})
 
@@ -102,11 +102,6 @@ local btn=ui and ui:FindFirstChild("AbilityContainer") and ui.AbilityContainer:F
 if not btn then return end
 for _,c in ipairs(getconnections(btn.MouseButton1Click))do pcall(function()c:Fire()end)end
 pcall(function()btn:Activate()end)
-end
-
-local function isFacing(my,enemy)
-local dir=(my.Position-enemy.Position).Unit
-return enemy.CFrame.LookVector:Dot(dir)>0.45
 end
 
 local checked={}
@@ -160,7 +155,7 @@ local killersFolder=workspace:WaitForChild("Players"):WaitForChild("Killers")
 local lastBackstab=0
 local COOLDOWN=10
 local HOLD=0.29
-local DIST=2.85
+local DIST=2.3
 
 local function isBehind(hrp,khrp)
 if(hrp.Position-khrp.Position).Magnitude>backstabRange then return false end
