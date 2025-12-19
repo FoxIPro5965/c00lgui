@@ -142,9 +142,9 @@ end)
 
 local killersFolder=workspace:WaitForChild("Players"):WaitForChild("Killers")
 local lastBackstab=0
-local COOLDOWN=30
+local COOLDOWN=10
 local HOLD=0.29
-local DIST=2.8
+local DIST=3
 
 local function isBehind(hrp,khrp)
 if(hrp.Position-khrp.Position).Magnitude>backstabRange then return false end
@@ -236,41 +236,29 @@ end
 end)
 
 local UserInputService = game:GetService("UserInputService")
-local ContextActionService = game:GetService("ContextActionService")
-local StarterGui = game:GetService("StarterGui")
+local Players = game:GetService("Players")
 
+local lp = Players.LocalPlayer
 local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 
 task.spawn(function()
-	while task.wait(0.15) do
+	if not isMobile then return end
+
+	while not lp:FindFirstChild("PlayerScripts") do task.wait() end
+	while not lp.PlayerScripts:FindFirstChild("PlayerModule") do task.wait() end
+
+	local PlayerModule = require(lp.PlayerScripts.PlayerModule)
+	local Controls = PlayerModule:GetControls()
+
+	while task.wait(0.1) do
 		if not anti1x1 then continue end
-		if not isMobile then continue end
 
-		local temp = lp.PlayerGui:FindFirstChild("TemporaryUI")
-		if temp then
-			for _,ui in ipairs(temp:GetChildren()) do
-				if ui.Name == "1x1x1x1Popup" then
-					pcall(function()
-						ui.Enabled = false
-						ui.Visible = false
-						ui.Parent = nil
-					end)
-				end
+		pcall(function()
+			if Controls and Controls.touchControls then
+				Controls.touchControls:Enable()
+				Controls.touchControls.moveStick.Visible = true
+				Controls.touchControls.jumpButton.Visible = true
 			end
-		end
-
-		pcall(function()
-			UserInputService.MouseIconEnabled = false
-			ContextActionService:UnbindAction("RestoreMobileControl")
-			ContextActionService:BindAction(
-				"RestoreMobileControl",
-				function() return Enum.ContextActionResult.Pass end,
-				false
-			)
-		end)
-
-		pcall(function()
-			StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.All, true)
 		end)
 	end
 end)
