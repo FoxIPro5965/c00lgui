@@ -154,11 +154,11 @@ local killersFolder=workspace:WaitForChild("Players"):WaitForChild("Killers")
 local lastBackstab=0
 local COOLDOWN=10
 local HOLD=0.29
-local DIST=3
+local DIST=2.85
 local BASE_BACKSTAB_RANGE = backstabRange
 local BASE_DIST = DIST
 local UNDETECT_RANGE_BONUS = 6
-local UNDETECT_BACKDIST = 3.2
+local UNDETECT_BACKDIST = 2.5
 
 local function isBehind(hrp,khrp)
 if(hrp.Position-khrp.Position).Magnitude>backstabRange then return false end
