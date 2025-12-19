@@ -236,19 +236,40 @@ end
 end)
 
 task.spawn(function()
-while task.wait(0.3) do
-if not anti1x1 then continue end
-local temp=PlayerGui:FindFirstChild("TemporaryUI")
-if temp then
-for _,i in ipairs(temp:GetChildren()) do
-if i.Name=="1x1x1x1Popup" then
-i.Enabled=false
-i.Visible=false
-i.Parent=nil
-end
-end
-end
-end
+	while task.wait(0.2) do
+		if not anti1x1 then continue end
+
+		local temp = PlayerGui:FindFirstChild("TemporaryUI")
+		if temp then
+			for _,ui in ipairs(temp:GetChildren()) do
+				if ui.Name=="1x1x1x1Popup" then
+					pcall(function()
+						ui.Enabled=false
+						ui.Visible=false
+						ui.Active=false
+						ui.Parent=nil
+					end)
+				end
+			end
+		end
+	end
+end)
+
+PlayerGui.ChildAdded:Connect(function(child)
+	if not anti1x1 then return end
+	if child.Name=="TemporaryUI" then
+		child.ChildAdded:Connect(function(ui)
+			if ui.Name=="1x1x1x1Popup" then
+				task.wait()
+				pcall(function()
+					ui.Enabled=false
+					ui.Visible=false
+					ui.Active=false
+					ui.Parent=nil
+				end)
+			end
+		end)
+	end
 end)
 
 task.spawn(function()
