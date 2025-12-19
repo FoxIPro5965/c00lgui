@@ -64,8 +64,6 @@ AutoBlockTab:CreateToggle({Name="Facing Check",Callback=function(v)facingCheckEn
 AutoBlockTab:CreateDropdown({Name="Mode",Options={"Block","Clone"},CurrentOption="Block",Callback=function(v)autoBlockMode=v end})
 
 BackstabTab:CreateToggle({Name="AutoBackstab",Callback=function(v)backstab=v end})
-BackstabTab:CreateToggle({Name="DashStab",Callback=function(v)dashStab=v end})
-BackstabTab:CreateToggle({Name="GlideStab",Callback=function(v)glideStab=v end})
 BackstabTab:CreateInput({Name="Range",PlaceholderText="8",Callback=function(v)backstabRange=tonumber(v)or backstabRange end})
 BackstabTab:CreateDropdown({Name="Mode",Options={"Behind","Around"},CurrentOption="Around",Callback=function(v)backstabMode=v end})
 
@@ -81,7 +79,7 @@ OtherTab:CreateToggle({Name="Hitbox",Callback=function(v)
 hitbox=v
 if v then
 HitboxModule=HitboxModule or loadstring(game:HttpGet("https://raw.githubusercontent.com/FoxIPro5965/c00lgui/main/Hitbox.lua"))()
-HitboxModule:ExtendHitbox(1.15,600)
+HitboxModule:ExtendHitbox(1.2,500)
 elseif HitboxModule then
 HitboxModule:StopExtendingHitbox()
 end
@@ -136,86 +134,33 @@ end
 end)
 
 local killersFolder=workspace:WaitForChild("Players"):WaitForChild("Killers")
-local COOLDOWN=10
-local HOLD_NORMAL=2.9
-local HOLD_GLIDE=3
-local TP_DIST=2.8
-local GLIDE_WINDOW=8
 local lastBackstab=0
-local isStabbing=false
-local lastCrouchTime=0
-
-task.spawn(function()
-while task.wait(0.05)do
-local ui=PlayerGui:FindFirstChild("MainUI")
-local c=ui and ui:FindFirstChild("AbilityContainer")
-local crouch=c and c:FindFirstChild("Crouch")
-if crouch then
-for _,con in ipairs(getconnections(crouch.MouseButton1Click))do con:Disable()end
-crouch.MouseButton1Click:Connect(function()
-lastCrouchTime=tick()
-end)
-break
-end
-end
-end)
-
-local function validKiller(k)
-local hum=k:FindFirstChildOfClass("Humanoid")
-local hrp=k:FindFirstChild("HumanoidRootPart")
-return hum and hrp and hum.Health>0
-end
+local COOLDOWN=10
+local HOLD=0.29
+local DIST=2.6
 
 local function isBehind(hrp,khrp)
-if (hrp.Position-khrp.Position).Magnitude>backstabRange then return false end
+if(hrp.Position-khrp.Position).Magnitude>backstabRange then return false end
 if backstabMode=="Around" then return true end
-return (hrp.Position-khrp.Position):Dot(-khrp.CFrame.LookVector)>0.5
-end
-
-local function tpBehind(hrp,khrp)
-hrp.CFrame=CFrame.new(khrp.Position-khrp.CFrame.LookVector*TP_DIST,khrp.Position)
-end
-
-local function holdTP(hrp,khrp,time)
-local s=tick()
-local c
-c=RunService.Heartbeat:Connect(function()
-if tick()-s>=time then c:Disconnect() return end
-tpBehind(hrp,khrp)
-end)
+return(hrp.Position-khrp.Position):Dot(-khrp.CFrame.LookVector)>0.5
 end
 
 RunService.Heartbeat:Connect(function()
-if not backstab then return end
-if isStabbing then return end
-if tick()-lastBackstab<COOLDOWN then return end
+if not backstab or tick()-lastBackstab<COOLDOWN then return end
 local hrp=lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
 if not hrp then return end
 for _,k in ipairs(killersFolder:GetChildren())do
-if validKiller(k) then
-local khrp=k.HumanoidRootPart
-if isBehind(hrp,khrp) then
-isStabbing=true
+local khrp=k:FindFirstChild("HumanoidRootPart")
+if khrp and isBehind(hrp,khrp)then
 lastBackstab=tick()
-if glideStab and tick()-lastCrouchTime<=GLIDE_WINDOW then
-clickSkill("Dagger")
-holdTP(hrp,khrp,HOLD_GLIDE)
-task.delay(HOLD_GLIDE,function()isStabbing=false end)
+click("Dagger")
+local s=tick()
+local c
+c=RunService.Heartbeat:Connect(function()
+if tick()-s>HOLD then c:Disconnect()return end
+hrp.CFrame=CFrame.new(khrp.Position-khrp.CFrame.LookVector*DIST,khrp.Position)
+end)
 break
-end
-if dashStab then
-clickSkill("Crouch")
-task.wait(0.02)
-clickSkill("Dagger")
-holdTP(hrp,khrp,HOLD_NORMAL)
-task.delay(HOLD_NORMAL,function()isStabbing=false end)
-break
-end
-clickSkill("Dagger")
-holdTP(hrp,khrp,HOLD_NORMAL)
-task.delay(HOLD_NORMAL,function()isStabbing=false end)
-break
-end
 end
 end
 end)
