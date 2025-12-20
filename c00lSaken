@@ -48,12 +48,12 @@ local showSurvivor=false
 local showItems=false  
 local showGen=false  
   
-local infStamina=false  
+local infStamina=true
 local jumpEnabled=false  
 local hitbox=false  
 local HitboxModule  
-local autoGen=false  
-local autoGenSpeed=0.1 
+local autoGen=true  
+local autoGenSpeed=0.1
   
 local anti1x1=false  
 local undetectedMode=false  
@@ -84,7 +84,7 @@ Callback=function(v)
 hitbox=v  
 if v then  
 HitboxModule=HitboxModule or loadstring(game:HttpGet("https://raw.githubusercontent.com/FoxIPro5965/c00lgui/main/Hitbox.lua"))()  
-HitboxModule:ExtendHitbox(1.15,600)  
+HitboxModule:ExtendHitbox(1.2,580)  
 elseif HitboxModule then  
 HitboxModule:StopExtendingHitbox()  
 end  
@@ -92,7 +92,7 @@ end
 })  
   
 OtherTab:CreateToggle({Name="Auto gen",Callback=function(v)autoGen=v end})  
-OtherTab:CreateSlider({Name="Gen Speed",Range={0.01,0.5},Increment=0.005,CurrentValue=0.115,Callback=function(v)autoGenSpeed=v end})    
+OtherTab:CreateSlider({Name="Gen Speed",Range={0.01,0.5},Increment=0.005,CurrentValue=0.1,Callback=function(v)autoGenSpeed=v end})    
 OtherTab:CreateToggle({Name="Undetected Mode",Callback=function(v)undetectedMode=v end})  
   
 local function click(btnName)  
@@ -142,7 +142,7 @@ local killersFolder=workspace:WaitForChild("Players"):WaitForChild("Killers")
 local lastBackstab=0  
 local COOLDOWN=10  
 local HOLD=0.29  
-local DIST=3  
+local DIST=2.8
   
 local function isBehind(hrp,khrp)  
 if(hrp.Position-khrp.Position).Magnitude>backstabRange then return false end  
@@ -232,8 +232,6 @@ end
 end  
 end  
 end)  
-    
-	
 task.spawn(function()  
 local Undetectable=require(ReplicatedStorage.Modules.StatusEffects.Undetectable)  
 local animationId="rbxassetid://75804462760596"  
@@ -351,87 +349,4 @@ while task.wait(0.2)do
 local hum=lp.Character and lp.Character:FindFirstChildOfClass("Humanoid")  
 if hum then hum.JumpPower=jumpEnabled and 60 or 0 end  
 end  
-end)  
-  
-Xóa phần anti 1x1 popup đi, ở Phần autoblocl tab, có thêm 1 nút Change mode có 2 chế độ , Block và Clone  
-Khi dùng block thì sẽ Block ngay lập rức khi killer vừa tạo ra IDS đã liệt kê, còn với Clone, thay vì Click Block button thì sẽ là Click Clone button, khi killer chạy animation liệt kê thì sẽ tự động tạo clone để đỡ đòn, thêm Auto racing pace ở mục other tab  
--- Auto RacingPace  
-local autoRacingPace = false  
-local racingPaceRange = 19  
-local RP_SPAM_DURATION = 3  
-local RP_COOLDOWN_TIME = 5  
-local racingCooldowns = {}local racingPaceAnims = {  
-	["116618003477002"] = true,  
-	["119462383658044"] = true,  
-	["131696603025265"] = true,  
-	["121255898612475"] = true,  
-	["133491532453922"] = true,  
-	["103601716322988"] = true,  
-	["86371356500204"] = true,  
-	["72722244508749"] = true,  
-	["87259391926321"] = true,  
-	["96959123077498"] = true,  
-}local function fireRacingPace()  
-	ReplicatedStorage  
-		:WaitForChild("Modules")  
-		:WaitForChild("Network")  
-		:WaitForChild("RemoteEvent")  
-		:FireServer("UseActorAbility", "RagingPace")  
-endlocal function isRacingPaceAnim(track)  
-	local id = tostring(track.Animation and track.Animation.AnimationId or "")  
-	local num = id:match("%d+")  
-	return num and racingPaceAnims[num]  
-endlocal function fireRacingPace()  
-	ReplicatedStorage  
-		:WaitForChild("Modules")  
-		:WaitForChild("Network")  
-		:WaitForChild("RemoteEvent")  
-		:FireServer("UseActorAbility", "RagingPace")  
-endOtherTab:CreateToggle({  
-	Name = "Auto RacingPace",  
-	Callback = function(v)  
-		autoRacingPace = v  
-	end  
-})  
-  
-OtherTab:CreateInput({  
-	Name = "RacingPace Range",  
-	PlaceholderText = "19",  
-	Callback = function(v)  
-		racingPaceRange = tonumber(v) or racingPaceRange  
-	end  
-})RunService.Heartbeat:Connect(function()  
-	if not autoRacingPace then return end  
-  
-	local myChar = lp.Character  
-	local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")  
-	if not myHRP then return end  
-  
-	for _, plr in ipairs(Players:GetPlayers()) do  
-		if plr ~= lp and plr.Character then  
-			local hrp = plr.Character:FindFirstChild("HumanoidRootPart")  
-			local hum = plr.Character:FindFirstChildOfClass("Humanoid")  
-			if hrp and hum then  
-				local dist = (hrp.Position - myHRP.Position).Magnitude  
-				if dist <= racingPaceRange then  
-					if not racingCooldowns[plr] or tick() - racingCooldowns[plr] >= RP_COOLDOWN_TIME then  
-						for _, track in ipairs(hum:GetPlayingAnimationTracks()) do  
-							if isRacingPaceAnim(track) then  
-								racingCooldowns[plr] = tick()  
-								task.spawn(function()  
-									local t0 = tick()  
-									while tick() - t0 < RP_SPAM_DURATION and autoRacingPace do  
-										fireRacingPace()  
-										task.wait(0.01)  
-									end  
-								end)  
-								break  
-							end  
-						end  
-					end  
-				end  
-			end  
-		end  
-	end  
-end)  
-  
+end)
