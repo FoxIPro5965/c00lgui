@@ -53,7 +53,7 @@ local autoBlockOn = false
 local autoBlockAudioOn = false 
 local detectionRange = 12
 local facingCheckEnabled = true
-local customFacingDot = -0.3
+local customFacingDot = 0.3
 local blockdelay = 0
 
 local KillersFolder = workspace:WaitForChild("Players"):WaitForChild("Killers")
@@ -104,7 +104,7 @@ AutoBlockTab:CreateToggle({
 
 AutoBlockTab:CreateInput({
     Name = "Detection Range",
-    PlaceholderText = "18",
+    PlaceholderText = "12",
     Callback = function(text)
         detectionRange = tonumber(text) or detectionRange
     end
@@ -118,7 +118,7 @@ AutoBlockTab:CreateToggle({
 
 AutoBlockTab:CreateInput({
     Name = "Facing Check DOT",
-    PlaceholderText = "-0.3",
+    PlaceholderText = "0.3",
     Callback = function(text)
         customFacingDot = tonumber(text) or customFacingDot
     end
@@ -488,7 +488,7 @@ hookedGen=true
 end  
   
 hookAutoGen()  
-  
+
 task.spawn(function()  
 local sprint=require(ReplicatedStorage.Systems.Character.Game.Sprinting)  
 while task.wait(3)do  
