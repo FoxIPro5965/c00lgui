@@ -59,26 +59,12 @@ local blockdelay = 0
 local KillersFolder = workspace:WaitForChild("Players"):WaitForChild("Killers")
 local testRemote = ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("RemoteEvent")
 
-local camera = workspace.CurrentCamera
-local punchAbilityName = "Punch"
-local targetKillerNames = {
-    ["Slasher"] = true,
-    ["Jason"] = true,
-    ["c00lkidd"] = true,
-    ["JohnDoe"] = true,
-    ["Noli"] = true,
-    ["1x1x1x1"] = true,
-    ["Sixer"] = true,
-    ["Nosferatu"] = true
-}
-
-local cachedBlockBtn, cachedCooldown, cachedPunchBtn
+local cachedBlockBtn, cachedCooldown
 local function refreshUIRefs()
     local main = PlayerGui:FindFirstChild("MainUI")
     if main then
         local ability = main:FindFirstChild("AbilityContainer")
         cachedBlockBtn = ability and ability:FindFirstChild("Block")
-        cachedPunchBtn = ability and ability:FindFirstChild(punchAbilityName)
         cachedCooldown = cachedBlockBtn and cachedBlockBtn:FindFirstChild("CooldownTime")
     end
 end
@@ -88,21 +74,12 @@ PlayerGui.ChildAdded:Connect(function(child)
 end)
 lp.CharacterAdded:Connect(function() task.delay(0.5, refreshUIRefs) end)
 
-local lastBlockTime = 0
-local function fireGuiBlock()
-    local blockData = {buffer.fromstring("\"Block\"")}
-    testRemote:FireServer("UseActorAbility", blockData)
-    lastBlockTime = tick()
-end
-
-local function firePunch()
-    refreshUIRefs()
-    if cachedPunchBtn then
-        for _, c in ipairs(getconnections(cachedPunchBtn.MouseButton1Click)) do
-            pcall(function() c:Fire() end)
-        end
-        pcall(function() cachedPunchBtn:Activate() end)
-    end
+local function click(btnName)
+    local ui=PlayerGui:FindFirstChild("MainUI")
+    local btn=ui and ui:FindFirstChild("AbilityContainer") and ui.AbilityContainer:FindFirstChild(btnName)
+    if not btn then return end
+    for _,c in ipairs(getconnections(btn.MouseButton1Click))do pcall(function()c:Fire()end)end
+    pcall(function()btn:Activate()end)
 end
 
 local function isFacing(myRoot, targetRoot)
@@ -194,7 +171,7 @@ local function hookSound(sound)
         if cachedCooldown and cachedCooldown.Text ~= "" then return end
 
         task.wait(blockdelay)
-        fireGuiBlock()
+        click("Block")
 
         lastLocalBlockTime = tick()
         soundBlockedUntil[sound] = tick() + 1
@@ -236,7 +213,7 @@ RunService.RenderStepped:Connect(function()
                     if animId and table.find(autoBlockTriggerAnims, animId) then
                         if not facingCheckEnabled or isFacing(myRoot, hrp) then
                             task.wait(blockdelay)
-                            fireGuiBlock()
+                            click("Block")
                             return
                         end
                     end
@@ -248,7 +225,66 @@ end)
 
 local autoPunch = false
 local aimPunch = false
-local aimPrediction = 0.8
+local aimPrediction = 1
+
+AutoBlockTab:CreateToggle({Name="Autopunch",Callback=function(v)autoPunch=v end})
+AutoBlockTab:CreateToggle({Name="Aimpunch",Callback=function(v)aimPunch=v end})
+AutoBlockTab:CreateSlider({
+    Name="Prediction",
+    Range={0,10},
+    Increment=0.1,
+    CurrentValue=1,
+    Suffix=" studs",
+    Callback=function(v) aimPrediction = v end
+})
+
+RunService.RenderStepped:Connect(function()
+    if not autoPunch then return end
+
+    local myChar = lp.Character
+    if not myChar then return end
+    local myRoot = myChar:FindFirstChild("HumanoidRootPart")
+    if not myRoot then return end
+
+    local gui = PlayerGui:FindFirstChild("MainUI")
+    local punchBtn = gui and gui:FindFirstChild("AbilityContainer") and gui.AbilityContainer:FindFirstChild("Punch")
+    local charges = punchBtn and punchBtn:FindFirstChild("Charges")
+    if not charges or charges.Text ~= "1" then return end
+
+    local killersFolder = workspace:FindFirstChild("Players") and workspace.Players:FindFirstChild("Killers")
+    if not killersFolder then return end
+
+    for _, killer in ipairs(killersFolder:GetChildren()) do
+        local root = killer:FindFirstChild("HumanoidRootPart")
+        if root and (root.Position - myRoot.Position).Magnitude <= 10 then
+
+            if aimPunch then
+                local humanoid = myChar:FindFirstChildOfClass("Humanoid")
+                if humanoid then
+                    humanoid.AutoRotate = false
+                end
+
+                task.spawn(function()
+                    local startTime = tick()
+                    while tick() - startTime < 2 do
+                        if myRoot and root and root.Parent then
+                            local predictedPos = root.Position + (root.CFrame.LookVector * aimPrediction)
+                            myRoot.CFrame = CFrame.lookAt(myRoot.Position, predictedPos)
+                        end
+                        task.wait()
+                    end
+                    if humanoid then
+                        humanoid.AutoRotate = true
+                    end
+                end)
+            end
+
+            click("Punch")
+
+            break
+        end
+    end
+end)
 
 local backstab = false
 local backstabRange = 8
@@ -268,10 +304,6 @@ local autoGen = true
 local autoGenSpeed = 0.1
 
 local undetectedMode = false
-
-AutoBlockTab:CreateToggle({Name="Autopunch",Callback=function(v)autoPunch=v end})
-AutoBlockTab:CreateToggle({Name="Aimpunch",Callback=function(v)aimPunch=v end})
-AutoBlockTab:CreateSlider({Name="Prediction",Range={0,5},Increment=0.1,CurrentValue=0.8,Callback=function(v)aimPrediction=v end})
 
 BackstabTab:CreateToggle({Name="AutoBackstab",Callback=function(v)backstab=v end})
 BackstabTab:CreateInput({Name="Range",PlaceholderText="8",Callback=function(v)backstabRange=tonumber(v)or backstabRange end})
@@ -303,19 +335,11 @@ OtherTab:CreateToggle({Name="Auto gen",Callback=function(v)autoGen=v end})
 OtherTab:CreateSlider({Name="Gen Speed",Range={0.01,0.5},Increment=0.005,CurrentValue=0.1,Callback=function(v)autoGenSpeed=v end})
 OtherTab:CreateToggle({Name="Undetected Mode",Callback=function(v)undetectedMode=v end})
 
-local function click(btnName)
-    local ui=PlayerGui:FindFirstChild("MainUI")
-    local btn=ui and ui:FindFirstChild("AbilityContainer") and ui.AbilityContainer:FindFirstChild(btnName)
-    if not btn then return end
-    for _,c in ipairs(getconnections(btn.MouseButton1Click))do pcall(function()c:Fire()end)end
-    pcall(function()btn:Activate()end)
-end
-
 local killersFolder=workspace:WaitForChild("Players"):WaitForChild("Killers")
 local lastBackstab=0
 local COOLDOWN=10
 local HOLD=0.29
-local DIST=2.8
+local DIST=2
 
 local function isBehind(hrp,khrp)
     if(hrp.Position-khrp.Position).Magnitude>backstabRange then return false end
@@ -342,80 +366,6 @@ RunService.Heartbeat:Connect(function()
         end
     end
 end)
-
-local function getTargetKiller()
-    local myRoot = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
-    if not myRoot then return nil end
-
-    local closest = nil
-    local closestDist = math.huge
-
-    for _, killer in ipairs(KillersFolder:GetChildren()) do
-        if killer:FindFirstChild("HumanoidRootPart") and killer:FindFirstChild("Humanoid") and killer.Humanoid.Health > 0 then
-            local kName = killer.Name
-            if targetKillerNames[kName] then
-                local dist = (killer.HumanoidRootPart.Position - myRoot.Position).Magnitude
-                if dist < closestDist then
-                    closest = killer
-                    closestDist = dist
-                end
-            end
-        end
-    end
-    return closest
-end
-
-RunService.RenderStepped:Connect(function(dt)
-    local myChar = lp.Character
-    if not myChar then return end
-    local myRoot = myChar:FindFirstChild("HumanoidRootPart")
-    if not myRoot then return end
-
-    local targetKiller = getTargetKiller()
-    if not targetKiller then 
-        if aimPunch then camera.CameraSubject = myChar.Humanoid end
-        return 
-    end
-
-    local targetRoot = targetKiller:FindFirstChild("HumanoidRootPart")
-    if not targetRoot then return end
-
-    if aimPunch then
-        local velocity = targetRoot.Velocity
-        local predictedPos = targetRoot.Position + velocity * aimPrediction
-
-        refreshUIRefs()
-        local punchCooldown = cachedPunchBtn and cachedPunchBtn:FindFirstChild("CooldownTime")
-        local isUsingPunch = punchCooldown and punchCooldown.Text ~= ""
-
-        if isUsingPunch then
-            local aimTime = 0.3
-            local lerpFactor = math.clamp(dt / aimTime, 0, 1)
-            local newCFrame = CFrame.lookAt(camera.CFrame.Position, predictedPos)
-            camera.CFrame = camera.CFrame:Lerp(newCFrame, lerpFactor)
-        if aimPunch then
-    local velocity = targetRoot.Velocity
-    local predictedPos = targetRoot.Position + velocity * aimPrediction
-
-    refreshUIRefs()
-    local punchCooldown = cachedPunchBtn and cachedPunchBtn:FindFirstChild("CooldownTime")
-    local isPunching = punchCooldown and punchCooldown.Text ~= ""
-
-    if isPunching then
-        local camPos = camera.CFrame.Position
-        local targetCF = CFrame.lookAt(camPos, predictedPos)
-        camera.CFrame = camera.CFrame:Lerp(targetCF, 0.35)
-    end
-end
-
-    if autoPunch then
-        if tick() - lastBlockTime >= 0.02 then
-            firePunch()
-            task.wait(0.5)
-        end
-    end
-end)
-
 local oldA,oldO,oldB,oldF=Lighting.Ambient,Lighting.OutdoorAmbient,Lighting.Brightness,Lighting.FogEnd  
 local function bright(on)  
 if on then  
