@@ -393,10 +393,20 @@ RunService.RenderStepped:Connect(function(dt)
             local lerpFactor = math.clamp(dt / aimTime, 0, 1)
             local newCFrame = CFrame.lookAt(camera.CFrame.Position, predictedPos)
             camera.CFrame = camera.CFrame:Lerp(newCFrame, lerpFactor)
-        else
-            camera.CameraSubject = targetKiller.Humanoid
-        end
+        if aimPunch then
+    local velocity = targetRoot.Velocity
+    local predictedPos = targetRoot.Position + velocity * aimPrediction
+
+    refreshUIRefs()
+    local punchCooldown = cachedPunchBtn and cachedPunchBtn:FindFirstChild("CooldownTime")
+    local isPunching = punchCooldown and punchCooldown.Text ~= ""
+
+    if isPunching then
+        local camPos = camera.CFrame.Position
+        local targetCF = CFrame.lookAt(camPos, predictedPos)
+        camera.CFrame = camera.CFrame:Lerp(targetCF, 0.35)
     end
+end
 
     if autoPunch then
         if tick() - lastBlockTime >= 0.02 then
