@@ -130,21 +130,29 @@ AutoBlockTab:CreateToggle({Name="Auto Punch",Callback=function(v)autoPunch=v end
 AutoBlockTab:CreateToggle({Name="Aim Punch",Callback=function(v)aimPunch=v end})
 AutoBlockTab:CreateSlider({Name="Aim Prediction",Min=0,Max=5,Increment=0.1,CurrentValue=0.8,Callback=function(v)aimPrediction=v end})
 
-BackstabTab:CreateToggle({Name="AutoBackstab",Callback=function(v)backstab=v end})
-BackstabTab:CreateInput({Name="Range",PlaceholderText="8",Callback=function(v)backstabRange=tonumber(v)or backstabRange end})
+BackstabTab:CreateToggle({Name="Auto Backstab",Callback=function(v)backstab=v end})
+BackstabTab:CreateInput({Name="Range",PlaceholderText="8",Callback=function(text)backstabRange=tonumber(text)or backstabRange end})
 BackstabTab:CreateDropdown({Name="Mode",Options={"Behind","Around"},CurrentOption="Around",Callback=function(v)backstabMode=v end})
 
-VisualTab:CreateToggle({Name="Highlight",Callback=function(v)visualEnabled=v end})
-VisualTab:CreateToggle({Name="Killer",Callback=function(v)showKiller=v end})
-VisualTab:CreateToggle({Name="Survivor",Callback=function(v)showSurvivor=v end})
-VisualTab:CreateToggle({Name="Generator",Callback=function(v)showGen=v end})
-VisualTab:CreateToggle({Name="Medkit & BloxyCola",Callback=function(v)showItems=v end})
+VisualTab:CreateToggle({Name="Enable Highlight",Callback=function(v)visualEnabled=v end})
+VisualTab:CreateToggle({Name="Show Killer",Callback=function(v)showKiller=v end})
+VisualTab:CreateToggle({Name="Show Survivor",Callback=function(v)showSurvivor=v end})
+VisualTab:CreateToggle({Name="Show Generator",Callback=function(v)showGen=v end})
+VisualTab:CreateToggle({Name="Show Medkit & BloxyCola",Callback=function(v)showItems=v end})
 
-OtherTab:CreateToggle({Name="INF STAMINA",Callback=function(v)infStamina=v end})
-OtherTab:CreateToggle({Name="Jump",Callback=function(v)jumpEnabled=v end})
-OtherTab:CreateToggle({Name="Hitbox",Callback=function(v)hitbox=v if v then HitboxModule=HitboxModule or loadstring(game:HttpGet("https://raw.githubusercontent.com/FoxIPro5965/c00lgui/main/Hitbox.lua"))()HitboxModule:ExtendHitbox(1.2,580)elseif HitboxModule then HitboxModule:StopExtendingHitbox()end end})
-OtherTab:CreateToggle({Name="Auto gen",Callback=function(v)autoGen=v end})
-OtherTab:CreateSlider({Name="Gen Speed",Range={0.01,0.5},Increment=0.005,CurrentValue=0.1,Callback=function(v)autoGenSpeed=v end})
+OtherTab:CreateToggle({Name="Infinite Stamina",Callback=function(v)infStamina=v end})
+OtherTab:CreateToggle({Name="High Jump",Callback=function(v)jumpEnabled=v end})
+OtherTab:CreateToggle({Name="Hitbox Expander",Callback=function(v)
+    hitbox=v
+    if v then
+        HitboxModule=HitboxModule or loadstring(game:HttpGet("https://raw.githubusercontent.com/FoxIPro5965/c00lgui/main/Hitbox.lua"))()
+        HitboxModule:ExtendHitbox(1.2,580)
+    elseif HitboxModule then
+        HitboxModule:StopExtendingHitbox()
+    end
+end})
+OtherTab:CreateToggle({Name="Auto Generator",Callback=function(v)autoGen=v end})
+OtherTab:CreateSlider({Name="Generator Speed",Min=0.01,Max=0.5,Increment=0.005,CurrentValue=0.1,Callback=function(v)autoGenSpeed=v end})
 OtherTab:CreateToggle({Name="Undetected Mode",Callback=function(v)undetectedMode=v end})
 
 local soundHooks={}
@@ -296,7 +304,7 @@ end)
 local lastBackstab=0
 local COOLDOWN=10
 local HOLD=0.29
-local DIST=2
+local DIST=2.8
 
 local function isBehind(hrp,khrp)
     if(hrp.Position-khrp.Position).Magnitude>backstabRange then return false end
