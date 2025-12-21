@@ -1,256 +1,134 @@
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
-local Lighting = game:GetService("Lighting")
-local lp = Players.LocalPlayer
-local PlayerGui = lp:WaitForChild("PlayerGui")
+local Players=game:GetService("Players")
+local ReplicatedStorage=game:GetService("ReplicatedStorage")
+local RunService=game:GetService("RunService")
+local Lighting=game:GetService("Lighting")
+local lp=Players.LocalPlayer
+local PlayerGui=lp:WaitForChild("PlayerGui")
 
-local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
-local Window = Rayfield:CreateWindow({
-    Name = "c00lSaken",
-    LoadingTitle = "c00lSaken",
-    LoadingSubtitle = "by FoxOfficial",
-    ConfigurationSaving = {
-        Enabled = true,
-        FolderName = "c00lSaken",
-        FileName = "Config"
-    },
-    KeySystem = false
+local Rayfield=loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
+local Window=Rayfield:CreateWindow({
+    Name="c00lSaken",
+    LoadingTitle="c00lSaken",
+    LoadingSubtitle="by FoxOfficial",
+    ConfigurationSaving={Enabled=true,FolderName="c00lSaken",FileName="Config"},
+    KeySystem=false
 })
 
-local AutoBlockTab = Window:CreateTab("Autoblock", 4483362458)
-local BackstabTab = Window:CreateTab("AutoBackstab", 4483362458)
-local VisualTab = Window:CreateTab("Visuals", 4483362458)
-local OtherTab = Window:CreateTab("Other", 4483362458)
-local autoBlockTriggerSounds = {
-    ["102228729296384"] = true, ["140242176732868"] = true, ["112809109188560"] = true,
-    ["136323728355613"] = true, ["115026634746636"] = true, ["84116622032112"] = true,
-    ["108907358619313"] = true, ["127793641088496"] = true, ["86174610237192"] = true,
-    ["95079963655241"] = true, ["101199185291628"] = true, ["119942598489800"] = true,
-    ["84307400688050"] = true, ["113037804008732"] = true, ["105200830849301"] = true,
-    ["75330693422988"] = true, ["82221759983649"] = true, ["81702359653578"] = true,
-    ["108610718831698"] = true, ["112395455254818"] = true, ["109431876587852"] = true,
-    ["109348678063422"] = true, ["85853080745515"] = true, ["12222216"] = true,
-    ["105840448036441"] = true, ["114742322778642"] = true, ["119583605486352"] = true,
-    ["79980897195554"] = true, ["71805956520207"] = true, ["79391273191671"] = true,
-    ["89004992452376"] = true, ["101553872555606"] = true, ["101698569375359"] = true,
-    ["106300477136129"] = true, ["116581754553533"] = true, ["117231507259853"] = true,
-    ["119089145505438"] = true, ["121954639447247"] = true, ["125213046326879"] = true,
-    ["131406927389838"] = true,
+local AutoBlockTab=Window:CreateTab("Autoblock",4483362458)
+local BackstabTab=Window:CreateTab("AutoBackstab",4483362458)
+local VisualTab=Window:CreateTab("Visuals",4483362458)
+local OtherTab=Window:CreateTab("Other",4483362458)
+
+local autoBlockTriggerSounds={
+    ["102228729296384"]=true,["140242176732868"]=true,["112809109188560"]=true,
+    ["136323728355613"]=true,["115026634746636"]=true,["84116622032112"]=true,
+    ["108907358619313"]=true,["127793641088496"]=true,["86174610237192"]=true,
+    ["95079963655241"]=true,["101199185291628"]=true,["119942598489800"]=true,
+    ["84307400688050"]=true,["113037804008732"]=true,["105200830849301"]=true,
+    ["75330693422988"]=true,["82221759983649"]=true,["81702359653578"]=true,
+    ["108610718831698"]=true,["112395455254818"]=true,["109431876587852"]=true,
+    ["109348678063422"]=true,["85853080745515"]=true,["12222216"]=true,
+    ["105840448036441"]=true,["114742322778642"]=true,["119583605486352"]=true,
+    ["79980897195554"]=true,["71805956520207"]=true,["79391273191671"]=true,
+    ["89004992452376"]=true,["101553872555606"]=true,["101698569375359"]=true,
+    ["106300477136129"]=true,["116581754553533"]=true,["117231507259853"]=true,
+    ["119089145505438"]=true,["121954639447247"]=true,["125213046326879"]=true,
+    ["131406927389838"]=true,
 }
 
-local autoBlockTriggerAnims = {
-    "126830014841198", "126355327951215", "121086746534252", "18885909645",
-    "98456918873918", "105458270463374", "83829782357897", "125403313786645",
-    "118298475669935", "82113744478546", "70371667919898", "99135633258223",
-    "97167027849946", "109230267448394", "139835501033932", "126896426760253",
-    "109667959938617", "126681776859538", "129976080405072", "121293883585738",
-    "81639435858902", "137314737492715", "92173139187970",
-    "122709416391", "879895330952"  -- thêm từ script cũ
+local autoBlockTriggerAnims={
+    "126830014841198","126355327951215","121086746534252","18885909645",
+    "98456918873918","105458270463374","83829782357897","125403313786645",
+    "118298475669935","82113744478546","70371667919898","99135633258223",
+    "97167027849946","109230267448394","139835501033932","126896426760253",
+    "109667959938617","126681776859538","129976080405072","121293883585738",
+    "81639435858902","137314737492715","92173139187970",
+    "122709416391","879895330952"
 }
 
-local autoBlockOn = false 
-local autoBlockAudioOn = false 
-local detectionRange = 15
-local facingCheckEnabled = true
-local customFacingDot = -0.3
-local blockdelay = 0
+local autoBlockOn=false
+local autoBlockAudioOn=false
+local detectionRange=15
+local facingCheckEnabled=true
+local customFacingDot=-0.3
+local blockdelay=0
+local autoAbility="Block"
+local autoPunch=false
+local aimPunch=false
+local aimPrediction=0.8
+local punchDelay=0.1
+local aimPunchDuration=0.3
 
-local KillersFolder = workspace:WaitForChild("Players"):WaitForChild("Killers")
-local testRemote = ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("RemoteEvent")
+local backstab=false
+local backstabRange=8
+local backstabMode="Around"
 
--- UI References
-local cachedBlockBtn, cachedCooldown
+local visualEnabled=false
+local showKiller=false
+local showSurvivor=false
+local showItems=false
+local showGen=false
+
+local infStamina=true
+local jumpEnabled=false
+local hitbox=false
+local HitboxModule
+local autoGen=true
+local autoGenSpeed=0.1
+local undetectedMode=false
+
+local KillersFolder=workspace:WaitForChild("Players"):WaitForChild("Killers")
+local testRemote=ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("RemoteEvent")
+
+local cachedBlockBtn,cachedCooldown,cachedPunchBtn
 local function refreshUIRefs()
-    local main = PlayerGui:FindFirstChild("MainUI")
+    local main=PlayerGui:FindFirstChild("MainUI")
     if main then
-        local ability = main:FindFirstChild("AbilityContainer")
-        cachedBlockBtn = ability and ability:FindFirstChild("Block")
-        cachedCooldown = cachedBlockBtn and cachedBlockBtn:FindFirstChild("CooldownTime")
+        local ability=main:FindFirstChild("AbilityContainer")
+        if ability then
+            cachedBlockBtn=ability:FindFirstChild(autoAbility)
+            cachedPunchBtn=ability:FindFirstChild("Punch")
+            cachedCooldown=cachedBlockBtn and cachedBlockBtn:FindFirstChild("CooldownTime")
+        end
     end
 end
 refreshUIRefs()
 PlayerGui.ChildAdded:Connect(function(child)
-    if child.Name == "MainUI" then task.delay(0.02, refreshUIRefs) end
+    if child.Name=="MainUI" then task.delay(0.02,refreshUIRefs) end
 end)
-lp.CharacterAdded:Connect(function() task.delay(0.5, refreshUIRefs) end)
+lp.CharacterAdded:Connect(function() task.delay(0.5,refreshUIRefs) end)
 
--- Fire Block (dùng buffer như script mới)
-local function fireGuiBlock()
-    local blockData = {buffer.fromstring("\"Block\"")}
-    testRemote:FireServer("UseActorAbility", blockData)
+local function fireGuiAbility(abilityName)
+    local abilityData={buffer.fromstring("\""..abilityName.."\"")}
+    testRemote:FireServer("UseActorAbility",abilityData)
 end
 
--- Facing Check
-local function isFacing(myRoot, targetRoot)
+local function click(btnName)
+    local ui=PlayerGui:FindFirstChild("MainUI")
+    local container=ui and ui:FindFirstChild("AbilityContainer")
+    local btn=container and container:FindFirstChild(btnName)
+    if not btn then return end
+    for _,c in ipairs(getconnections(btn.MouseButton1Click))do pcall(function()c:Fire()end)end
+    pcall(function()btn:Activate()end)
+end
+
+local function isFacing(myRoot,targetRoot)
     if not facingCheckEnabled then return true end
-    local dir = (myRoot.Position - targetRoot.Position).Unit
-    local dot = targetRoot.CFrame.LookVector:Dot(dir)
-    return dot > customFacingDot
+    local dir=(myRoot.Position-targetRoot.Position).Unit
+    local dot=targetRoot.CFrame.LookVector:Dot(dir)
+    return dot>customFacingDot
 end
 
--- GUI Controls cho AutoBlock mới
-AutoBlockTab:CreateToggle({
-    Name = "Auto Block (Animation)",
-    CurrentValue = false,
-    Callback = function(v) autoBlockOn = v end
-})
-
-AutoBlockTab:CreateToggle({
-    Name = "Auto Block (Audio)",
-    CurrentValue = false,
-    Callback = function(v) autoBlockAudioOn = v end
-})
-
-AutoBlockTab:CreateInput({
-    Name = "Detection Range",
-    PlaceholderText = "15",
-    Callback = function(text)
-        detectionRange = tonumber(text) or detectionRange
-    end
-})
-
-AutoBlockTab:CreateToggle({
-    Name = "Enable Facing Check",
-    CurrentValue = true,
-    Callback = function(v) facingCheckEnabled = v end
-})
-
-AutoBlockTab:CreateInput({
-    Name = "Facing Check DOT",
-    PlaceholderText = "-0.3",
-    Callback = function(text)
-        customFacingDot = tonumber(text) or customFacingDot
-    end
-})
-
-AutoBlockTab:CreateInput({
-    Name = "Block Delay (seconds)",
-    PlaceholderText = "0",
-    Callback = function(text)
-        blockdelay = tonumber(text) or blockdelay
-    end
-})
-
--- ==== Audio Auto Block ====
-local soundHooks = {}
-local soundBlockedUntil = {}
-local lastLocalBlockTime = 0
-local AUDIO_LOCAL_COOLDOWN = 0.35
-
-local function extractNumericSoundId(sound)
-    local sid = sound.SoundId
-    if type(sid) ~= "string" then sid = tostring(sid) end
-    return sid:match("rbxassetid://(%d+)") or sid:match("://(%d+)") or sid:match("^(%d+)$")
-end
-
-local function hookSound(sound)
-    if not sound:IsA("Sound") or soundHooks[sound] then return end
-    local id = extractNumericSoundId(sound)
-    if not id or not autoBlockTriggerSounds[id] then return end
-
-    soundHooks[sound] = true
-
-    local function tryBlock()
-        if not autoBlockAudioOn then return end
-        if tick() - lastLocalBlockTime < AUDIO_LOCAL_COOLDOWN then return end
-        if soundBlockedUntil[sound] and tick() < soundBlockedUntil[sound] then return end
-
-        local myRoot = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
-        if not myRoot then return end
-
-        local parent = sound.Parent
-        while parent and not parent:FindFirstChild("HumanoidRootPart") do
-            parent = parent.Parent
-        end
-        local hrp = parent and parent:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
-
-        if (hrp.Position - myRoot.Position).Magnitude > detectionRange then return end
-        if facingCheckEnabled and not isFacing(myRoot, hrp) then return end
-
-        refreshUIRefs()
-        if cachedCooldown and cachedCooldown.Text ~= "" then return end
-
-        task.wait(blockdelay)
-        fireGuiBlock()
-
-        lastLocalBlockTime = tick()
-        soundBlockedUntil[sound] = tick() + 1
-    end
-
-    sound.Played:Connect(tryBlock)
-    sound:GetPropertyChangedSignal("IsPlaying"):Connect(function()
-        if sound.IsPlaying then tryBlock() end
-    end)
-    if sound.IsPlaying then tryBlock() end
-end
-
-for _, desc in ipairs(KillersFolder:GetDescendants()) do
-    if desc:IsA("Sound") then hookSound(desc) end
-end
-KillersFolder.DescendantAdded:Connect(function(desc)
-    if desc:IsA("Sound") then hookSound(desc) end
-end)
-
-RunService.RenderStepped:Connect(function()
-    if not autoBlockOn then return end
-
-    local myChar = lp.Character
-    if not myChar then return end
-    local myRoot = myChar:FindFirstChild("HumanoidRootPart")
-    if not myRoot then return end
-
-    refreshUIRefs()
-    if cachedCooldown and cachedCooldown.Text ~= "" then return end
-
-    for _, killer in ipairs(KillersFolder:GetChildren()) do
-        local hrp = killer:FindFirstChild("HumanoidRootPart")
-        if hrp and (hrp.Position - myRoot.Position).Magnitude <= detectionRange then
-            local hum = killer:FindFirstChildOfClass("Humanoid")
-            local animator = hum and hum:FindFirstChildOfClass("Animator")
-            if animator then
-                for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
-                    local animId = tostring(track.Animation.AnimationId):match("%d+")
-                    if animId and table.find(autoBlockTriggerAnims, animId) then
-                        if not facingCheckEnabled or isFacing(myRoot, hrp) then
-                            task.wait(blockdelay)
-                            fireGuiBlock()
-                            return
-                        end
-                    end
-                end
-            end
-        end
-    end
-end)
-
-local autoPunch = false
-local aimPunch = false
-local aimPrediction = 0.8
-
-local backstab = false
-local backstabRange = 8
-local backstabMode = "Around"
-
-local visualEnabled = false
-local showKiller = false
-local showSurvivor = false
-local showItems = false
-local showGen = false
-
-local infStamina = true
-local jumpEnabled = false
-local hitbox = false
-local HitboxModule
-local autoGen = true
-local autoGenSpeed = 0.1
-
-local undetectedMode = false
-
-AutoBlockTab:CreateToggle({Name="Autopunch",Callback=function(v)autoPunch=v end})
-AutoBlockTab:CreateToggle({Name="Aimpunch",Callback=function(v)aimPunch=v end})
-AutoBlockTab:CreateSlider({Name="Prediction",Range={0,5},Increment=0.1,CurrentValue=0.8,Callback=function(v)aimPrediction=v end})
+AutoBlockTab:CreateToggle({Name="Auto Block (Animation)",Callback=function(v)autoBlockOn=v end})
+AutoBlockTab:CreateToggle({Name="Auto Block (Audio)",Callback=function(v)autoBlockAudioOn=v end})
+AutoBlockTab:CreateInput({Name="Detection Range",PlaceholderText="15",Callback=function(text)detectionRange=tonumber(text)or detectionRange end})
+AutoBlockTab:CreateToggle({Name="Enable Facing Check",CurrentValue=true,Callback=function(v)facingCheckEnabled=v end})
+AutoBlockTab:CreateInput({Name="Facing Check DOT",PlaceholderText="-0.3",Callback=function(text)customFacingDot=tonumber(text)or customFacingDot end})
+AutoBlockTab:CreateInput({Name="Ability Delay (seconds)",PlaceholderText="0",Callback=function(text)blockdelay=tonumber(text)or blockdelay end})
+AutoBlockTab:CreateDropdown({Name="Ability Mode",Options={"Block","Clone"},CurrentOption="Block",Callback=function(v)autoAbility=v refreshUIRefs()end})
+AutoBlockTab:CreateToggle({Name="Auto Punch",Callback=function(v)autoPunch=v end})
+AutoBlockTab:CreateToggle({Name="Aim Punch",Callback=function(v)aimPunch=v end})
+AutoBlockTab:CreateSlider({Name="Aim Prediction",Min=0,Max=5,Increment=0.1,CurrentValue=0.8,Callback=function(v)aimPrediction=v end})
 
 BackstabTab:CreateToggle({Name="AutoBackstab",Callback=function(v)backstab=v end})
 BackstabTab:CreateInput({Name="Range",PlaceholderText="8",Callback=function(v)backstabRange=tonumber(v)or backstabRange end})
@@ -264,42 +142,165 @@ VisualTab:CreateToggle({Name="Medkit & BloxyCola",Callback=function(v)showItems=
 
 OtherTab:CreateToggle({Name="INF STAMINA",Callback=function(v)infStamina=v end})
 OtherTab:CreateToggle({Name="Jump",Callback=function(v)jumpEnabled=v end})
-
-OtherTab:CreateToggle({
-    Name="Hitbox",
-    Callback=function(v)
-        hitbox=v
-        if v then
-            HitboxModule=HitboxModule or loadstring(game:HttpGet("https://raw.githubusercontent.com/FoxIPro5965/c00lgui/main/Hitbox.lua"))()
-            HitboxModule:ExtendHitbox(1.2,580)
-        elseif HitboxModule then
-            HitboxModule:StopExtendingHitbox()
-        end
-    end
-})
-
+OtherTab:CreateToggle({Name="Hitbox",Callback=function(v)hitbox=v if v then HitboxModule=HitboxModule or loadstring(game:HttpGet("https://raw.githubusercontent.com/FoxIPro5965/c00lgui/main/Hitbox.lua"))()HitboxModule:ExtendHitbox(1.2,580)elseif HitboxModule then HitboxModule:StopExtendingHitbox()end end})
 OtherTab:CreateToggle({Name="Auto gen",Callback=function(v)autoGen=v end})
 OtherTab:CreateSlider({Name="Gen Speed",Range={0.01,0.5},Increment=0.005,CurrentValue=0.1,Callback=function(v)autoGenSpeed=v end})
 OtherTab:CreateToggle({Name="Undetected Mode",Callback=function(v)undetectedMode=v end})
 
--- Các function còn lại giữ nguyên (click, backstab, visual, undetected, autogen, inf stamina, jump, v.v.)
-local function click(btnName)
-    local ui=PlayerGui:FindFirstChild("MainUI")
-    local btn=ui and ui:FindFirstChild("AbilityContainer") and ui.AbilityContainer:FindFirstChild(btnName)
-    if not btn then return end
-    for _,c in ipairs(getconnections(btn.MouseButton1Click))do pcall(function()c:Fire()end)end
-    pcall(function()btn:Activate()end)
+local soundHooks={}
+local soundBlockedUntil={}
+local lastLocalBlockTime=0
+local AUDIO_LOCAL_COOLDOWN=0.35
+
+local function extractNumericSoundId(sound)
+    local sid=sound.SoundId
+    if type(sid)~="string" then sid=tostring(sid) end
+    return sid:match("rbxassetid://(%d+)")or sid:match("://(%d+)")or sid:match("^(%d+)$")
 end
 
-local killersFolder=workspace:WaitForChild("Players"):WaitForChild("Killers")
+local function hookSound(sound)
+    if not sound:IsA("Sound")or soundHooks[sound]then return end
+    local id=extractNumericSoundId(sound)
+    if not id or not autoBlockTriggerSounds[id]then return end
+    soundHooks[sound]=true
+    local function tryBlock()
+        if not autoBlockAudioOn then return end
+        if tick()-lastLocalBlockTime<AUDIO_LOCAL_COOLDOWN then return end
+        if soundBlockedUntil[sound]and tick()<soundBlockedUntil[sound]then return end
+        local myRoot=lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
+        if not myRoot then return end
+        local parent=sound.Parent
+        while parent and not parent:FindFirstChild("HumanoidRootPart")do parent=parent.Parent end
+        local hrp=parent and parent:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+        if(hrp.Position-myRoot.Position).Magnitude>detectionRange then return end
+        if facingCheckEnabled and not isFacing(myRoot,hrp)then return end
+        refreshUIRefs()
+        if cachedCooldown and cachedCooldown.Text~=""then return end
+        task.wait(blockdelay)
+        fireGuiAbility(autoAbility)
+        lastLocalBlockTime=tick()
+        soundBlockedUntil[sound]=tick()+1
+    end
+    sound.Played:Connect(tryBlock)
+    sound:GetPropertyChangedSignal("IsPlaying"):Connect(function()if sound.IsPlaying then tryBlock()end end)
+    if sound.IsPlaying then tryBlock()end
+end
+
+for _,desc in ipairs(KillersFolder:GetDescendants())do if desc:IsA("Sound")then hookSound(desc)end end
+KillersFolder.DescendantAdded:Connect(function(desc)if desc:IsA("Sound")then hookSound(desc)end end)
+
+RunService.RenderStepped:Connect(function()
+    if not autoBlockOn then return end
+    local myChar=lp.Character
+    if not myChar then return end
+    local myRoot=myChar:FindFirstChild("HumanoidRootPart")
+    if not myRoot then return end
+    refreshUIRefs()
+    if cachedCooldown and cachedCooldown.Text~=""then return end
+    for _,killer in ipairs(KillersFolder:GetChildren())do
+        local hrp=killer:FindFirstChild("HumanoidRootPart")
+        if hrp and(hrp.Position-myRoot.Position).Magnitude<=detectionRange then
+            local hum=killer:FindFirstChildOfClass("Humanoid")
+            local animator=hum and hum:FindFirstChildOfClass("Animator")
+            if animator then
+                for _,track in ipairs(animator:GetPlayingAnimationTracks())do
+                    local animId=tostring(track.Animation.AnimationId):match("%d+")
+                    if animId and table.find(autoBlockTriggerAnims,animId)then
+                        if not facingCheckEnabled or isFacing(myRoot,hrp)then
+                            task.wait(blockdelay)
+                            fireGuiAbility(autoAbility)
+                            return
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
+local lastBlockTime=0
+local originalFire=fireGuiAbility
+fireGuiAbility=function(abilityName)
+    originalFire(abilityName)
+    if autoPunch and abilityName=="Block" then
+        lastBlockTime=tick()
+    end
+end
+
+task.spawn(function()
+    while task.wait(0.05)do
+        if not autoPunch then continue end
+        if autoAbility~="Block" then continue end
+        local timeSinceBlock=tick()-lastBlockTime
+        if timeSinceBlock<punchDelay or timeSinceBlock>0.5 then continue end
+        refreshUIRefs()
+        if cachedPunchBtn then
+            local punchCooldown=cachedPunchBtn:FindFirstChild("CooldownTime")
+            if not punchCooldown or punchCooldown.Text==""then
+                click("Punch")
+                lastBlockTime=0
+            end
+        end
+    end
+end)
+
+task.spawn(function()
+    local aiming=false
+    local aimConnection
+    local lastPunchTime=0
+    local oldClick=click
+    click=function(btnName)
+        oldClick(btnName)
+        if btnName=="Punch"then lastPunchTime=tick()end
+    end
+    local oldFire=fireGuiAbility
+    fireGuiAbility=function(abilityName)
+        oldFire(abilityName)
+        if abilityName=="Punch"then lastPunchTime=tick()end
+    end
+    while task.wait(0.05)do
+        if not aimPunch or not lp.Character or not lp.Character:FindFirstChild("HumanoidRootPart")then
+            if aiming and aimConnection then aimConnection:Disconnect()aiming=false end
+            continue
+        end
+        if tick()-lastPunchTime<aimPunchDuration and not aiming then
+            aiming=true
+            aimConnection=RunService.Heartbeat:Connect(function()
+                local hrp=lp.Character:FindFirstChild("HumanoidRootPart")
+                if not hrp then return end
+                local closestKiller=nil
+                local closestDist=math.huge
+                for _,killer in ipairs(KillersFolder:GetChildren())do
+                    local khrp=killer:FindFirstChild("HumanoidRootPart")
+                    if khrp then
+                        local dist=(khrp.Position-hrp.Position).Magnitude
+                        if dist<closestDist then
+                            closestDist=dist
+                            closestKiller=khrp
+                        end
+                    end
+                end
+                if closestKiller then
+                    local predictedPos=closestKiller.Position+closestKiller.Velocity*aimPrediction
+                    hrp.CFrame=CFrame.new(hrp.Position,predictedPos)
+                end
+            end)
+        elseif tick()-lastPunchTime>=aimPunchDuration and aiming then
+            if aimConnection then aimConnection:Disconnect()end
+            aiming=false
+        end
+    end
+end)
+
 local lastBackstab=0
 local COOLDOWN=10
 local HOLD=0.29
-local DIST=2.8
+local DIST=2
 
 local function isBehind(hrp,khrp)
     if(hrp.Position-khrp.Position).Magnitude>backstabRange then return false end
-    if backstabMode=="Around" then return true end
+    if backstabMode=="Around"then return true end
     return(hrp.Position-khrp.Position):Dot(-khrp.CFrame.LookVector)>0.5
 end
 
@@ -307,7 +308,7 @@ RunService.Heartbeat:Connect(function()
     if not backstab or tick()-lastBackstab<COOLDOWN then return end
     local hrp=lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
-    for _,k in ipairs(killersFolder:GetChildren())do
+    for _,k in ipairs(KillersFolder:GetChildren())do
         local khrp=k:FindFirstChild("HumanoidRootPart")
         if khrp and isBehind(hrp,khrp)then
             lastBackstab=tick()
@@ -322,184 +323,185 @@ RunService.Heartbeat:Connect(function()
         end
     end
 end)
-local oldA,oldO,oldB,oldF=Lighting.Ambient,Lighting.OutdoorAmbient,Lighting.Brightness,Lighting.FogEnd  
-local function bright(on)  
-if on then  
-Lighting.Ambient=Color3.new(1,1,1)  
-Lighting.OutdoorAmbient=Color3.new(1,1,1)  
-Lighting.Brightness=6  
-Lighting.FogEnd=0  
-else  
-Lighting.Ambient=oldA  
-Lighting.OutdoorAmbient=oldO  
-Lighting.Brightness=oldB  
-Lighting.FogEnd=oldF  
-end  
-end  
-  
-local function addHL(obj,color)  
-if obj:FindFirstChild("VisualHL")then return end  
-local h=Instance.new("Highlight")  
-h.Name="VisualHL"  
-h.FillTransparency=1  
-h.OutlineTransparency=0  
-h.OutlineColor=color  
-h.Parent=obj  
-h.Adornee=obj  
-end  
-  
-local function clearVisual()  
-for _,v in ipairs(workspace:GetDescendants())do  
-if v:IsA("Highlight")and v.Name=="VisualHL"then v:Destroy()end  
-end  
-end  
-  
-task.spawn(function()  
-while task.wait(0.6)do  
-if not visualEnabled then clearVisual()bright(false)continue end  
-bright(true)  
-clearVisual()  
-local pf=workspace:FindFirstChild("Players")  
-if pf then  
-if showKiller and pf:FindFirstChild("Killers")then  
-for _,k in ipairs(pf.Killers:GetChildren())do  
-if k:FindFirstChild("Humanoid")then addHL(k,Color3.fromRGB(255,70,70))end  
-end  
-end  
-if showSurvivor and pf:FindFirstChild("Survivors")then  
-for _,s in ipairs(pf.Survivors:GetChildren())do  
-if s:FindFirstChild("Humanoid")then addHL(s,Color3.fromRGB(70,255,70))end  
-end  
-end  
-end  
-if showItems then  
-for _,i in ipairs(workspace:GetDescendants())do  
-if i.Name=="Medkit"or i.Name=="BloxyCola"then addHL(i,Color3.fromRGB(180,0,255))end  
-end  
-end  
-if showGen then  
-for _,g in ipairs(workspace:GetDescendants())do  
-if g.Name:lower():find("generator")then addHL(g,Color3.fromRGB(255,255,0))end  
-end  
-end  
-end  
-end)  
-task.spawn(function()  
-local Undetectable=require(ReplicatedStorage.Modules.StatusEffects.Undetectable)  
-local animationId="rbxassetid://75804462760596"  
-local loadedAnim=nil  
-local function play(char)  
-local hum=char and char:FindFirstChildOfClass("Humanoid")  
-if hum then  
-local anim=Instance.new("Animation")  
-anim.AnimationId=animationId  
-loadedAnim=hum:LoadAnimation(anim)  
-loadedAnim:Play()  
-loadedAnim:AdjustSpeed(0)  
-end  
-end  
-local function stop()  
-if loadedAnim then loadedAnim:Stop() loadedAnim=nil end  
-end  
-local oA=Undetectable.Applied  
-local oR=Undetectable.Removed  
-Undetectable.Applied=function(d)  
-if undetectedMode and d.Player==lp then play(d.Character or d.Player.Character) end  
-return oA(d)  
-end  
-Undetectable.Removed=function(d)  
-if undetectedMode and d.Player==lp then stop() end  
-return oR(d)  
-end  
-end)  
-  
-local FlowGameModule  
-local oldNew  
-local hookedGen=false  
-  
-local function isNeighbour(r1,c1,r2,c2)  
-if r2==r1-1 and c2==c1 then return true end  
-if r2==r1+1 and c2==c1 then return true end  
-if r2==r1 and c2==c1-1 then return true end  
-if r2==r1 and c2==c1+1 then return true end  
-return false  
-end  
-  
-local function key(n)  
-return n.row.."-"..n.col  
-end  
-  
-local function orderPath(path,endpoints)  
-if not path or #path==0 then return path end  
-local start=endpoints and endpoints[1] or path[1]  
-local pool={}  
-for _,n in ipairs(path)do pool[key(n)]={row=n.row,col=n.col}end  
-local ordered={}  
-local cur={row=start.row,col=start.col}  
-table.insert(ordered,cur)  
-pool[key(cur)]=nil  
-while next(pool)do  
-local found=false  
-for k,n in pairs(pool)do  
-if isNeighbour(cur.row,cur.col,n.row,n.col)then  
-table.insert(ordered,n)  
-pool[k]=nil  
-cur=n  
-found=true  
-break  
-end  
-end  
-if not found then break end  
-end  
-return ordered  
-end  
-  
-local HintSystem={}  
-function HintSystem:Draw(puzzle)  
-if not puzzle or not puzzle.Solution then return end  
-for i=1,#puzzle.Solution do  
-local path=puzzle.Solution[i]  
-local ends=puzzle.targetPairs[i]  
-local ordered=orderPath(path,ends)  
-puzzle.paths[i]={}  
-for _,node in ipairs(ordered)do  
-if not autoGen then return end  
-table.insert(puzzle.paths[i],{row=node.row,col=node.col})  
-puzzle:updateGui()  
-task.wait(autoGenSpeed)  
-end  
-puzzle:checkForWin()  
-end  
-end  
-  
-local function hookAutoGen()  
-if hookedGen then return end  
-local mod=ReplicatedStorage.Modules.Misc.FlowGameManager.FlowGame  
-FlowGameModule=require(mod)  
-oldNew=oldNew or FlowGameModule.new  
-FlowGameModule.new=function(...)  
-local puzzle=oldNew(...)  
-task.spawn(function()  
-if autoGen then HintSystem:Draw(puzzle) end  
-end)  
-return puzzle  
-end  
-hookedGen=true  
-end  
-  
-hookAutoGen()  
 
-task.spawn(function()  
-local sprint=require(ReplicatedStorage.Systems.Character.Game.Sprinting)  
-while task.wait(3)do  
-if infStamina then sprint.Stamina=sprint.MaxStamina or 100 end  
-end  
-end)  
-  
-task.spawn(function()  
-while task.wait(0.2)do  
-local hum=lp.Character and lp.Character:FindFirstChildOfClass("Humanoid")  
-if hum then hum.JumpPower=jumpEnabled and 60 or 0 end  
-end  
+local oldA,oldO,oldB,oldF=Lighting.Ambient,Lighting.OutdoorAmbient,Lighting.Brightness,Lighting.FogEnd
+local function bright(on)
+    if on then
+        Lighting.Ambient=Color3.new(1,1,1)
+        Lighting.OutdoorAmbient=Color3.new(1,1,1)
+        Lighting.Brightness=6
+        Lighting.FogEnd=0
+    else
+        Lighting.Ambient=oldA
+        Lighting.OutdoorAmbient=oldO
+        Lighting.Brightness=oldB
+        Lighting.FogEnd=oldF
+    end
+end
+
+local function addHL(obj,color)
+    if obj:FindFirstChild("VisualHL")then return end
+    local h=Instance.new("Highlight")
+    h.Name="VisualHL"
+    h.FillTransparency=1
+    h.OutlineTransparency=0
+    h.OutlineColor=color
+    h.Parent=obj
+    h.Adornee=obj
+end
+
+local function clearVisual()
+    for _,v in ipairs(workspace:GetDescendants())do
+        if v:IsA("Highlight")and v.Name=="VisualHL"then v:Destroy()end
+    end
+end
+
+task.spawn(function()
+    while task.wait(0.6)do
+        if not visualEnabled then clearVisual()bright(false)continue end
+        bright(true)
+        clearVisual()
+        local pf=workspace:FindFirstChild("Players")
+        if pf then
+            if showKiller and pf:FindFirstChild("Killers")then
+                for _,k in ipairs(pf.Killers:GetChildren())do
+                    if k:FindFirstChild("Humanoid")then addHL(k,Color3.fromRGB(255,70,70))end
+                end
+            end
+            if showSurvivor and pf:FindFirstChild("Survivors")then
+                for _,s in ipairs(pf.Survivors:GetChildren())do
+                    if s:FindFirstChild("Humanoid")then addHL(s,Color3.fromRGB(70,255,70))end
+                end
+            end
+        end
+        if showItems then
+            for _,i in ipairs(workspace:GetDescendants())do
+                if i.Name=="Medkit"or i.Name=="BloxyCola"then addHL(i,Color3.fromRGB(180,0,255))end
+            end
+        end
+        if showGen then
+            for _,g in ipairs(workspace:GetDescendants())do
+                if g.Name:lower():find("generator")then addHL(g,Color3.fromRGB(255,255,0))end
+            end
+        end
+    end
 end)
+
+task.spawn(function()
+    local Undetectable=require(ReplicatedStorage.Modules.StatusEffects.Undetectable)
+    local animationId="rbxassetid://75804462760596"
+    local loadedAnim=nil
+    local function play(char)
+        local hum=char and char:FindFirstChildOfClass("Humanoid")
+        if hum then
+            local anim=Instance.new("Animation")
+            anim.AnimationId=animationId
+            loadedAnim=hum:LoadAnimation(anim)
+            loadedAnim:Play()
+            loadedAnim:AdjustSpeed(0)
+        end
+    end
+    local function stop()
+        if loadedAnim then loadedAnim:Stop()loadedAnim=nil end
+    end
+    local oA=Undetectable.Applied
+    local oR=Undetectable.Removed
+    Undetectable.Applied=function(d)
+        if undetectedMode and d.Player==lp then play(d.Character or d.Player.Character)end
+        return oA(d)
+    end
+    Undetectable.Removed=function(d)
+        if undetectedMode and d.Player==lp then stop()end
+        return oR(d)
+    end
+end)
+
+local FlowGameModule
+local oldNew
+local hookedGen=false
+
+local function isNeighbour(r1,c1,r2,c2)
+    if r2==r1-1 and c2==c1 then return true end
+    if r2==r1+1 and c2==c1 then return true end
+    if r2==r1 and c2==c1-1 then return true end
+    if r2==r1 and c2==c1+1 then return true end
+    return false
+end
+
+local function key(n)return n.row.."-"..n.col end
+
+local function orderPath(path,endpoints)
+    if not path or #path==0 then return path end
+    local start=endpoints and endpoints[1]or path[1]
+    local pool={}
+    for _,n in ipairs(path)do pool[key(n)]={row=n.row,col=n.col}end
+    local ordered={}
+    local cur={row=start.row,col=start.col}
+    table.insert(ordered,cur)
+    pool[key(cur)]=nil
+    while next(pool)do
+        local found=false
+        for k,n in pairs(pool)do
+            if isNeighbour(cur.row,cur.col,n.row,n.col)then
+                table.insert(ordered,n)
+                pool[k]=nil
+                cur=n
+                found=true
+                break
+            end
+        end
+        if not found then break end
+    end
+    return ordered
+end
+
+local HintSystem={}
+function HintSystem:Draw(puzzle)
+    if not puzzle or not puzzle.Solution then return end
+    for i=1,#puzzle.Solution do
+        local path=puzzle.Solution[i]
+        local ends=puzzle.targetPairs[i]
+        local ordered=orderPath(path,ends)
+        puzzle.paths[i]={}
+        for _,node in ipairs(ordered)do
+            if not autoGen then return end
+            table.insert(puzzle.paths[i],{row=node.row,col=node.col})
+            puzzle:updateGui()
+            task.wait(autoGenSpeed)
+        end
+        puzzle:checkForWin()
+    end
+end
+
+local function hookAutoGen()
+    if hookedGen then return end
+    local mod=ReplicatedStorage.Modules.Misc.FlowGameManager.FlowGame
+    FlowGameModule=require(mod)
+    oldNew=oldNew or FlowGameModule.new
+    FlowGameModule.new=function(...)
+        local puzzle=oldNew(...)
+        task.spawn(function()
+            if autoGen then HintSystem:Draw(puzzle)end
+        end)
+        return puzzle
+    end
+    hookedGen=true
+end
+
+hookAutoGen()
+
+task.spawn(function()
+    local sprint=require(ReplicatedStorage.Systems.Character.Game.Sprinting)
+    while task.wait(3)do
+        if infStamina then sprint.Stamina=sprint.MaxStamina or 100 end
+    end
+end)
+
+task.spawn(function()
+    while task.wait(0.2)do
+        local hum=lp.Character and lp.Character:FindFirstChildOfClass("Humanoid")
+        if hum then hum.JumpPower=jumpEnabled and 60 or 0 end
+    end
+end)
+
 Rayfield:LoadConfiguration()
