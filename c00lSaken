@@ -51,7 +51,7 @@ local autoBlockTriggerAnims = {
 
 local autoBlockOn = false 
 local autoBlockAudioOn = false 
-local detectionRange = 15
+local detectionRange = 12
 local facingCheckEnabled = true
 local customFacingDot = -0.3
 local blockdelay = 0
@@ -103,7 +103,7 @@ AutoBlockTab:CreateToggle({
 
 AutoBlockTab:CreateInput({
     Name = "Detection Range",
-    PlaceholderText = "15",
+    PlaceholderText = "12",
     Callback = function(text)
         detectionRange = tonumber(text) or detectionRange
     end
@@ -225,7 +225,7 @@ end)
 
 local autoPunch = false
 local aimPunch = false
-local aimPrediction = 1
+local aimPrediction = 4
 
 AutoBlockTab:CreateToggle({Name="Autopunch",Callback=function(v)autoPunch=v end})
 AutoBlockTab:CreateToggle({Name="Aimpunch",Callback=function(v)aimPunch=v end})
@@ -233,7 +233,7 @@ AutoBlockTab:CreateSlider({
     Name="Prediction",
     Range={0,10},
     Increment=0.1,
-    CurrentValue=1,
+    CurrentValue=4,
     Suffix=" studs",
     Callback=function(v) aimPrediction = v end
 })
