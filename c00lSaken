@@ -117,8 +117,110 @@ end})
 LeftOther:AddToggle("AutoGen", {Text = "Auto gen", Default = true, Callback = function(v) autoGen = v end})
 LeftOther:AddSlider("GenSpeed", {Text = "Gen Speed", Min = 0.01, Max = 0.5, Default = 0.1, Increment = 0.005, Callback = function(v) autoGenSpeed = v end})
 LeftOther:AddToggle("Undetected", {Text = "Undetected Mode", Default = false, Callback = function(v) undetectedMode = v end})
+LeftOther:AddToggle("HakariDance", {
+    Text = "Hakari Dance",
+    Default = false,
+    Callback = function(state)
+        local char = lp.Character or lp.CharacterAdded:Wait()
+        local humanoid = char:WaitForChild("Humanoid")
+        local rootPart = char:WaitForChild("HumanoidRootPart")
 
-Library:Notify("c00lSaken Obsidian loaded! Press RightControl to toggle 🔥", 8)
+        if state then
+            Library:Notify("Hakari Dance activated! 🕺", 5)
+            humanoid.PlatformStand = true
+            humanoid.JumpPower = 0
+
+            local bodyVelocity = Instance.new("BodyVelocity")
+            bodyVelocity.MaxForce = Vector3.new(100000, 100000, 100000)
+            bodyVelocity.Velocity = Vector3.zero
+            bodyVelocity.Parent = rootPart
+
+            local animation = Instance.new("Animation")
+            animation.AnimationId = "rbxassetid://138019937280193"
+            local animationTrack = humanoid:LoadAnimation(animation)
+            animationTrack:Play()
+
+            local sound = Instance.new("Sound")
+            sound.SoundId = "rbxassetid://87166578676888"
+            sound.Parent = rootPart
+            sound.Volume = 0.5
+            sound.Looped = true
+            sound:Play()
+
+            local effect = ReplicatedStorage.Assets.Emotes.HakariDance.HakariBeamEffect:Clone()
+            effect.Name = "PlayerEmoteVFX"
+            effect.CFrame = char.PrimaryPart.CFrame * CFrame.new(0, -1, -0.3)
+            effect.WeldConstraint.Part0 = char.PrimaryPart
+            effect.WeldConstraint.Part1 = effect
+            effect.Parent = char
+            effect.CanCollide = false
+
+            local args = {"PlayEmote", "Animations", "HakariDance"}
+            ReplicatedStorage.Modules.Network.RemoteEvent:FireServer(unpack(args))
+
+            animationTrack.Stopped:Connect(function()
+                if not LeftOther.Options.HakariDance.Value then
+                    humanoid.PlatformStand = false
+                    if bodyVelocity and bodyVelocity.Parent then bodyVelocity:Destroy() end
+                end
+            end)
+        else
+            humanoid.PlatformStand = false
+            humanoid.JumpPower = 50
+
+            local bodyVelocity = rootPart:FindFirstChildOfClass("BodyVelocity")
+            if bodyVelocity then bodyVelocity:Destroy() end
+
+            local sound = rootPart:FindFirstChildOfClass("Sound")
+            if sound and sound.SoundId:find("87166578676888") then
+                sound:Stop()
+                sound:Destroy()
+            end
+
+            local effect = char:FindFirstChild("PlayerEmoteVFX")
+            if effect then effect:Destroy() end
+
+            for _, track in ipairs(humanoid:GetPlayingAnimationTracks()) do
+                if track.Animation.AnimationId == "rbxassetid://138019937280193" then
+                    track:Stop()
+                end
+            end
+        end
+    end
+})
+
+local popupLoop
+LeftOther:AddToggle("Anti1x1Popup", {
+    Text = "Anti 1x1x1x1 Popup",
+    Default = false,
+    Callback = function(state)
+        if state then
+            Library:Notify("Anti 1x1x1x1 Popup ON – auto click popup!", 5)
+            popupLoop = task.spawn(function()
+                while LeftOther.Options.Anti1x1Popup.Value do
+                    task.wait(0.1)
+                    local popups = PlayerGui.TemporaryUI:GetChildren()
+                    for _, popup in ipairs(popups) do
+                        if popup.Name == "1x1x1x1Popup" then
+                            local centerX = popup.AbsolutePosition.X + (popup.AbsoluteSize.X / 2)
+                            local centerY = popup.AbsolutePosition.Y + (popup.AbsoluteSize.Y / 2)
+                            VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, true, game, 1)
+                            task.wait()
+                            VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, false, game, 1)
+                        end
+                    end
+                end
+            end)
+        else
+            if popupLoop then
+                task.cancel(popupLoop)
+                popupLoop = nil
+            end
+        end
+    end
+})
+
+Library:Notify("c00lSaken loaded! Press RightControl to toggle", 8)
 
 local KillersFolder = workspace:WaitForChild("Players"):WaitForChild("Killers")
 
