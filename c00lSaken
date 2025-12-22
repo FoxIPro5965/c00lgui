@@ -23,15 +23,6 @@ SaveManager:IgnoreThemeSettings()
 ThemeManager:ApplyToTab(ConfigTab)
 SaveManager:BuildConfigSection(ConfigTab)
 
-Library.Scheme = {
-    FontColor = Color3.fromHex("ffffff"),
-    MainColor = Color3.fromHex("1e1e1e"),
-    AccentColor = Color3.fromHex("ff6b6b"),
-    BackgroundColor = Color3.fromHex("141414"),
-    OutlineColor = Color3.fromHex("303030")
-}
-Library:UpdateColorsUsingRegistry()
-
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
