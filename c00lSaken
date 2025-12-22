@@ -189,32 +189,48 @@ LeftOther:AddToggle("HakariDance", {
     end
 })
 
-local popupLoop
 LeftOther:AddToggle("Anti1x1Popup", {
     Text = "Anti 1x1x1x1 Popup",
     Default = false,
     Callback = function(state)
         if state then
-            Library:Notify("Anti 1x1x1x1 Popup ON – auto click popup!", 5)
-            popupLoop = task.spawn(function()
+            connections = connections or {}
+            table.insert(connections, PlayerGui.TemporaryUI.ChildAdded:Connect(function(child)
+                if child.Name == "1x1x1x1Popup" and LeftOther.Options.Anti1x1Popup.Value then
+                    task.wait()  -- Đợi frame để button load đầy đủ
+                    local button = child:FindFirstChild("Button") or child:FindFirstChildWhichIsA("TextButton") or child:FindFirstChildWhichIsA("ImageButton")
+                    if button then
+                        for _, conn in ipairs(getconnections(button.MouseButton1Click)) do
+                            pcall(conn.Fire, conn)
+                        end
+                        -- Backup: activate trực tiếp
+                        pcall(function() button:Activate() end)
+                    end
+                end
+            end))
+            task.spawn(function()
                 while LeftOther.Options.Anti1x1Popup.Value do
-                    task.wait(0.1)
-                    local popups = PlayerGui.TemporaryUI:GetChildren()
-                    for _, popup in ipairs(popups) do
+                    task.wait(0.2)
+                    for _, popup in ipairs(PlayerGui.TemporaryUI:GetChildren()) do
                         if popup.Name == "1x1x1x1Popup" then
-                            local centerX = popup.AbsolutePosition.X + (popup.AbsoluteSize.X / 2)
-                            local centerY = popup.AbsolutePosition.Y + (popup.AbsoluteSize.Y / 2)
-                            VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, true, game, 1)
-                            task.wait()
-                            VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, false, game, 1)
+                            local button = popup:FindFirstChild("Button") or popup:FindFirstChildWhichIsA("TextButton") or popup:FindFirstChildWhichIsA("ImageButton")
+                            if button then
+                                for _, conn in ipairs(getconnections(button.MouseButton1Click)) do
+                                    pcall(conn.Fire, conn)
+                                end
+                                pcall(function() button:Activate() end)
+                            end
                         end
                     end
                 end
             end)
+
         else
-            if popupLoop then
-                task.cancel(popupLoop)
-                popupLoop = nil
+            if connections then
+                for _, conn in ipairs(connections) do
+                    if conn.Connected then conn:Disconnect() end
+                end
+                connections = {}
             end
         end
     end
