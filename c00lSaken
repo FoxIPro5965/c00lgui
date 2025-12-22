@@ -244,7 +244,7 @@ RunService.RenderStepped:Connect(function()
                 if humanoid then humanoid.AutoRotate = false end
                 task.spawn(function()
                     local startTime = tick()
-                    while tick() - startTime < 2 do
+                    while tick() - startTime < 1 do
                         if myRoot and root and root.Parent then
                             local predictedPos = root.Position + (root.CFrame.LookVector * aimPrediction)
                             myRoot.CFrame = CFrame.lookAt(myRoot.Position, predictedPos)
