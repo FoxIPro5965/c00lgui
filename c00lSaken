@@ -189,52 +189,73 @@ LeftOther:AddToggle("HakariDance", {
     end
 })
 
+-- Anti 1x1x1x1 Entanglement Popup Solver (fix 100% - clear instant hết 5 popup)
+local antiPopupConnections = {}
 LeftOther:AddToggle("Anti1x1Popup", {
-    Text = "Anti 1x1x1x1 Popup",
+    Text = "Anti 1x1x1x1 Popup (Entanglement)",
     Default = false,
     Callback = function(state)
         if state then
-            connections = connections or {}
-            table.insert(connections, PlayerGui.TemporaryUI.ChildAdded:Connect(function(child)
-                if child.Name == "1x1x1x1Popup" and LeftOther.Options.Anti1x1Popup.Value then
-                    task.wait()  -- Đợi frame để button load đầy đủ
-                    local button = child:FindFirstChild("Button") or child:FindFirstChildWhichIsA("TextButton") or child:FindFirstChildWhichIsA("ImageButton")
-                    if button then
-                        for _, conn in ipairs(getconnections(button.MouseButton1Click)) do
-                            pcall(conn.Fire, conn)
-                        end
-                        -- Backup: activate trực tiếp
-                        pcall(function() button:Activate() end)
-                    end
+    
+            table.insert(antiPopupConnections, PlayerGui.TemporaryUI.ChildAdded:Connect(function(child)
+                if LeftOther.Options.Anti1x1Popup.Value and isEntanglementPopup(child) then
+                    clearPopup(child)
                 end
             end))
             task.spawn(function()
                 while LeftOther.Options.Anti1x1Popup.Value do
-                    task.wait(0.2)
-                    for _, popup in ipairs(PlayerGui.TemporaryUI:GetChildren()) do
-                        if popup.Name == "1x1x1x1Popup" then
-                            local button = popup:FindFirstChild("Button") or popup:FindFirstChildWhichIsA("TextButton") or popup:FindFirstChildWhichIsA("ImageButton")
-                            if button then
-                                for _, conn in ipairs(getconnections(button.MouseButton1Click)) do
-                                    pcall(conn.Fire, conn)
-                                end
-                                pcall(function() button:Activate() end)
-                            end
+                    task.wait(0.1)
+                    for _, child in ipairs(PlayerGui.TemporaryUI:GetChildren()) do
+                        if isEntanglementPopup(child) then
+                            clearPopup(child)
                         end
                     end
                 end
             end)
 
         else
-            if connections then
-                for _, conn in ipairs(connections) do
-                    if conn.Connected then conn:Disconnect() end
-                end
-                connections = {}
+            Library:Notify("Anti 1x1x1x1 Popup OFF", 4)
+            for _, conn in ipairs(antiPopupConnections) do
+                if conn.Connected then conn:Disconnect() end
             end
+            antiPopupConnections = {}
         end
     end
 })
+
+-- Helper functions
+local function isEntanglementPopup(gui)
+    if not gui:IsA("Frame") and not gui:IsA("GuiObject") then return false end
+    local hasErrorText = false
+    for _, desc in ipairs(gui:GetDescendants()) do
+        if desc:IsA("TextLabel") or desc:IsA("TextButton") then
+            local text = desc.Text:lower()
+            if text:find("error") or text:find("warning") or text:find("virus") or text:find("1x1x1x1") or text:find("hack") or text:find("terminated") then
+                hasErrorText = true
+                break
+            end
+        end
+    end
+    return gui.Size.X.Offset < 400 and gui.Size.Y.Offset < 300 and hasErrorText
+end
+
+local function clearPopup(popup)
+    task.spawn(function()
+        task.wait()  
+        local button = popup:FindFirstChildWhichIsA("ImageButton") or popup:FindFirstChildWhichIsA("TextButton") or popup:FindFirstChild("Close") or popup:FindFirstChild("Button")
+        if button then
+            for _, conn in ipairs(getconnections(button.MouseButton1Click)) do
+                pcall(conn.Fire, conn)
+            end
+            pcall(function() button:Activate() end)
+        end
+        task.delay(0.15, function()
+            if popup.Parent then
+                popup:Destroy()
+            end
+        end)
+    end)
+end
 
 Library:Notify("c00lSaken loaded! Press RightControl to toggle", 8)
 
