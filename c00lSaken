@@ -113,10 +113,6 @@ LeftOther:AddToggle("AutoGen",{Text="Auto gen",Default=true,Callback=function(v)
 LeftOther:AddSlider("GenSpeed",{Text="Gen Speed",Min=0.01,Max=0.5,Default=0.1,Increment=0.005,Callback=function(v) autoGenSpeed=v end})
 LeftOther:AddToggle("Undetected",{Text="Undetected Mode",Default=false,Callback=function(v) undetectedMode=v end})
 
-SaveManager:IgnoreThemeSettings()
-SaveManager:SetIgnoreIndexes({})
-SaveManager:LoadAutoloadConfig()
-
 local soundHooks={}
 local soundBlockedUntil={}
 local lastLocalBlockTime=0
@@ -438,4 +434,6 @@ task.spawn(function()
         if hum then hum.JumpPower=jumpEnabled and 60 or 0 end
     end
 end)
-
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetIgnoreIndexes({})
+SaveManager:LoadAutoloadConfig()
