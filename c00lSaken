@@ -203,23 +203,50 @@ local originalValues={}
 
 local AntiGroup=AntiTab:AddLeftGroupbox("Anti")
 
-AntiGroup:AddToggle("Anti1x",{
-    Text="Anti 1x1x1x1 popups",
-    Default=false,
-    Callback=function(bool)
-        _G.no1x = bool
-        task.spawn(function()
-            while _G.no1x and task.wait() do
-                local temp = lp.PlayerGui:FindFirstChild("TemporaryUI")
+local anti1xConn
 
-                if temp and temp:FindFirstChild("1x1x1x1Popup") then
-                    if firesignal then
-                        firesignal(temp["1x1x1x1Popup"].MouseButton1Click)
-                    end
-                    warn("it gone! yess")
-                end
+AntiGroup:AddToggle("Anti1x", {
+    Text = "Anti 1x1x1x1 popups",
+    Default = false,
+    Callback = function(state)
+        _G.no1x = state
+
+        if anti1xConn then
+            anti1xConn:Disconnect()
+            anti1xConn = nil
+        end
+
+        if not state then return end
+
+        local function handlePopup(popup)
+            task.wait() -- chờ UI render
+            if firesignal and popup and popup:IsA("ImageButton") then
+                pcall(function()
+                    firesignal(popup.MouseButton1Click)
+                end)
             end
-        end)
+        end
+
+        local function scan(gui)
+            if gui.Name ~= "TemporaryUI" then return end
+            local popup = gui:FindFirstChild("1x1x1x1Popup")
+            if popup then
+                handlePopup(popup)
+            end
+            gui.ChildAdded:Connect(function(c)
+                if c.Name == "1x1x1x1Popup" then
+                    handlePopup(c)
+                end
+            end)
+        end
+
+        -- check UI đã tồn tại
+        for _,ui in ipairs(lp.PlayerGui:GetChildren()) do
+            scan(ui)
+        end
+
+        -- hook UI spawn sau
+        anti1xConn = lp.PlayerGui.ChildAdded:Connect(scan)
     end
 })
 
