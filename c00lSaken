@@ -189,7 +189,7 @@ LeftOther:AddToggle("HakariDance", {
         end
     end
 })
-local AntiGroup = Tabs.Anti:AddLeftGroupbox("Anti")
+local AntiGroup = AntiTab:AddLeftGroupbox("Anti")
 AntiGroup:AddToggle("AutoRemove1x1x1x1", {
     Text = "Anti 1x1x1x1 popups",
     Default = false,
