@@ -229,6 +229,7 @@ local autoBlockTriggerSounds = {
 ["101698569375359"]=true,["106300477136129"]=true,["116581754553533"]=true,["117231507259853"]=true,
 ["119089145505438"]=true,["121954639447247"]=true,["125213046326879"]=true,["131406927389838"]=true
 }
+
 local autoBlockTriggerAnims = {
     ["126830014841198"]=true, ["126355327951215"]=true, ["121086746534252"]=true,
     ["18885909645"]=true, ["98456918873918"]=true, ["105458270463374"]=true,
@@ -271,9 +272,6 @@ local aimPrediction = 4
 local backstab = false
 local backstabRange = 8
 local backstabMode = "Around"
-local backstabPredict = 2
-local HOLD = 0.25
-local DIST = 2.2
 local visualEnabled = false
 local showKiller = false
 local showSurvivor = false
@@ -286,6 +284,9 @@ local HitboxModule
 local autoGen = true
 local autoGenSpeed = 0.1
 local undetectedMode = false
+
+-- Biến Backdis (default 0.2)
+local backdis = 0.2
 
 local LeftAB = AutoBlockTab:AddLeftGroupbox("Auto Block")
 local RightAB = AutoBlockTab:AddRightGroupbox("Autopunch")
@@ -303,11 +304,20 @@ RightAB:AddSlider("Prediction", {Text = "Prediction", Min = 0, Max = 10, Default
 
 local LeftBS = BackstabTab:AddLeftGroupbox("Auto Backstab")
 LeftBS:AddToggle("AutoBackstab", {Text = "AutoBackstab", Default = false, Callback = function(v) backstab = v end})
-LeftBS:AddSlider("BackstabRange", {Text = "Range", Min = 1, Max = 20, Default = 8, Increment = 0.1, Suffix = " studs", Callback = function(v) backstabRange = v end})
+LeftBS:AddInput("BackstabRange", {Text = "Range", Default = "8", Numeric = true, Callback = function(t) backstabRange = tonumber(t) or backstabRange end})
 LeftBS:AddDropdown("BackstabMode", {Text = "Mode", Default = "Around", Values = {"Behind", "Around"}, Callback = function(v) backstabMode = v end})
-LeftBS:AddSlider("BackstabPredict", {Text = "Prediction (studs)", Min = 0, Max = 10, Default = 2, Increment = 0.1, Suffix = " studs", Callback = function(v) backstabPredict = v end})
-LeftBS:AddSlider("BackstabHold", {Text = "Hold Time (s)", Min = 0.1, Max = 1, Default = 0.25, Increment = 0.01, Suffix = " s", Callback = function(v) HOLD = v end})
-LeftBS:AddSlider("BackstabDist", {Text = "Behind Dist", Min = 1, Max = 5, Default = 2.2, Increment = 0.1, Suffix = " studs", Callback = function(v) DIST = v end})
+
+LeftBS:AddSlider("Backdis", {
+    Text = "Backdis",
+    Min = 0.1,
+    Max = 0.3,
+    Default = 0.2,
+    Increment = 0.1,
+    Suffix = " studs",
+    Callback = function(v)
+        backdis = v
+    end
+})
 
 local LeftVis = VisualTab:AddLeftGroupbox("ESP Settings")
 LeftVis:AddToggle("Highlight", {Text = "Highlight", Default = false, Callback = function(v) visualEnabled = v end})
@@ -329,17 +339,23 @@ LeftOther:AddToggle("Hitbox", {Text = "Hitbox", Default = false, Callback = func
     end
 end})
 LeftOther:AddToggle("AutoGen", {Text = "Auto gen", Default = true, Callback = function(v) autoGen = v end})
-LeftOther:AddSlider("GenSpeed", {
+
+LeftOther:AddInput("GenSpeed", {
     Text = "Gen Speed",
-    Min = 0.01,
-    Max = 0.5,
-    Default = 0.1,
-    Increment = 0.005,
-    Suffix = " s",
-    Callback = function(v)
-        autoGenSpeed = v
+    Default = "0.1",
+    Numeric = true,
+    PlaceholderText = "0.05 - 0.5",
+    Callback = function(text)
+        local num = tonumber(text)
+        if num and num >= 0.05 and num <= 0.5 then
+            autoGenSpeed = num
+        else
+            autoGenSpeed = 0.1
+            Library:Notify("Gen Speed phải từ 0.05 đến 0.5!", 3)
+        end
     end
 })
+
 LeftOther:AddToggle("Undetected", {Text = "Undetected Mode", Default = false, Callback = function(v) undetectedMode = v end})
 LeftOther:AddToggle("HakariDance", {
     Text = "Hakari Dance",
@@ -671,7 +687,7 @@ RunService.RenderStepped:Connect(function()
             if animator then
                 for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
                     local animId = tostring(track.Animation.AnimationId):match("%d+")
-                    if animId and table.find(autoBlockTriggerAnims, animId) then
+                    if animId and autoBlockTriggerAnims[animId] then
                         if not facingCheckEnabled or isFacing(myRoot, hrp) then
                             task.wait(blockdelay)
                             click("Block")
@@ -723,6 +739,7 @@ end)
 local killersFolder = workspace:WaitForChild("Players"):WaitForChild("Killers")
 local lastBackstab = 0
 local COOLDOWN = 10
+local HOLD = 0.29
 
 local function isBehind(hrp, khrp)
     if (hrp.Position - khrp.Position).Magnitude > backstabRange then return false end
@@ -732,88 +749,23 @@ end
 
 RunService.Heartbeat:Connect(function()
     if not backstab or tick() - lastBackstab < COOLDOWN then return end
-    local myChar = lp.Character
-    if not myChar then return end
-    local hrp = myChar:FindFirstChild("HumanoidRootPart")
+    local hrp = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
-    local hum = myChar:FindFirstChildOfClass("Humanoid")
-    if not hum then return end
-
     for _, k in ipairs(killersFolder:GetChildren()) do
         local khrp = k:FindFirstChild("HumanoidRootPart")
-        if not khrp or not isBehind(hrp, khrp) then continue end
-
-        lastBackstab = tick()
-
-        local vel = khrp.AssemblyLinearVelocity
-        local predictTime = HOLD / 2
-        local predictPos = khrp.Position + vel * predictTime + (khrp.CFrame.LookVector * backstabPredict)
-        local behindPos = predictPos - khrp.CFrame.LookVector * DIST
-        hrp.CFrame = CFrame.lookAt(behindPos, predictPos)
-
-        hum.AutoRotate = false
-
-        task.wait()
-
-        click("Dagger")
-
-        local startTime = tick()
-        local holdConn = RunService.RenderStepped:Connect(function()
-            if tick() - startTime > HOLD then
-                holdConn:Disconnect()
-                hum.AutoRotate = true
-                return
-            end
-            local remainingTime = HOLD - (tick() - startTime)
-            local currVel = khrp.AssemblyLinearVelocity
-            local currPredict = khrp.Position + currVel * remainingTime + (khrp.CFrame.LookVector * backstabPredict * 0.5)
-            local currBehind = currPredict - khrp.CFrame.LookVector * DIST
-            hrp.CFrame = CFrame.lookAt(currBehind, currPredict)
-        end)
-        break
+        if khrp and isBehind(hrp, khrp) then
+            lastBackstab = tick()
+            click("Dagger")
+            local s = tick()
+            local c
+            c = RunService.Heartbeat:Connect(function()
+                if tick() - s > HOLD then c:Disconnect() return end
+                hrp.CFrame = CFrame.new(khrp.Position - khrp.CFrame.LookVector * backdis, khrp.Position)
+            end)
+            break
+        end
     end
 end)
-
-local FlowGameModule
-local oldNew
-local hookedGen = false
-
-local HintSystem = {}
-function HintSystem:Draw(puzzle)
-    if not puzzle or not puzzle.Solution then return end
-    for i = 1, #puzzle.Solution do
-        local path = puzzle.Solution[i]
-        if not path or #path == 0 then continue end
-        puzzle.paths[i] = {}
-        for _, node in ipairs(path) do
-            if not autoGen then return end
-            table.insert(puzzle.paths[i], {row = node.row, col = node.col})
-            puzzle:updateGui()
-            task.wait(autoGenSpeed)
-        end
-        puzzle:checkForWin()
-        task.wait(autoGenSpeed)
-    end
-end
-
-local function hookAutoGen()
-    if hookedGen then return end
-    hookedGen = true
-    local mod = ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Misc"):WaitForChild("FlowGameManager"):WaitForChild("FlowGame")
-    FlowGameModule = require(mod)
-    oldNew = FlowGameModule.new
-    FlowGameModule.new = function(...)
-        local puzzle = oldNew(...)
-        if autoGen then
-            task.spawn(function()
-                HintSystem:Draw(puzzle)
-            end)
-        end
-        return puzzle
-    end
-end
-
-hookAutoGen()
 
 local oldA, oldO, oldB, oldF = Lighting.Ambient, Lighting.OutdoorAmbient, Lighting.Brightness, Lighting.FogEnd
 local function bright(on)
@@ -884,7 +836,7 @@ local flipDistance = 20
 LeftOther:AddToggle("FrontFlip", { 
     Text = "Front Flip",
     Tooltip = "funny flip",
-    Default = true,
+    Default = false,
     Callback = function(v)
         getgenv().FlipUI.Enabled = v
     end
@@ -1109,6 +1061,76 @@ task.spawn(function()
         return oR(d)
     end
 end)
+
+local FlowGameModule
+local oldNew
+local hookedGen = false
+
+local function isNeighbour(r1, c1, r2, c2)
+    return (r2 == r1-1 and c2 == c1) or (r2 == r1+1 and c2 == c1) or (r2 == r1 and c2 == c1-1) or (r2 == r1 and c2 == c1+1)
+end
+
+local function key(n) return n.row .. "-" .. n.col end
+
+local function orderPath(path, endpoints)
+    if not path or #path == 0 then return path end
+    local start = endpoints and endpoints[1] or path[1]
+    local pool = {}
+    for _, n in ipairs(path) do pool[key(n)] = {row = n.row, col = n.col} end
+    local ordered = {}
+    local cur = {row = start.row, col = start.col}
+    table.insert(ordered, cur)
+    pool[key(cur)] = nil
+    while next(pool) do
+        local found = false
+        for k, n in pairs(pool) do
+            if isNeighbour(cur.row, cur.col, n.row, n.col) then
+                table.insert(ordered, n)
+                pool[k] = nil
+                cur = n
+                found = true
+                break
+            end
+        end
+        if not found then break end
+    end
+    return ordered
+end
+
+local HintSystem = {}
+function HintSystem:Draw(puzzle)
+    if not puzzle or not puzzle.Solution then return end
+    for i = 1, #puzzle.Solution do
+        local path = puzzle.Solution[i]
+        local ends = puzzle.targetPairs[i]
+        local ordered = orderPath(path, ends)
+        puzzle.paths[i] = {}
+        for _, node in ipairs(ordered) do
+            if not autoGen then return end
+            table.insert(puzzle.paths[i], {row = node.row, col = node.col})
+            puzzle:updateGui()
+            task.wait(autoGenSpeed)
+        end
+        puzzle:checkForWin()
+    end
+end
+
+local function hookAutoGen()
+    if hookedGen then return end
+    local mod = ReplicatedStorage.Modules.Misc.FlowGameManager.FlowGame
+    FlowGameModule = require(mod)
+    oldNew = oldNew or FlowGameModule.new
+    FlowGameModule.new = function(...)
+        local puzzle = oldNew(...)
+        task.spawn(function()
+            if autoGen then HintSystem:Draw(puzzle) end
+        end)
+        return puzzle
+    end
+    hookedGen = true
+end
+
+hookAutoGen()
 
 task.spawn(function()
     local sprint = require(ReplicatedStorage.Systems.Character.Game.Sprinting)
