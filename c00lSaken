@@ -217,7 +217,7 @@ local VerronicaGroup = RoleTab:AddRightGroupbox("Verronica")
     })
 end
 local hitboxExpanderEnabled = false
-local hitboxRange = 37
+local hitboxRange = 10
 
 task.spawn(function()
     local RunService = game:GetService("RunService")
@@ -293,9 +293,9 @@ KillerGroup:AddToggle("HitboxExpander", {
 
 KillerGroup:AddSlider("HitboxRange", {
     Text = "Reach Distance",
-    Min = 20,
+    Min = 5,
     Max = 200,
-    Default = 37,
+    Default = 10,
     Rounding = 0,
     Callback = function(v)
         hitboxRange = v
