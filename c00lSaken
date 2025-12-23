@@ -204,13 +204,13 @@ local originalValues={}
 local AntiGroup=AntiTab:AddLeftGroupbox("Anti")
 
 AntiGroup:AddToggle("Anti1x",{
-Text="Anti 1x1x1x1 popups",
-Default=false,
-Callback = function (bool)
-        _G.no1x= bool
-        task.spawn(function ()
+    Text="Anti 1x1x1x1 popups",
+    Default=false,
+    Callback=function(bool)
+        _G.no1x = bool
+        task.spawn(function()
             while _G.no1x and task.wait() do
-                local temp = localPlayer.PlayerGui:FindFirstChild("TemporaryUI")
+                local temp = lp.PlayerGui:FindFirstChild("TemporaryUI")
 
                 if temp and temp:FindFirstChild("1x1x1x1Popup") then
                     if firesignal then
