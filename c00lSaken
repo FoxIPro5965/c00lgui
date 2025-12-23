@@ -189,9 +189,9 @@ LeftOther:AddToggle("HakariDance", {
     end
 })
 
-local AntiGroup = OtherTab:AddLeftGroupbox("Anti")
+local AntiGroup = OtherTab:AddRightGroupbox("Anti")
 
-local toggleState = false  -- cho Anti Hidden Stats
+local toggleState = false
 
 AntiGroup:AddToggle("AutoRemove1x1x1x1", {
     Text = "Anti 1x1x1x1 Popups",
@@ -207,7 +207,7 @@ AntiGroup:AddToggle("AutoRemove1x1x1x1", {
                             if firesignal and popup:FindFirstChildWhichIsA("TextButton") then
                                 firesignal(popup:FindFirstChildWhichIsA("TextButton").MouseButton1Click)
                             end
-                            popup:Destroy()  -- Backup destroy luôn cho chắc
+                            popup:Destroy()
                         end
                     end
                 end
@@ -324,13 +324,14 @@ AntiGroup:AddToggle("AntiFootsteps", {
     Callback = function(state)
         pcall(function()
             if state then
-                hookmetamethod(game, "__namecall", function(self, ...)
+                local old
+                old = hookmetamethod(game, "__namecall", function(self, ...)
                     local args = {...}
                     local method = getnamecallmethod()
                     if method == "FireServer" and args[1] == "FootstepPlayed" and type(args[2]) == "number" then
                         return
                     end
-                    return hookmetamethod(game, "__namecall", self, unpack(args))
+                    return old(self, unpack(args))
                 end)
             end
         end)
@@ -392,7 +393,8 @@ AntiGroup:AddToggle("AntiHiddenStats", {
         hiddenStatsFunc(state)
     end
 })
-
+                                                end)
+            
 Library:Notify("c00lSaken loaded! Press RightControl to toggle", 8)
 
 local KillersFolder = workspace:WaitForChild("Players"):WaitForChild("Killers")
