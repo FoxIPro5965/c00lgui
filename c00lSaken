@@ -799,8 +799,8 @@ task.spawn(function()
     end
 end)
 
-local flipHeight = 8
-local flipDistance = 8
+local flipHeight = 10
+local flipDistance = 20
 
 LeftOther:AddToggle("FrontFlip", { 
     Text = "Front Flip",
@@ -823,7 +823,7 @@ LeftOther:AddSlider("FlipHeight", {
     Text = "Flip Height",
     Min = 5,
     Max = 35,
-    Default = 8,
+    Default = 10,
     Rounding = 1,
     Callback = function(v)
         flipHeight = v
@@ -834,7 +834,7 @@ LeftOther:AddSlider("FlipDistance", {
     Text = "Flip Distance",
     Min = 5,
     Max = 35,
-    Default = 8,
+    Default = 20,
     Rounding = 1,
     Callback = function(v)
         flipDistance = v
@@ -1250,7 +1250,6 @@ end)
             end
         end
     })
-end
     SkinGroup:AddLabel("default Slasher to Jason skin")
 end
 
