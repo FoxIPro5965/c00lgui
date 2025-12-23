@@ -1138,7 +1138,7 @@ do
         if not head then return end
 
         local mask = Instance.new("Accessory")
-        mask.Name = "JasonMask"  -- Đổi tên khác để tránh conflict với mask cũ
+        mask.Name = "JasonMask"
 
         local handle = Instance.new("Part")
         handle.Name = "Handle"
@@ -1153,12 +1153,12 @@ do
         mesh.TextureId = "rbxassetid://17176629042"
         mesh.Parent = handle
 
-        local weld = Instance.new("WeldConstraint")  -- Dùng WeldConstraint thay vì Weld cũ → ổn định hơn
+        local weld = Instance.new("WeldConstraint")
         weld.Part0 = head
         weld.Part1 = handle
         weld.Parent = handle
 
-        handle.CFrame = head.CFrame * CFrame.new(0, -0.1, 0.6)  -- Đẩy mask ra trước mặt một chút
+        handle.CFrame = head.CFrame * CFrame.new(0, -0.1, 0.6)
 
         mask.Parent = char
         return mask
@@ -1249,10 +1249,7 @@ do
                 if lp.Character then RevertJason(lp.Character) end
             end
         end
-    })
-
-    SkinGroup:AddLabel("Use default Slasher skin to see Jason properly")
-end
+    })            
     SkinGroup:AddLabel("default Slasher to Jason skin")
 end
 
