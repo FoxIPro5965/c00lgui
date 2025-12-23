@@ -11,6 +11,7 @@ local Window = Library:CreateWindow({
     ToggleKeybind = Enum.KeyCode.RightControl
 })
 
+local RoleTab = Window:AddTab({ Name = "Role", Icon = "user" })
 local AutoBlockTab = Window:AddTab({ Name = "Autoblock", Icon = "shield" })
 local BackstabTab = Window:AddTab({ Name = "AutoBackstab", Icon = "swords" })
 local VisualTab = Window:AddTab({ Name = "Visuals", Icon = "eye" })
@@ -33,6 +34,188 @@ local Lighting=game:GetService("Lighting")
 local lp=Players.LocalPlayer
 local PlayerGui=lp:WaitForChild("PlayerGui")
 
+do
+  local voidrushcontrol = false
+
+    local function setupCharacter(character)
+        if not character then return end
+        local Humanoid = character:FindFirstChild("Humanoid")
+        local HumanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+        if Humanoid and HumanoidRootPart then
+            _G.Humanoid = Humanoid
+            _G.HumanoidRootPart = HumanoidRootPart
+        end
+    end
+
+    if lp.Character then setupCharacter(lp.Character) end
+    lp.CharacterAdded:Connect(setupCharacter)
+
+    local ORIGINAL_DASH_SPEED = 60
+    local isOverrideActive = false
+    local connection
+
+    local function startOverride()
+        if isOverrideActive then return end
+        isOverrideActive = true
+        connection = RunService.RenderStepped:Connect(function()
+            local humanoid = _G.Humanoid
+            local rootPart = _G.HumanoidRootPart
+            if not humanoid or not rootPart then return end
+            humanoid.WalkSpeed = ORIGINAL_DASH_SPEED
+            humanoid.AutoRotate = false
+            local direction = rootPart.CFrame.LookVector
+            local horizontal = Vector3.new(direction.X, 0, direction.Z)
+            if horizontal.Magnitude > 0 then
+                humanoid:Move(horizontal.Unit)
+            end
+        end)
+    end
+
+    local function stopOverride()
+        if not isOverrideActive then return end
+        isOverrideActive = false
+        local humanoid = _G.Humanoid
+        if humanoid then
+            humanoid.WalkSpeed = 16
+            humanoid.AutoRotate = true
+            humanoid:Move(Vector3.new(0, 0, 0))
+        end
+        if connection then connection:Disconnect() connection = nil end
+    end
+
+    RunService.RenderStepped:Connect(function()
+        if not voidrushcontrol then return end
+        local char = _G.Humanoid and _G.Humanoid.Parent
+        local voidRushState = char and char:GetAttribute("VoidRushState")
+        if voidRushState == "Dashing" then
+            startOverride()
+        else
+            stopOverride()
+        end
+    end)
+local NoliGroup = RoleTab:AddLeftGroupbox("Noli")
+    NoliGroup:AddToggle("VoidrushControl", {
+        Text = "Voidrush Controllable",
+        Default = false,
+        Callback = function(v)
+            voidrushcontrol = v
+        end
+    })
+end
+
+do
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local player = Players.LocalPlayer
+    local device = "Mobile"
+
+    local function getBehaviorFolder()
+        return ReplicatedStorage:WaitForChild("Assets")
+            :WaitForChild("Survivors")
+            :WaitForChild("Veeronica")
+            :WaitForChild("Behavior")
+    end
+
+    local function getSprintingButton()
+        return player.PlayerGui:WaitForChild("MainUI"):WaitForChild("SprintingButton")
+    end
+
+    local behaviorFolder = getBehaviorFolder()
+
+    local function safeConnectPropertyChanged(instance, prop, fn)
+        local ok, signal = pcall(function() return instance:GetPropertyChangedSignal(prop) end)
+        if ok and signal then return signal:Connect(fn) end
+        return nil
+    end
+
+    local enabled = false
+    local activeMonitors = {}
+    local descendantAddedConn = nil
+
+    local function monitorHighlight(h)
+        if not h or activeMonitors[h] then return end
+
+        local connections = {}
+        local prevState = false
+
+        local function cleanup()
+            for _, conn in ipairs(connections) do
+                if conn and conn.Connected then conn:Disconnect() end
+            end
+            activeMonitors[h] = nil
+        end
+
+        local function adorneeIsPlayerCharacter()
+            local adornee = h.Adornee
+            local char = player.Character
+            if not adornee or not char then return false end
+            return adornee == char or adornee:IsDescendantOf(char)
+        end
+
+        local function onChanged()
+            if not enabled then return end
+            if not h or not h.Parent then cleanup() return end
+
+            local currState = adorneeIsPlayerCharacter()
+            if prevState ~= currState and currState then
+                if device == "Mobile" then
+                    local ok, btn = pcall(getSprintingButton)
+                    if ok and btn then
+                        for _, v in pairs(getconnections(btn.MouseButton1Down)) do
+                            pcall(v.Fire, v)
+                        end
+                    end
+                end
+            end
+            prevState = currState
+        end
+
+        local c = safeConnectPropertyChanged(h, "Adornee", onChanged)
+        if c then table.insert(connections, c) end
+
+        table.insert(connections, h.AncestryChanged:Connect(function(_, parent)
+            if not parent then cleanup() else onChanged() end
+        end))
+
+        table.insert(connections, player.CharacterAdded:Connect(onChanged))
+        table.insert(connections, player.CharacterRemoving:Connect(onChanged))
+
+        activeMonitors[h] = cleanup
+        task.spawn(onChanged)
+    end
+
+    local function startManager()
+        if descendantAddedConn then return end
+        for _, desc in ipairs(behaviorFolder:GetDescendants()) do
+            if desc:IsA("Highlight") then monitorHighlight(desc) end
+        end
+        descendantAddedConn = behaviorFolder.DescendantAdded:Connect(function(child)
+            if child:IsA("Highlight") then monitorHighlight(child) end
+        end)
+    end
+
+    local function stopManager()
+        if descendantAddedConn and descendantAddedConn.Connected then
+            descendantAddedConn:Disconnect()
+        end
+        descendantAddedConn = nil
+        for _, cleanup in pairs(activeMonitors) do pcall(cleanup) end
+        activeMonitors = {}
+    end
+
+    local function setEnabled(v)
+        if enabled == v then return end
+        enabled = v
+        if enabled then startManager() else stopManager() end
+    end
+local VerronicaGroup = RoleTab:AddRightGroupbox("Verronica")
+    VerronicaGroup:AddToggle("AutoTrick", {
+        Text = "Auto Trick",
+        Default = false,
+        Callback = function(v)
+            setEnabled(v)
+        end
+    })
+end
 
 local autoBlockTriggerSounds = {
 ["102228729296384"]=true,["140242176732868"]=true,["112809109188560"]=true,["136323728355613"]=true,
