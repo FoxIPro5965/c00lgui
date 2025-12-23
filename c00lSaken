@@ -284,9 +284,7 @@ local HitboxModule
 local autoGen = true
 local autoGenSpeed = 0.1
 local undetectedMode = false
-
--- Biến Backdis (default 0.2)
-local backdis = 0.2
+local backdis = 2.2
 
 local LeftAB = AutoBlockTab:AddLeftGroupbox("Auto Block")
 local RightAB = AutoBlockTab:AddRightGroupbox("Autopunch")
@@ -306,16 +304,19 @@ local LeftBS = BackstabTab:AddLeftGroupbox("Auto Backstab")
 LeftBS:AddToggle("AutoBackstab", {Text = "AutoBackstab", Default = false, Callback = function(v) backstab = v end})
 LeftBS:AddInput("BackstabRange", {Text = "Range", Default = "8", Numeric = true, Callback = function(t) backstabRange = tonumber(t) or backstabRange end})
 LeftBS:AddDropdown("BackstabMode", {Text = "Mode", Default = "Around", Values = {"Behind", "Around"}, Callback = function(v) backstabMode = v end})
-
-LeftBS:AddSlider("Backdis", {
+LeftBS:AddInput("Backdis", {
     Text = "Backdis",
-    Min = 0.1,
-    Max = 0.3,
-    Default = 0.2,
-    Increment = 0.1,
-    Suffix = " studs",
-    Callback = function(v)
-        backdis = v
+    Default = "2.2",
+    Numeric = true,
+    PlaceholderText = "0.5 - 5",
+    Callback = function(text)
+        local num = tonumber(text)
+        if num and num >= 0.5 and num <= 5 then
+            backdis = num
+        else
+            backdis = 2.2
+            Library:Notify("Backdis must be between 0.5 and 5!", 3)
+        end
     end
 })
 
@@ -339,7 +340,6 @@ LeftOther:AddToggle("Hitbox", {Text = "Hitbox", Default = false, Callback = func
     end
 end})
 LeftOther:AddToggle("AutoGen", {Text = "Auto gen", Default = true, Callback = function(v) autoGen = v end})
-
 LeftOther:AddInput("GenSpeed", {
     Text = "Gen Speed",
     Default = "0.1",
@@ -351,11 +351,10 @@ LeftOther:AddInput("GenSpeed", {
             autoGenSpeed = num
         else
             autoGenSpeed = 0.1
-            Library:Notify("Gen Speed phải từ 0.05 đến 0.5!", 3)
+            Library:Notify("Gen Speed must be between 0.05 and 0.5!", 3)
         end
     end
 })
-
 LeftOther:AddToggle("Undetected", {Text = "Undetected Mode", Default = false, Callback = function(v) undetectedMode = v end})
 LeftOther:AddToggle("HakariDance", {
     Text = "Hakari Dance",
@@ -454,7 +453,7 @@ AntiGroup:AddToggle("Anti1x", {
         if not state then return end
 
         local function handlePopup(popup)
-            task.wait(0.5) 
+            task.wait(0.3) 
             if firesignal and popup and popup:IsA("ImageButton") then
                 pcall(function()
                     firesignal(popup.MouseButton1Click)
@@ -836,7 +835,7 @@ local flipDistance = 20
 LeftOther:AddToggle("FrontFlip", { 
     Text = "Front Flip",
     Tooltip = "funny flip",
-    Default = false,
+    Default = true,
     Callback = function(v)
         getgenv().FlipUI.Enabled = v
     end
