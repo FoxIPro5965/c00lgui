@@ -1134,35 +1134,35 @@ do
     end
 
     local function AddJasonMask(char)
-        local head = char:FindFirstChild("Head")
-        if not head then return end
+    local head = char:FindFirstChild("Head")
+    if not head then return end
 
-        local mask = Instance.new("Accessory")
-        mask.Name = "JasonMask"
+    local mask = Instance.new("Accessory")
+    mask.Name = "JasonMask"
 
-        local handle = Instance.new("Part")
-        handle.Name = "Handle"
-        handle.Size = Vector3.new(1,1,1)
-        handle.Transparency = 1
-        handle.CanCollide = false
-        handle.Massless = true
-        handle.Parent = mask
+    local handle = Instance.new("Part")
+    handle.Name = "Handle"
+    handle.Size = Vector3.new(1,1,1)
+    handle.CanCollide = false
+    handle.Massless = true
+    handle.Transparency = 0 -- PHẢI = 0
+    handle.Parent = mask
 
-        local mesh = Instance.new("SpecialMesh")
-        mesh.MeshId = "rbxassetid://17176629012"
-        mesh.TextureId = "rbxassetid://17176629042"
-        mesh.Parent = handle
+    local mesh = Instance.new("SpecialMesh")
+    mesh.MeshId = "rbxassetid://17176629012"
+    mesh.TextureId = "rbxassetid://17176629042"
+    mesh.Scale = Vector3.new(1,1,1)
+    mesh.Parent = handle
+    local attach = Instance.new("Attachment")
+    attach.Name = "HatAttachment"
+    attach.Position = Vector3.new(0, 0, 0)
+    attach.Parent = handle
 
-        local weld = Instance.new("WeldConstraint")
-        weld.Part0 = head
-        weld.Part1 = handle
-        weld.Parent = handle
+    mask.Parent = char
+    char:WaitForChild("Humanoid"):AddAccessory(mask)
 
-        handle.CFrame = head.CFrame * CFrame.new(0, -0.1, 0.6)
-
-        mask.Parent = char
-        return mask
-    end
+    return mask
+end
 
     local function OnCharacter(char)
         if char.Name ~= "Slasher" or char.Parent ~= workspace.Players.Killers or char:GetAttribute("SkinName") ~= "" then return end
