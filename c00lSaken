@@ -338,7 +338,101 @@ antiHiddenStats=v
 hiddenStatsFunc(v)
 end})
 
-Library:Notify("c00lSaken loaded! Press RightControl",6)
+local SlasherGroup = AntiTab:AddRightGroupbox("Slasher")
+
+local racingPaceEnabled = false
+
+local savedRange = lp:FindFirstChild("RagingPaceRange")
+if not savedRange then
+    savedRange = Instance.new("NumberValue")
+    savedRange.Name = "RagingPaceRange"
+    savedRange.Value = 19
+    savedRange.Parent = lp
+end
+
+local RACING_RANGE = savedRange.Value
+local SPAM_DURATION = 3
+local COOLDOWN_TIME = 5
+local activeCooldowns = {}
+
+local animsToDetect = {
+    ["116618003477002"]=true,
+    ["119462383658044"]=true,
+    ["131696603025265"]=true,
+    ["121255898612475"]=true,
+    ["133491532453922"]=true,
+    ["103601716322988"]=true,
+    ["86371356500204"]=true,
+    ["72722244508749"]=true,
+    ["87259391926321"]=true,
+    ["96959123077498"]=true
+}
+
+local function fireRagingPace()
+    ReplicatedStorage.Modules.Network.RemoteEvent:FireServer("UseActorAbility","RagingPace")
+end
+
+local function isAnimMatch(track)
+    local id = tostring(track.Animation and track.Animation.AnimationId or ""):match("%d+")
+    return animsToDetect[id] or false
+end
+
+SlasherGroup:AddToggle("RacingPaceToggle",{
+    Text="Racing Pace",
+    Default=false,
+    Callback=function(v)
+        racingPaceEnabled = v
+    end
+})
+
+SlasherGroup:AddSlider("RacingPaceRange",{
+    Text="Racing Pace Range",
+    Min=5,
+    Max=40,
+    Default=savedRange.Value,
+    Increment=1,
+    Callback=function(v)
+        RACING_RANGE = v
+        savedRange.Value = v
+    end
+})
+
+RunService.Heartbeat:Connect(function()
+    if not racingPaceEnabled then return end
+    local myChar = lp.Character
+    local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
+    if not myHRP then return end
+
+    for _,plr in ipairs(Players:GetPlayers()) do
+        if plr ~= lp and plr.Character then
+            local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
+            local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+            if hrp and hum then
+                local dist = (hrp.Position - myHRP.Position).Magnitude
+                if dist <= RACING_RANGE and (not activeCooldowns[plr] or tick() - activeCooldowns[plr] >= COOLDOWN_TIME) then
+                    for _,track in ipairs(hum:GetPlayingAnimationTracks()) do
+                        if isAnimMatch(track) then
+                            activeCooldowns[plr] = tick()
+                            task.spawn(function()
+                                local t = tick()
+                                while tick() - t < SPAM_DURATION do
+                                    fireRagingPace()
+                                    task.wait(0.05)
+                                end
+                            end)
+                            break
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
+lp.CharacterAdded:Connect(function()
+    task.wait(0.2)
+    RACING_RANGE = savedRange.Value
+end)
 Library:Notify("c00lSaken loaded! Press RightControl to toggle", 8)
 
 local KillersFolder = workspace:WaitForChild("Players"):WaitForChild("Killers")
