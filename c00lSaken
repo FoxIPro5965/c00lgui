@@ -218,7 +218,7 @@ AntiGroup:AddToggle("Anti1x", {
         if not state then return end
 
         local function handlePopup(popup)
-            task.wait() -- chờ UI render
+            task.wait(0.5) 
             if firesignal and popup and popup:IsA("ImageButton") then
                 pcall(function()
                     firesignal(popup.MouseButton1Click)
@@ -259,7 +259,7 @@ while antiStun and task.wait() do
 local char=lp.Character
 if char and char:FindFirstChild("SpeedMultipliers") then
 local s=char.SpeedMultipliers:FindFirstChild("Stunned")
-if s then s.Value=0 end
+if s then s.Value=2 end
 end
 end
 end)
