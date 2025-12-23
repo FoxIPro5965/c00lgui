@@ -35,7 +35,7 @@ local lp=Players.LocalPlayer
 local PlayerGui=lp:WaitForChild("PlayerGui")
 
 do
-  local voidrushcontrol = false
+    local voidrushcontrol = false
 
     local function setupCharacter(character)
         if not character then return end
@@ -93,7 +93,7 @@ do
             stopOverride()
         end
     end)
-local NoliGroup = RoleTab:AddLeftGroupbox("Noli")
+    local NoliGroup = RoleTab:AddLeftGroupbox("Noli")
     NoliGroup:AddToggle("VoidrushControl", {
         Text = "Voidrush Controllable",
         Default = false,
@@ -207,7 +207,7 @@ do
         enabled = v
         if enabled then startManager() else stopManager() end
     end
-local VerronicaGroup = RoleTab:AddRightGroupbox("Verronica")
+    local VerronicaGroup = RoleTab:AddRightGroupbox("Verronica")
     VerronicaGroup:AddToggle("AutoTrick", {
         Text = "Auto Trick",
         Default = false,
@@ -443,12 +443,10 @@ AntiGroup:AddToggle("Anti1x", {
             end)
         end
 
-        -- check UI đã tồn tại
         for _,ui in ipairs(lp.PlayerGui:GetChildren()) do
             scan(ui)
         end
 
-        -- hook UI spawn sau
         anti1xConn = lp.PlayerGui.ChildAdded:Connect(scan)
     end
 })
@@ -565,8 +563,6 @@ toggleState=v
 antiHiddenStats=v
 hiddenStatsFunc(v)
 end})
-
-Library:Notify("c00lSaken loaded! Press RightControl to toggle", 8)
 
 local KillersFolder = workspace:WaitForChild("Players"):WaitForChild("Killers")
 
@@ -802,6 +798,7 @@ task.spawn(function()
         end
     end
 end)
+
 local flipHeight = 8
 local flipDistance = 8
 
@@ -1117,3 +1114,135 @@ task.spawn(function()
         if hum then hum.JumpPower = jumpEnabled and 60 or 0 end
     end
 end)
+
+do
+    local JasonEnabled = false
+    local OriginalParts = {}
+
+    local Jason = game:GetService("ReplicatedStorage").Assets.Killers.Jason
+    local Slasher = game:GetService("ReplicatedStorage").Assets.Killers.Slasher
+
+    local function ApplyJason()
+        require(Slasher.Behavior).Abilities.Slash.Icon = require(Jason.Behavior).Abilities.Slash.Icon
+        require(Slasher.Behavior).Abilities.Behead.Icon = require(Jason.Behavior).Abilities.Behead.Icon
+        require(Slasher.Behavior).Abilities.GashingWound.Icon = require(Jason.Behavior).Abilities.GashingWound.Icon
+        require(Slasher.Behavior).Abilities.RagingPace.Icon = require(Jason.Behavior).Abilities.RagingPace.Icon
+
+        local SoundsSlasher = require(Slasher.Config).Sounds
+        SoundsSlasher["TerrorRadiusThemes"] = require(Jason.Config).Sounds.TerrorRadiusThemes
+        require(Slasher.Config).DisplayName = "Jason"
+        require(Slasher.Config).RenderImage = require(Jason.Config).RenderImage
+    end
+
+    local function AddAccessory(char, name, meshId, textureId, weldCFrame, weldPart)
+        local acc = Instance.new("Accessory")
+        acc.Name = name
+        local handle = Instance.new("Part")
+        handle.Name = "Handle"
+        handle.Size = Vector3.new(1,1,1)
+        handle.Transparency = 1
+        handle.CanCollide = false
+        handle.Massless = true
+        handle.Parent = acc
+
+        local mesh = Instance.new("SpecialMesh")
+        mesh.MeshId = meshId
+        mesh.TextureId = textureId
+        mesh.Parent = handle
+
+        local weld = Instance.new("Weld")
+        weld.C0 = weldCFrame
+        weld.Part0 = char:FindFirstChild(weldPart)
+        weld.Part1 = handle
+        weld.Parent = handle
+
+        acc.Parent = char
+        return acc
+    end
+
+    local function OnCharacter(char)
+        if char.Name ~= "Slasher" or char.Parent ~= workspace.Players.Killers or char:GetAttribute("SkinName") ~= "" then return end
+
+        OriginalParts[char] = {
+            Shirt = char:FindFirstChildOfClass("Shirt"),
+            Pants = char:FindFirstChildOfClass("Pants"),
+            Mask = char:FindFirstChild("Mask"),
+            ChainsawNote = char:FindFirstChild("Chainsaw") and char.Chainsaw:FindFirstChild("Note"),
+            SlasherExport = char:FindFirstChild("Slasher Export"),
+            LimbsTransparency = {}
+        }
+        local orig = OriginalParts[char]
+        for _, limb in pairs({"Head", "Torso", "Left Arm", "Right Arm", "Left Leg", "Right Leg"}) do
+            local part = char:FindFirstChild(limb)
+            if part then orig.LimbsTransparency[limb] = part.Transparency end
+        end
+
+        if JasonEnabled then
+            if orig.SlasherExport then orig.SlasherExport:Destroy() end
+            if orig.ChainsawNote then orig.ChainsawNote:Destroy() end
+            if orig.Mask then orig.Mask:Destroy() end
+
+            for _, limb in pairs({"Head", "Torso", "Left Arm", "Right Arm", "Left Leg", "Right Leg"}) do
+                local part = char:FindFirstChild(limb)
+                if part then part.Transparency = 0 end
+            end
+
+            local shirt = Instance.new("Shirt", char)
+            shirt.ShirtTemplate = "http://www.roblox.com/asset/?id=1502643168"
+            local pants = Instance.new("Pants", char)
+            pants.PantsTemplate = "http://www.roblox.com/asset/?id=1502651303"
+
+            AddAccessory(char, "Mask", "rbxassetid://17176629012", "rbxassetid://17176629042", CFrame.new(0, -0.1, 0.6), "Head")
+        end
+    end
+
+    local function RevertJason(char)
+        local orig = OriginalParts[char]
+        if not orig then return end
+
+        if char:FindFirstChildOfClass("Shirt") and char:FindFirstChildOfClass("Shirt") ~= orig.Shirt then
+            char:FindFirstChildOfClass("Shirt"):Destroy()
+        end
+        if char:FindFirstChildOfClass("Pants") and char:FindFirstChildOfClass("Pants") ~= orig.Pants then
+            char:FindFirstChildOfClass("Pants"):Destroy()
+        end
+        local maskAcc = char:FindFirstChild("Mask")
+        if maskAcc and maskAcc ~= orig.Mask then maskAcc:Destroy() end
+
+        for limb, trans in pairs(orig.LimbsTransparency) do
+            local part = char:FindFirstChild(limb)
+            if part then part.Transparency = trans end
+        end
+
+        OriginalParts[char] = nil
+    end
+
+    lp.CharacterAdded:Connect(function(char)
+        if JasonEnabled then ApplyJason() end
+        task.wait(1)
+        OnCharacter(char)
+    end)
+
+    local SkinGroup = RoleTab:AddLeftGroupbox("Skin")
+
+    SkinGroup:AddToggle("JasonSkin", {
+        Text = "Jason",
+        Default = false,
+        Callback = function(v)
+            JasonEnabled = v
+
+            if v then
+                ApplyJason()
+                Library:Notify("Jason skin enabled!", 4)
+                if lp.Character then OnCharacter(lp.Character) end
+            else
+                Library:Notify("Jason skin disabled - reverted to default Slasher", 4)
+                if lp.Character then RevertJason(lp.Character) end
+            end
+        end
+    })
+
+    SkinGroup:AddLabel("Use default Slasher skin to see Jason properly")
+end
+
+Library:Notify("c00lSaken loaded! Press RightControl to toggle", 8)
