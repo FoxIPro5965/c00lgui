@@ -1114,7 +1114,6 @@ task.spawn(function()
         if hum then hum.JumpPower = jumpEnabled and 60 or 0 end
     end
 end)
-
 do
     local JasonEnabled = false
     local OriginalParts = {}
@@ -1134,30 +1133,35 @@ do
         require(Slasher.Config).RenderImage = require(Jason.Config).RenderImage
     end
 
-    local function AddAccessory(char, name, meshId, textureId, weldCFrame, weldPart)
-        local acc = Instance.new("Accessory")
-        acc.Name = name
+    local function AddJasonMask(char)
+        local head = char:FindFirstChild("Head")
+        if not head then return end
+
+        local mask = Instance.new("Accessory")
+        mask.Name = "JasonMask"  -- Đổi tên khác để tránh conflict với mask cũ
+
         local handle = Instance.new("Part")
         handle.Name = "Handle"
         handle.Size = Vector3.new(1,1,1)
         handle.Transparency = 1
         handle.CanCollide = false
         handle.Massless = true
-        handle.Parent = acc
+        handle.Parent = mask
 
         local mesh = Instance.new("SpecialMesh")
-        mesh.MeshId = meshId
-        mesh.TextureId = textureId
+        mesh.MeshId = "rbxassetid://17176629012"
+        mesh.TextureId = "rbxassetid://17176629042"
         mesh.Parent = handle
 
-        local weld = Instance.new("Weld")
-        weld.C0 = weldCFrame
-        weld.Part0 = char:FindFirstChild(weldPart)
+        local weld = Instance.new("WeldConstraint")  -- Dùng WeldConstraint thay vì Weld cũ → ổn định hơn
+        weld.Part0 = head
         weld.Part1 = handle
         weld.Parent = handle
 
-        acc.Parent = char
-        return acc
+        handle.CFrame = head.CFrame * CFrame.new(0, -0.1, 0.6)  -- Đẩy mask ra trước mặt một chút
+
+        mask.Parent = char
+        return mask
     end
 
     local function OnCharacter(char)
@@ -1166,7 +1170,7 @@ do
         OriginalParts[char] = {
             Shirt = char:FindFirstChildOfClass("Shirt"),
             Pants = char:FindFirstChildOfClass("Pants"),
-            Mask = char:FindFirstChild("Mask"),
+            OldMask = char:FindFirstChild("Mask"),
             ChainsawNote = char:FindFirstChild("Chainsaw") and char.Chainsaw:FindFirstChild("Note"),
             SlasherExport = char:FindFirstChild("Slasher Export"),
             LimbsTransparency = {}
@@ -1180,7 +1184,7 @@ do
         if JasonEnabled then
             if orig.SlasherExport then orig.SlasherExport:Destroy() end
             if orig.ChainsawNote then orig.ChainsawNote:Destroy() end
-            if orig.Mask then orig.Mask:Destroy() end
+            if orig.OldMask then orig.OldMask:Destroy() end
 
             for _, limb in pairs({"Head", "Torso", "Left Arm", "Right Arm", "Left Leg", "Right Leg"}) do
                 local part = char:FindFirstChild(limb)
@@ -1192,7 +1196,7 @@ do
             local pants = Instance.new("Pants", char)
             pants.PantsTemplate = "http://www.roblox.com/asset/?id=1502651303"
 
-            AddAccessory(char, "Mask", "rbxassetid://17176629012", "rbxassetid://17176629042", CFrame.new(0, -0.1, 0.6), "Head")
+            AddJasonMask(char)
         end
     end
 
@@ -1206,8 +1210,8 @@ do
         if char:FindFirstChildOfClass("Pants") and char:FindFirstChildOfClass("Pants") ~= orig.Pants then
             char:FindFirstChildOfClass("Pants"):Destroy()
         end
-        local maskAcc = char:FindFirstChild("Mask")
-        if maskAcc and maskAcc ~= orig.Mask then maskAcc:Destroy() end
+        local jasonMask = char:FindFirstChild("JasonMask")
+        if jasonMask then jasonMask:Destroy() end
 
         for limb, trans in pairs(orig.LimbsTransparency) do
             local part = char:FindFirstChild(limb)
@@ -1222,6 +1226,11 @@ do
         task.wait(1)
         OnCharacter(char)
     end)
+
+    if lp.Character then
+        task.wait(1)
+        OnCharacter(lp.Character)
+    end
 
     local SkinGroup = RoleTab:AddLeftGroupbox("Skin")
 
@@ -1243,6 +1252,8 @@ do
     })
 
     SkinGroup:AddLabel("Use default Slasher skin to see Jason properly")
+end
+    SkinGroup:AddLabel("default Slasher to Jason skin")
 end
 
 Library:Notify("c00lSaken loaded! Press RightControl to toggle", 8)
