@@ -230,33 +230,33 @@ local autoBlockTriggerSounds = {
 ["119089145505438"]=true,["121954639447247"]=true,["125213046326879"]=true,["131406927389838"]=true
 }
 local autoBlockTriggerAnims = {
-    "rbxassetid://126830014841198","rbxassetid://126355327951215","rbxassetid://121086746534252",
-    "rbxassetid://18885909645","rbxassetid://98456918873918","rbxassetid://105458270463374",
-    "rbxassetid://83829782357897","rbxassetid://125403313786645","rbxassetid://118298475669935",
-    "rbxassetid://82113744478546","rbxassetid://70371667919898","rbxassetid://99135633258223",
-    "rbxassetid://97167027849946","rbxassetid://109230267448394","rbxassetid://139835501033932",
-    "rbxassetid://126896426760253","rbxassetid://109667959938617","rbxassetid://126681776859538",
-    "rbxassetid://129976080405072","rbxassetid://121293883585738","rbxassetid://81639435858902",
-    "rbxassetid://137314737492715","rbxassetid://92173139187970","rbxassetid://122709416391",
-    "rbxassetid://879895330952",
+    ["126830014841198"]=true, ["126355327951215"]=true, ["121086746534252"]=true,
+    ["18885909645"]=true, ["98456918873918"]=true, ["105458270463374"]=true,
+    ["83829782357897"]=true, ["125403313786645"]=true, ["118298475669935"]=true,
+    ["82113744478546"]=true, ["70371667919898"]=true, ["99135633258223"]=true,
+    ["97167027849946"]=true, ["109230267448394"]=true, ["139835501033932"]=true,
+    ["126896426760253"]=true, ["109667959938617"]=true, ["126681776859538"]=true,
+    ["129976080405072"]=true, ["121293883585738"]=true, ["81639435858902"]=true,
+    ["137314737492715"]=true, ["92173139187970"]=true, ["122709416391"]=true,
+    ["879895330952"]=true,
 
-    "rbxassetid://131430497821198","rbxassetid://127172483138092","rbxassetid://18885919947",
-    "rbxassetid://87259391926321","rbxassetid://106014898528300","rbxassetid://86545133269813",
-    "rbxassetid://89448354637442","rbxassetid://90499469533503","rbxassetid://116618003477002",
-    "rbxassetid://106086955212611","rbxassetid://107640065977686","rbxassetid://77124578197357",
-    "rbxassetid://101771617803133","rbxassetid://134958187822107","rbxassetid://111313169447787",
-    "rbxassetid://71685573690338","rbxassetid://129843313690921","rbxassetid://97623143664485",
-    "rbxassetid://136007065400978","rbxassetid://86096387000557","rbxassetid://108807732150251",
-    "rbxassetid://138040001965654","rbxassetid://73502073176819","rbxassetid://86709774283672",
-    "rbxassetid://140703210927645","rbxassetid://96173857867228","rbxassetid://121255898612475",
-    "rbxassetid://98031287364865","rbxassetid://119462383658044","rbxassetid://77448521277146",
-    "rbxassetid://103741352379819","rbxassetid://131696603025265","rbxassetid://122503338277352",
-    "rbxassetid://97648548303678","rbxassetid://94162446513587","rbxassetid://84426150435898",
-    "rbxassetid://93069721274110","rbxassetid://114620047310688","rbxassetid://97433060861952",
-    "rbxassetid://82183356141401","rbxassetid://100592913030351","rbxassetid://70447634862911",
-    "rbxassetid://106847695270773","rbxassetid://120112897026015","rbxassetid://74707328554358",
-    "rbxassetid://133336594357903","rbxassetid://86204001129974","rbxassetid://124243639579224",
-    "rbxassetid://131543461321709","rbxassetid://136323728355613"
+    ["131430497821198"]=true, ["127172483138092"]=true, ["18885919947"]=true,
+    ["87259391926321"]=true, ["106014898528300"]=true, ["86545133269813"]=true,
+    ["89448354637442"]=true, ["90499469533503"]=true, ["116618003477002"]=true,
+    ["106086955212611"]=true, ["107640065977686"]=true, ["77124578197357"]=true,
+    ["101771617803133"]=true, ["134958187822107"]=true, ["111313169447787"]=true,
+    ["71685573690338"]=true, ["129843313690921"]=true, ["97623143664485"]=true,
+    ["136007065400978"]=true, ["86096387000557"]=true, ["108807732150251"]=true,
+    ["138040001965654"]=true, ["73502073176819"]=true, ["86709774283672"]=true,
+    ["140703210927645"]=true, ["96173857867228"]=true, ["121255898612475"]=true,
+    ["98031287364865"]=true, ["119462383658044"]=true, ["77448521277146"]=true,
+    ["103741352379819"]=true, ["131696603025265"]=true, ["122503338277352"]=true,
+    ["97648548303678"]=true, ["94162446513587"]=true, ["84426150435898"]=true,
+    ["93069721274110"]=true, ["114620047310688"]=true, ["97433060861952"]=true,
+    ["82183356141401"]=true, ["100592913030351"]=true, ["70447634862911"]=true,
+    ["106847695270773"]=true, ["120112897026015"]=true, ["74707328554358"]=true,
+    ["133336594357903"]=true, ["86204001129974"]=true, ["124243639579224"]=true,
+    ["131543461321709"]=true, ["136323728355613"]=true
 }
 
 local autoBlockOn = false
@@ -271,6 +271,9 @@ local aimPrediction = 4
 local backstab = false
 local backstabRange = 8
 local backstabMode = "Around"
+local backstabPredict = 2
+local HOLD = 0.25
+local DIST = 2.2
 local visualEnabled = false
 local showKiller = false
 local showSurvivor = false
@@ -300,8 +303,11 @@ RightAB:AddSlider("Prediction", {Text = "Prediction", Min = 0, Max = 10, Default
 
 local LeftBS = BackstabTab:AddLeftGroupbox("Auto Backstab")
 LeftBS:AddToggle("AutoBackstab", {Text = "AutoBackstab", Default = false, Callback = function(v) backstab = v end})
-LeftBS:AddInput("BackstabRange", {Text = "Range", Default = "8", Numeric = true, Callback = function(t) backstabRange = tonumber(t) or backstabRange end})
+LeftBS:AddSlider("BackstabRange", {Text = "Range", Min = 1, Max = 20, Default = 8, Increment = 0.1, Suffix = " studs", Callback = function(v) backstabRange = v end})
 LeftBS:AddDropdown("BackstabMode", {Text = "Mode", Default = "Around", Values = {"Behind", "Around"}, Callback = function(v) backstabMode = v end})
+LeftBS:AddSlider("BackstabPredict", {Text = "Prediction (studs)", Min = 0, Max = 10, Default = 2, Increment = 0.1, Suffix = " studs", Callback = function(v) backstabPredict = v end})
+LeftBS:AddSlider("BackstabHold", {Text = "Hold Time (s)", Min = 0.1, Max = 1, Default = 0.25, Increment = 0.01, Suffix = " s", Callback = function(v) HOLD = v end})
+LeftBS:AddSlider("BackstabDist", {Text = "Behind Dist", Min = 1, Max = 5, Default = 2.2, Increment = 0.1, Suffix = " studs", Callback = function(v) DIST = v end})
 
 local LeftVis = VisualTab:AddLeftGroupbox("ESP Settings")
 LeftVis:AddToggle("Highlight", {Text = "Highlight", Default = false, Callback = function(v) visualEnabled = v end})
@@ -323,7 +329,17 @@ LeftOther:AddToggle("Hitbox", {Text = "Hitbox", Default = false, Callback = func
     end
 end})
 LeftOther:AddToggle("AutoGen", {Text = "Auto gen", Default = true, Callback = function(v) autoGen = v end})
-LeftOther:AddSlider("GenSpeed", {Text = "Gen Speed", Min = 0.05, Max = 0.5, Default = 0.1, Increment = 0.005, Callback = function(v) autoGenSpeed = v end})
+LeftOther:AddSlider("GenSpeed", {
+    Text = "Gen Speed",
+    Min = 0.01,
+    Max = 0.5,
+    Default = 0.1,
+    Increment = 0.005,
+    Suffix = " s",
+    Callback = function(v)
+        autoGenSpeed = v
+    end
+})
 LeftOther:AddToggle("Undetected", {Text = "Undetected Mode", Default = false, Callback = function(v) undetectedMode = v end})
 LeftOther:AddToggle("HakariDance", {
     Text = "Hakari Dance",
@@ -707,8 +723,6 @@ end)
 local killersFolder = workspace:WaitForChild("Players"):WaitForChild("Killers")
 local lastBackstab = 0
 local COOLDOWN = 10
-local HOLD = 0.29
-local DIST = 2
 
 local function isBehind(hrp, khrp)
     if (hrp.Position - khrp.Position).Magnitude > backstabRange then return false end
@@ -718,23 +732,88 @@ end
 
 RunService.Heartbeat:Connect(function()
     if not backstab or tick() - lastBackstab < COOLDOWN then return end
-    local hrp = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
+    local myChar = lp.Character
+    if not myChar then return end
+    local hrp = myChar:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
+    local hum = myChar:FindFirstChildOfClass("Humanoid")
+    if not hum then return end
+
     for _, k in ipairs(killersFolder:GetChildren()) do
         local khrp = k:FindFirstChild("HumanoidRootPart")
-        if khrp and isBehind(hrp, khrp) then
-            lastBackstab = tick()
-            click("Dagger")
-            local s = tick()
-            local c
-            c = RunService.Heartbeat:Connect(function()
-                if tick() - s > HOLD then c:Disconnect() return end
-                hrp.CFrame = CFrame.new(khrp.Position - khrp.CFrame.LookVector * DIST, khrp.Position)
-            end)
-            break
-        end
+        if not khrp or not isBehind(hrp, khrp) then continue end
+
+        lastBackstab = tick()
+
+        local vel = khrp.AssemblyLinearVelocity
+        local predictTime = HOLD / 2
+        local predictPos = khrp.Position + vel * predictTime + (khrp.CFrame.LookVector * backstabPredict)
+        local behindPos = predictPos - khrp.CFrame.LookVector * DIST
+        hrp.CFrame = CFrame.lookAt(behindPos, predictPos)
+
+        hum.AutoRotate = false
+
+        task.wait()
+
+        click("Dagger")
+
+        local startTime = tick()
+        local holdConn = RunService.RenderStepped:Connect(function()
+            if tick() - startTime > HOLD then
+                holdConn:Disconnect()
+                hum.AutoRotate = true
+                return
+            end
+            local remainingTime = HOLD - (tick() - startTime)
+            local currVel = khrp.AssemblyLinearVelocity
+            local currPredict = khrp.Position + currVel * remainingTime + (khrp.CFrame.LookVector * backstabPredict * 0.5)
+            local currBehind = currPredict - khrp.CFrame.LookVector * DIST
+            hrp.CFrame = CFrame.lookAt(currBehind, currPredict)
+        end)
+        break
     end
 end)
+
+local FlowGameModule
+local oldNew
+local hookedGen = false
+
+local HintSystem = {}
+function HintSystem:Draw(puzzle)
+    if not puzzle or not puzzle.Solution then return end
+    for i = 1, #puzzle.Solution do
+        local path = puzzle.Solution[i]
+        if not path or #path == 0 then continue end
+        puzzle.paths[i] = {}
+        for _, node in ipairs(path) do
+            if not autoGen then return end
+            table.insert(puzzle.paths[i], {row = node.row, col = node.col})
+            puzzle:updateGui()
+            task.wait(autoGenSpeed)
+        end
+        puzzle:checkForWin()
+        task.wait(autoGenSpeed)
+    end
+end
+
+local function hookAutoGen()
+    if hookedGen then return end
+    hookedGen = true
+    local mod = ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Misc"):WaitForChild("FlowGameManager"):WaitForChild("FlowGame")
+    FlowGameModule = require(mod)
+    oldNew = FlowGameModule.new
+    FlowGameModule.new = function(...)
+        local puzzle = oldNew(...)
+        if autoGen then
+            task.spawn(function()
+                HintSystem:Draw(puzzle)
+            end)
+        end
+        return puzzle
+    end
+end
+
+hookAutoGen()
 
 local oldA, oldO, oldB, oldF = Lighting.Ambient, Lighting.OutdoorAmbient, Lighting.Brightness, Lighting.FogEnd
 local function bright(on)
@@ -1031,76 +1110,6 @@ task.spawn(function()
     end
 end)
 
-local FlowGameModule
-local oldNew
-local hookedGen = false
-
-local function isNeighbour(r1, c1, r2, c2)
-    return (r2 == r1-1 and c2 == c1) or (r2 == r1+1 and c2 == c1) or (r2 == r1 and c2 == c1-1) or (r2 == r1 and c2 == c1+1)
-end
-
-local function key(n) return n.row .. "-" .. n.col end
-
-local function orderPath(path, endpoints)
-    if not path or #path == 0 then return path end
-    local start = endpoints and endpoints[1] or path[1]
-    local pool = {}
-    for _, n in ipairs(path) do pool[key(n)] = {row = n.row, col = n.col} end
-    local ordered = {}
-    local cur = {row = start.row, col = start.col}
-    table.insert(ordered, cur)
-    pool[key(cur)] = nil
-    while next(pool) do
-        local found = false
-        for k, n in pairs(pool) do
-            if isNeighbour(cur.row, cur.col, n.row, n.col) then
-                table.insert(ordered, n)
-                pool[k] = nil
-                cur = n
-                found = true
-                break
-            end
-        end
-        if not found then break end
-    end
-    return ordered
-end
-
-local HintSystem = {}
-function HintSystem:Draw(puzzle)
-    if not puzzle or not puzzle.Solution then return end
-    for i = 1, #puzzle.Solution do
-        local path = puzzle.Solution[i]
-        local ends = puzzle.targetPairs[i]
-        local ordered = orderPath(path, ends)
-        puzzle.paths[i] = {}
-        for _, node in ipairs(ordered) do
-            if not autoGen then return end
-            table.insert(puzzle.paths[i], {row = node.row, col = node.col})
-            puzzle:updateGui()
-            task.wait(autoGenSpeed)
-        end
-        puzzle:checkForWin()
-    end
-end
-
-local function hookAutoGen()
-    if hookedGen then return end
-    local mod = ReplicatedStorage.Modules.Misc.FlowGameManager.FlowGame
-    FlowGameModule = require(mod)
-    oldNew = oldNew or FlowGameModule.new
-    FlowGameModule.new = function(...)
-        local puzzle = oldNew(...)
-        task.spawn(function()
-            if autoGen then HintSystem:Draw(puzzle) end
-        end)
-        return puzzle
-    end
-    hookedGen = true
-end
-
-hookAutoGen()
-
 task.spawn(function()
     local sprint = require(ReplicatedStorage.Systems.Character.Game.Sprinting)
     while task.wait(3) do
@@ -1114,7 +1123,8 @@ task.spawn(function()
         if hum then hum.JumpPower = jumpEnabled and 60 or 0 end
     end
 end)
-            do
+
+do
     local JasonEnabled = false
     local OriginalParts = {}
 
