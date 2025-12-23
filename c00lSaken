@@ -193,12 +193,10 @@ LeftOther:AddToggle("HakariDance", {
     end
 })
 local anti1x=false
-local antiHealthGlitch=false
 local antiStun=false
 local antiSlow=false
 local antiBlindness=false
 local antiSubspace=false
-local antiFootsteps=false
 local antiHiddenStats=false
 local toggleState=false
 local originalValues={}
@@ -208,39 +206,24 @@ local AntiGroup=AntiTab:AddLeftGroupbox("Anti")
 AntiGroup:AddToggle("Anti1x",{
 Text="Anti 1x1x1x1 popups",
 Default=false,
-Callback=function(v)
-anti1x=v
-task.spawn(function()
-while anti1x and task.wait() do
-local temp=PlayerGui:FindFirstChild("TemporaryUI")
-if temp and temp:FindFirstChild("1x1x1x1Popup") then
-pcall(function()firesignal(temp["1x1x1x1Popup"].MouseButton1Click)end)
-end
-end
-end)
-end})
+Callback = function (bool)
+        _G.no1x= bool
+        task.spawn(function ()
+            while _G.no1x and task.wait() do
+                local temp = localPlayer.PlayerGui:FindFirstChild("TemporaryUI")
+
+                if temp and temp:FindFirstChild("1x1x1x1Popup") then
+                    if firesignal then
+                        firesignal(temp["1x1x1x1Popup"].MouseButton1Click)
+                    end
+                    warn("it gone! yess")
+                end
+            end
+        end)
+    end
+})
 
 local function removeHealthGlitch()
-local temp=PlayerGui:FindFirstChild("TemporaryUI")
-if not temp then return end
-for _,v in ipairs(temp:GetChildren()) do
-if v.Name=="Frame" and v:FindFirstChild("Glitched") then
-v:Destroy()
-end
-end
-end
-
-AntiGroup:AddToggle("AntiHealth",{
-Text="Anti Health Glitch",
-Default=false,
-Callback=function(v)
-antiHealthGlitch=v
-task.spawn(function()
-while antiHealthGlitch and task.wait() do
-removeHealthGlitch()
-end
-end)
-end})
 
 AntiGroup:AddToggle("AntiStun",{
 Text="Anti Stun",
@@ -252,7 +235,7 @@ while antiStun and task.wait() do
 local char=lp.Character
 if char and char:FindFirstChild("SpeedMultipliers") then
 local s=char.SpeedMultipliers:FindFirstChild("Stunned")
-if s then s.Value=1 end
+if s then s.Value=0 end
 end
 end
 end)
@@ -302,24 +285,6 @@ if b then b:Destroy() end
 end
 end)
 end})
-
-AntiGroup:AddToggle("AntiFootsteps",{
-Text="Anti Footsteps",
-Default=false,
-Callback=function(v)
-antiFootsteps=v
-end})
-
-pcall(function()
-local old
-old=hookmetamethod(game,"__namecall",function(self,...)
-local args={...}
-if antiFootsteps and args[1]=="FootstepPlayed" then
-return
-end
-return old(self,unpack(args))
-end)
-end)
 
 local paths={"HideKillerWins","HidePlaytime","HideSurvivorWins"}
 
