@@ -191,8 +191,6 @@ LeftOther:AddToggle("HakariDance", {
 
 local AntiGroup = OtherTab:AddLeftGroupbox("Anti")
 
-local toggleState = false  -- cho Anti Hidden Stats
-
 AntiGroup:AddToggle("AutoRemove1x1x1x1", {
     Text = "Anti 1x1x1x1 Popups",
     Default = false,
@@ -216,6 +214,33 @@ AntiGroup:AddToggle("AutoRemove1x1x1x1", {
     end
 })
 
+local function removeHealthGlitch()
+    local TemporaryUI = PlayerGui:FindFirstChild("TemporaryUI")
+    if TemporaryUI then
+        for _, v in pairs(TemporaryUI:GetChildren()) do
+            if v.Name == "Frame" and v:FindFirstChild("Glitched") then
+                v:Destroy()
+                Library:Notify("Health Glitch removed!", 4)
+            end
+        end
+    end
+end
+
+AntiGroup:AddToggle("AntiHealthGlitch", {
+    Text = "Anti Health Glitch",
+    Default = false,
+    Callback = function(state)
+        if state then
+            task.spawn(function()
+                while AntiGroup.Options.AntiHealthGlitch.Value do
+                    removeHealthGlitch()
+                    task.wait(0.2)
+                end
+            end)
+        end
+    end
+})
+
 AntiGroup:AddToggle("AntiStun", {
     Text = "Anti Stun",
     Default = false,
@@ -226,6 +251,27 @@ AntiGroup:AddToggle("AntiStun", {
                     task.wait()
                     if lp.Character and lp.Character:FindFirstChild("SpeedMultipliers") and lp.Character.SpeedMultipliers:FindFirstChild("Stunned") then
                         lp.Character.SpeedMultipliers.Stunned.Value = 1
+                    end
+                end
+            end)
+        end
+    end
+})
+
+AntiGroup:AddToggle("AntiSlow", {
+    Text = "Anti Slow",
+    Default = false,
+    Callback = function(state)
+        if state then
+            task.spawn(function()
+                while AntiGroup.Options.AntiSlow.Value do
+                    task.wait()
+                    if lp.Character and lp.Character:FindFirstChild("SpeedMultipliers") then
+                        for _, v in pairs(lp.Character.SpeedMultipliers:GetChildren()) do
+                            if v.Value < 1 then
+                                v.Value = 1
+                            end
+                        end
                     end
                 end
             end)
@@ -267,25 +313,6 @@ AntiGroup:AddToggle("AntiSubspace", {
                 end
             end)
         end
-    end
-})
-
-AntiGroup:AddToggle("AntiFootsteps", {
-    Text = "Anti Footsteps",
-    Default = false,
-    Callback = function(state)
-        pcall(function()
-            if state then
-                hookmetamethod(game, "__namecall", function(self, ...)
-                    local args = {...}
-                    local method = getnamecallmethod()
-                    if method == "FireServer" and args[1] == "FootstepPlayed" and type(args[2]) == "number" then
-                        return
-                    end
-                    return hookmetamethod(game, "__namecall", self, unpack(args))
-                end)
-            end
-        end)
     end
 })
 
