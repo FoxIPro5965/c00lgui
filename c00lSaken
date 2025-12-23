@@ -216,6 +216,269 @@ local VerronicaGroup = RoleTab:AddRightGroupbox("Verronica")
         end
     })
 end
+local hitboxExpanderEnabled = false
+local hitboxRange = 37
+
+task.spawn(function()
+    local RunService = game:GetService("RunService")
+    local RNG = Random.new()
+
+    local Character = lp.Character or lp.CharacterAdded:Wait()
+    local Humanoid = Character:WaitForChild("Humanoid")
+    local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+
+    lp.CharacterAdded:Connect(function(char)
+        Character = char
+        Humanoid = char:WaitForChild("Humanoid")
+        HumanoidRootPart = char:WaitForChild("HumanoidRootPart")
+    end)
+
+    while task.wait() do
+        if hitboxExpanderEnabled and HumanoidRootPart then
+            local playing = false
+            for _, track in ipairs(Humanoid:GetPlayingAnimationTracks()) do
+                if table.find(AttackAnimations, track.Animation.AnimationId) and (track.TimePosition / track.Length < 0.75) then
+                    playing = true
+                    break
+                end
+            end
+
+            if playing then
+                local Target
+                local NearestDist = hitboxRange
+
+                local function scanGroup(group)
+                    for _, obj in ipairs(group:GetDescendants()) do
+                        if obj ~= Character and obj:FindFirstChild("HumanoidRootPart") and obj:FindFirstChild("Humanoid") and obj.Humanoid.Health > 0 then
+                            local dist = (obj.HumanoidRootPart.Position - HumanoidRootPart.Position).Magnitude
+                            if dist < NearestDist then
+                                NearestDist = dist
+                                Target = obj
+                            end
+                        end
+                    end
+                end
+
+                scanGroup(workspace.Players)
+                local npcs = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("NPCs")
+                if npcs then
+                    scanGroup(npcs)
+                end
+
+                if Target then
+                    local ping = lp:GetNetworkPing() * 1000
+                    local randomOffset = Vector3.new(RNG:NextNumber(-1.5, 1.5), 0, RNG:NextNumber(-1.5, 1.5))
+                    local predicted = Target.HumanoidRootPart.Position + randomOffset + (Target.HumanoidRootPart.Velocity * (ping * 1.25 / 1000))
+                    local neededVelocity = (predicted - HumanoidRootPart.Position) / (ping / 2000)
+
+                    local oldVelocity = HumanoidRootPart.Velocity
+                    HumanoidRootPart.Velocity = neededVelocity
+                    RunService.RenderStepped:Wait()
+                    HumanoidRootPart.Velocity = oldVelocity
+                end
+            end
+        end
+    end
+end)
+
+local KillerGroup = RoleTab:AddLeftGroupbox("Killer")
+
+KillerGroup:AddToggle("HitboxExpander", {
+    Text = "Hitbox Expander (Reach)",
+    Default = false,
+    Callback = function(v)
+        hitboxExpanderEnabled = v
+    end
+})
+
+KillerGroup:AddSlider("HitboxRange", {
+    Text = "Reach Distance",
+    Min = 20,
+    Max = 200,
+    Default = 37,
+    Rounding = 0,
+    Callback = function(v)
+        hitboxRange = v
+    end
+})
+
+LeftOther:AddToggle("FrontFlip", { 
+    Text = "Front Flip",
+    Tooltip = "funny flip",
+    Default = true,
+    Callback = function(v)
+        getgenv().FlipUI.Enabled = v
+    end
+}):AddKeyPicker("FlipKeybind", {
+    Default = "F",
+    Text = "Flip keybind",
+    NoUI = false,
+    Callback = function()
+        if not LeftOther.Options.FrontFlip.Value then return end
+        FortniteFlips()
+    end,
+})
+
+local FlipCooldown = false
+
+function FortniteFlips()
+    if FlipCooldown then
+        return
+    end
+
+    FlipCooldown = true
+    local character = lp.Character
+    local hrp = character and character:FindFirstChild("HumanoidRootPart")
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    local animator = humanoid and humanoid:FindFirstChildOfClass("Animator")
+    if not hrp or not humanoid then
+        FlipCooldown = false
+        return
+    end
+
+    local savedTracks = {}
+
+    if animator then
+        for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
+            savedTracks[#savedTracks + 1] = { track = track, time = track.TimePosition }
+            track:Stop(0)
+        end
+    end
+
+    humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+    humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+    humanoid:SetStateEnabled(Enum.HumanoidStateType.Freefall, false)
+    humanoid:SetStateEnabled(Enum.HumanoidStateType.Running, false)
+    humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
+    humanoid:SetStateEnabled(Enum.HumanoidStateType.Climbing, false)
+
+    local duration = 0.45
+    local steps = 120
+    local startCFrame = hrp.CFrame
+    local forwardVector = startCFrame.LookVector
+    local upVector = Vector3.new(0, 1, 0)
+    task.spawn(function()
+        local startTime = tick()
+        for i = 1, steps do
+            local t = i / steps
+            local height = 4 * (t - t ^ 2) * 10
+            local nextPos = startCFrame.Position + forwardVector * (35 * t) + upVector * height
+            local rotation = startCFrame.Rotation * CFrame.Angles(-math.rad(i * (360 / steps)), 0, 0)
+
+            hrp.CFrame = CFrame.new(nextPos) * rotation
+            local elapsedTime = tick() - startTime
+            local expectedTime = (duration / steps) * i
+            local waitTime = expectedTime - elapsedTime
+            if waitTime > 0 then
+                task.wait(waitTime)
+            end
+        end
+
+        hrp.CFrame = CFrame.new(startCFrame.Position + forwardVector * 35) * startCFrame.Rotation
+        humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true)
+        humanoid:SetStateEnabled(Enum.HumanoidStateType.Freefall, true)
+        humanoid:SetStateEnabled(Enum.HumanoidStateType.Running, true)
+        humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
+        humanoid:SetStateEnabled(Enum.HumanoidStateType.Climbing, true)
+        humanoid:ChangeState(Enum.HumanoidStateType.Running)
+
+        if animator then
+            for _, data in ipairs(savedTracks) do
+                local track = data.track
+                track:Play()
+                track.TimePosition = data.time
+            end
+        end
+        task.wait(0.25)
+        FlipCooldown = false
+    end)
+end
+
+local Flip = Instance.new("ScreenGui")
+local Frame = Instance.new("Frame")
+local button = Instance.new("ImageButton")
+local UICorner = Instance.new("UICorner")
+local move = Instance.new("ImageLabel")
+
+Flip.Name = "Flip"
+Flip.Parent = gethui()
+Flip.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+Flip.DisplayOrder = 999999
+Flip.OnTopOfCoreBlur = true
+
+Frame.Parent = Flip
+Frame.AnchorPoint = Vector2.new(1, 1)
+Frame.BackgroundColor3 = Color3.fromRGB(49, 49, 49)
+Frame.BorderColor3 = Color3.fromRGB(0, 0, 0)
+Frame.BorderSizePixel = 0
+Frame.Position = UDim2.new(1, -30, 1, -30)
+Frame.Size = UDim2.new(0, 98, 0, 44)
+
+button.Name = "button"
+button.Parent = Frame
+button.AnchorPoint = Vector2.new(0, 0.5)
+button.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+button.BackgroundTransparency = 1.000
+button.BorderColor3 = Color3.fromRGB(0, 0, 0)
+button.BorderSizePixel = 0
+button.Position = UDim2.new(0, 5, 0.5, 0)
+button.Size = UDim2.new(0, 20, 0, 20)
+button.Image = "rbxassetid://114905930912702"
+Instance.new("UICorner", button).CornerRadius = UDim.new(0, 8)
+
+UICorner.CornerRadius = UDim.new(0, 13)
+UICorner.Parent = Frame
+
+move.Name = "move"
+move.Parent = Frame
+move.AnchorPoint = Vector2.new(1, 0.5)
+move.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+move.BackgroundTransparency = 1.000
+move.BorderColor3 = Color3.fromRGB(0, 0, 0)
+move.BorderSizePixel = 0
+move.Position = UDim2.new(1, -5, 0.5, 0)
+move.Size = UDim2.new(0, 20, 0, 20)
+move.Image = "rbxassetid://107178621515925"
+
+local UIS = game:GetService("UserInputService")
+local function dragify(Frame, DragInp)
+	local dragToggle = nil
+	local dragInput = nil
+	local dragStart = nil
+	local Delta
+	local Position
+	local startPos
+	local function updateInput(input)
+		Delta = input.Position - dragStart
+		Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + Delta.X, startPos.Y.Scale, startPos.Y.Offset + Delta.Y)
+		Frame.Position = Position
+	end
+	DragInp.InputBegan:Connect(function(input)
+		if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and UIS:GetFocusedTextBox() == nil then
+			dragToggle = true
+			dragStart = input.Position
+			startPos = Frame.Position
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then
+					dragToggle = false
+				end
+			end)
+		end
+	end)
+	DragInp.InputChanged:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+			dragInput = input
+		end
+	end)
+	UIS.InputChanged:Connect(function(input)
+		if input == dragInput and dragToggle then
+			updateInput(input)
+		end
+	end)
+end
+dragify(Frame, move)
+getgenv().FlipUI = Flip
+button.MouseButton1Click:Connect(FortniteFlips)
 
 local autoBlockTriggerSounds = {
 ["102228729296384"]=true,["140242176732868"]=true,["112809109188560"]=true,["136323728355613"]=true,
