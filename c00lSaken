@@ -50,7 +50,7 @@ do
     if lp.Character then setupCharacter(lp.Character) end
     lp.CharacterAdded:Connect(setupCharacter)
 
-    local ORIGINAL_DASH_SPEED = 60
+    local ORIGINAL_DASH_SPEED = 50
     local isOverrideActive = false
     local connection
 
@@ -76,7 +76,7 @@ do
         isOverrideActive = false
         local humanoid = _G.Humanoid
         if humanoid then
-            humanoid.WalkSpeed = 16
+            humanoid.WalkSpeed = 18
             humanoid.AutoRotate = true
             humanoid:Move(Vector3.new(0, 0, 0))
         end
