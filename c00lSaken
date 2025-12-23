@@ -317,13 +317,13 @@ LeftOther:AddToggle("Hitbox", {Text = "Hitbox", Default = false, Callback = func
     hitbox = v
     if v then
         HitboxModule = HitboxModule or loadstring(game:HttpGet("https://raw.githubusercontent.com/FoxIPro5965/c00lgui/main/Hitbox.lua"))()
-        HitboxModule:ExtendHitbox(1.2, 580)
+        HitboxModule:ExtendHitbox(1.25, 585)
     elseif HitboxModule then
         HitboxModule:StopExtendingHitbox()
     end
 end})
 LeftOther:AddToggle("AutoGen", {Text = "Auto gen", Default = true, Callback = function(v) autoGen = v end})
-LeftOther:AddSlider("GenSpeed", {Text = "Gen Speed", Min = 0.01, Max = 0.5, Default = 0.1, Increment = 0.005, Callback = function(v) autoGenSpeed = v end})
+LeftOther:AddSlider("GenSpeed", {Text = "Gen Speed", Min = 0.05, Max = 0.5, Default = 0.1, Increment = 0.005, Callback = function(v) autoGenSpeed = v end})
 LeftOther:AddToggle("Undetected", {Text = "Undetected Mode", Default = false, Callback = function(v) undetectedMode = v end})
 LeftOther:AddToggle("HakariDance", {
     Text = "Hakari Dance",
