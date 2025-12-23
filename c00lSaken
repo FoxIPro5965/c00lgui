@@ -192,7 +192,7 @@ LeftOther:AddToggle("HakariDance", {
         end
     end
 })
-local anti1x=false
+
 local antiStun=false
 local antiSlow=false
 local antiBlindness=false
@@ -202,7 +202,6 @@ local toggleState=false
 local originalValues={}
 
 local AntiGroup=AntiTab:AddLeftGroupbox("Anti")
-
 local anti1xConn
 
 AntiGroup:AddToggle("Anti1x", {
@@ -249,8 +248,6 @@ AntiGroup:AddToggle("Anti1x", {
         anti1xConn = lp.PlayerGui.ChildAdded:Connect(scan)
     end
 })
-
-local function removeHealthGlitch()
 
 AntiGroup:AddToggle("AntiStun",{
 Text="Anti Stun",
