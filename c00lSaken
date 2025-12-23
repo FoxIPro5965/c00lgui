@@ -127,7 +127,7 @@ LeftOther:AddToggle("HakariDance", {
         local rootPart = char:WaitForChild("HumanoidRootPart")
 
         if state then
-            Library:Notify("Hakari Dance activated! 🕺", 5)
+            Library:Notify("Hakari Dance activated!", 5)
             humanoid.PlatformStand = true
             humanoid.JumpPower = 0
 
@@ -189,7 +189,7 @@ LeftOther:AddToggle("HakariDance", {
         end
     end
 })
-local AntiGroup = Tabs.Anti:AddLeftGroupbox("Anti", "ban")
+local AntiGroup = Tabs.Anti:AddLeftGroupbox("Anti")
 AntiGroup:AddToggle("AutoRemove1x1x1x1", {
     Text = "Anti 1x1x1x1 popups",
     Default = false,
@@ -582,7 +582,7 @@ local function clearVisual()
 end
 
 task.spawn(function()
-    while task.wait(0.6) do
+    while task.wait(60) do
         if not visualEnabled then clearVisual() bright(false) continue end
         bright(true)
         clearVisual()
