@@ -188,26 +188,21 @@ LeftOther:AddToggle("HakariDance", {
         end
     end
 })
-
-local AntiGroup = OtherTab:AddLeftGroupbox("Anti")
-
+local AntiGroup = OtherTab:AddLeftGroupbox("Anti", "ban")
 AntiGroup:AddToggle("AutoRemove1x1x1x1", {
-    Text = "Anti 1x1x1x1 Popups",
+    Text = "Anti 1x1x1x1 popups",
     Default = false,
-    Callback = function(bool)
-        _G.no1x = bool
-        task.spawn(function()
-            while _G.no1x and task.wait(0.1) do
-                local temp = PlayerGui:FindFirstChild("TemporaryUI")
-                if temp then
-                    for _, popup in ipairs(temp:GetChildren()) do
-                        if popup.Name == "1x1x1x1Popup" or (popup:IsA("Frame") and popup:FindFirstChild("Glitched")) then
-                            if firesignal and popup:FindFirstChildWhichIsA("TextButton") then
-                                firesignal(popup:FindFirstChildWhichIsA("TextButton").MouseButton1Click)
-                            end
-                            popup:Destroy()  -- Backup destroy luôn cho chắc
-                        end
+    Callback = function (bool)
+        _G.no1x= bool
+        task.spawn(function ()
+            while _G.no1x and task.wait() do
+                local temp = localPlayer.PlayerGui:FindFirstChild("TemporaryUI")
+
+                if temp and temp:FindFirstChild("1x1x1x1Popup") then
+                    if firesignal then
+                        firesignal(temp["1x1x1x1Popup"].MouseButton1Click)
                     end
+                    warn("yes its gone, maybe")
                 end
             end
         end)
@@ -215,123 +210,130 @@ AntiGroup:AddToggle("AutoRemove1x1x1x1", {
 })
 
 local function removeHealthGlitch()
-    local TemporaryUI = PlayerGui:FindFirstChild("TemporaryUI")
-    if TemporaryUI then
-        for _, v in pairs(TemporaryUI:GetChildren()) do
-            if v.Name == "Frame" and v:FindFirstChild("Glitched") then
-                v:Destroy()
-                Library:Notify("Health Glitch removed!", 4)
-            end
+    local TemporaryUI = localPlayer.PlayerGui:FindFirstChild("TemporaryUI")
+    for i, v in pairs(TemporaryUI:GetChildren()) do
+         if v.Name == "Frame" and v:FindFirstChild("Glitched") then
+            v:Destroy()
+            Notify("deleted", "deleted health glitch", 6)
         end
     end
 end
-
 AntiGroup:AddToggle("AntiHealthGlitch", {
     Text = "Anti Health Glitch",
     Default = false,
-    Callback = function(state)
-        if state then
-            task.spawn(function()
-                while AntiGroup.Options.AntiHealthGlitch.Value do
-                    removeHealthGlitch()
-                    task.wait(0.2)
-                end
-            end)
-        end
+    Callback = function()
+        task.spawn(function()
+            while Toggles.AntiHealthGlitch.Value and task.wait() do
+                removeHealthGlitch()
+            end
+        end)
     end
 })
-
 AntiGroup:AddToggle("AntiStun", {
     Text = "Anti Stun",
     Default = false,
-    Callback = function(state)
-        if state then
-            task.spawn(function()
-                while AntiGroup.Options.AntiStun.Value do
-                    task.wait()
-                    if lp.Character and lp.Character:FindFirstChild("SpeedMultipliers") and lp.Character.SpeedMultipliers:FindFirstChild("Stunned") then
-                        lp.Character.SpeedMultipliers.Stunned.Value = 1
+    Callback = function ()
+        task.spawn(function ()
+            while Toggles.AntiStun.Value and task.wait() do
+                if localPlayer.Character and localPlayer.Character:FindFirstChild("SpeedMultipliers") then
+                    if localPlayer.Character.SpeedMultipliers:FindFirstChild("Stunned") then
+                        localPlayer.Character.SpeedMultipliers:FindFirstChild("Stunned").Value = 1
                     end
                 end
-            end)
-        end
+            end
+        end)
     end
 })
-
 AntiGroup:AddToggle("AntiSlow", {
     Text = "Anti Slow",
     Default = false,
-    Callback = function(state)
-        if state then
-            task.spawn(function()
-                while AntiGroup.Options.AntiSlow.Value do
-                    task.wait()
-                    if lp.Character and lp.Character:FindFirstChild("SpeedMultipliers") then
-                        for _, v in pairs(lp.Character.SpeedMultipliers:GetChildren()) do
-                            if v.Value < 1 then
-                                v.Value = 1
-                            end
+    Callback = function ()
+        task.spawn(function ()
+            while Toggles.AntiSlow.Value and task.wait() do
+                if localPlayer.Character and localPlayer.Character:FindFirstChild("SpeedMultipliers") then
+                    for i, v in localPlayer.Character.SpeedMultipliers:GetChildren() do
+                        if v.Value < 1 then
+                            v.Value = 1
                         end
                     end
                 end
-            end)
-        end
+            end
+        end)
     end
 })
-
 AntiGroup:AddToggle("AntiBlindness", {
     Text = "Anti Blindness",
     Default = false,
-    Callback = function(state)
-        if state then
-            task.spawn(function()
-                while AntiGroup.Options.AntiBlindness.Value do
-                    task.wait(0.2)
-                    if Lighting:FindFirstChild("BlindnessBlur") then
-                        Lighting.BlindnessBlur:Destroy()
-                    end
+    Callback = function ()
+        task.spawn(function ()
+            while Toggles.AntiBlindness.Value and task.wait() do
+                if game.Lighting:FindFirstChild("BlindnessBlur") then
+                    game.Lighting.BlindnessBlur:Destroy()
                 end
-            end)
-        end
+            end
+        end)
     end
 })
-
 AntiGroup:AddToggle("AntiSubspace", {
     Text = "Anti Subspace",
     Default = false,
-    Callback = function(state)
-        if state then
-            task.spawn(function()
-                while AntiGroup.Options.AntiSubspace.Value do
-                    task.wait(0.2)
-                    local subspace = {"SubspaceVFXBlur", "SubspaceVFXColorCorrection"}
-                    for _, v in pairs(subspace) do
-                        if Lighting:FindFirstChild(v) then
-                            Lighting[v]:Destroy()
-                        end
+    Callback = function ()
+        task.spawn(function ()
+            while Toggles.AntiSubspace.Value and task.wait() do
+                local subspace = {
+                    "SubspaceVFXBlur",
+                    "SubspaceVFXColorCorrection"
+                }
+
+                for i, v in pairs(subspace) do
+                    if game.Lighting:FindFirstChild(v) then
+                        game.Lighting[v]:Destroy()
                     end
                 end
-            end)
-        end
+            end
+        end)
     end
 })
 
--- Anti Hidden Stats
-local originalValues = {}
-local paths = {"HideKillerWins", "HidePlaytime", "HideSurvivorWins"}
+AntiGroup:AddToggle("AntiFootsteps", {
+    Text = "Anti Footsteps",
+    Default = false,
+})
 
+pcall(function()
+    local old; old = hookmetamethod(game, "__namecall", function (self, ...)
+        local args = {...}
+
+        if Toggles.AntiFootsteps.Value and args[1] == "FootstepPlayed" and type(args[2]) == "number" then
+            return 
+        end
+
+        return old(self, unpack(args))
+    end)
+end)
+
+local Players = game:GetService("Players")
+local originalValues = {}
+
+local paths = {
+    "HideKillerWins",
+    "HidePlaytime",
+    "HideSurvivorWins"
+}
 local function saveOriginals(player)
-    if not originalValues[player.UserId] then originalValues[player.UserId] = {} end
+    if not originalValues[player.UserId] then
+        originalValues[player.UserId] = {}
+    end
     for _, key in ipairs(paths) do
         local value = player.PlayerData.Settings.Privacy:FindFirstChild(key)
-        if value then originalValues[player.UserId][key] = value.Value end
+        originalValues[player.UserId][key] = value.Value
     end
 end
 
 local function reveal(player)
     for _, key in ipairs(paths) do
         local value = player.PlayerData.Settings.Privacy:FindFirstChild(key)
-        if value then value.Value = false end
+        value.Value = false
     end
 end
 
@@ -339,14 +341,14 @@ local function restore(player)
     if originalValues[player.UserId] then
         for key, val in pairs(originalValues[player.UserId]) do
             local value = player.PlayerData.Settings.Privacy:FindFirstChild(key)
-            if value then value.Value = val end
+            value.Value = val
         end
     end
 end
 
-local function hiddenStatsFunc(state)
+local function hiddenStatsFunc(disable)
     for _, player in ipairs(Players:GetPlayers()) do
-        if state then
+        if disable then
             saveOriginals(player)
             reveal(player)
         else
@@ -356,7 +358,7 @@ local function hiddenStatsFunc(state)
 end
 
 Players.PlayerAdded:Connect(function(player)
-    if AntiGroup.Options.AntiHiddenStats and AntiGroup.Options.AntiHiddenStats.Value then
+    if toggleState == true then
         saveOriginals(player)
         reveal(player)
     end
@@ -365,13 +367,14 @@ end)
 AntiGroup:AddToggle("AntiHiddenStats", {
     Text = "Anti Hidden Stats",
     Default = false,
-    Tooltip = "View people's stats even if hidden",
-    Callback = function(state)
-        toggleState = state
-        hiddenStatsFunc(state)
+    Tooltip = "lets you view peoples stats even if they are off",
+    Callback = function(value)
+        toggleState = value
+        hiddenStatsFunc(value)
     end
 })
 
+                    
 Library:Notify("c00lSaken loaded! Press RightControl to toggle", 8)
 
 local KillersFolder = workspace:WaitForChild("Players"):WaitForChild("Killers")
