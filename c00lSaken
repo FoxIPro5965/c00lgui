@@ -50,7 +50,7 @@ do
     if lp.Character then setupCharacter(lp.Character) end
     lp.CharacterAdded:Connect(setupCharacter)
 
-    local ORIGINAL_DASH_SPEED = 50
+    local ORIGINAL_DASH_SPEED = 55
     local isOverrideActive = false
     local connection
 
@@ -802,8 +802,8 @@ task.spawn(function()
         end
     end
 end)
-local flipHeight = 10
-local flipDistance = 35
+local flipHeight = 8
+local flipDistance = 8
 
 LeftOther:AddToggle("FrontFlip", { 
     Text = "Front Flip",
@@ -825,8 +825,8 @@ LeftOther:AddToggle("FrontFlip", {
 LeftOther:AddSlider("FlipHeight", {
     Text = "Flip Height",
     Min = 5,
-    Max = 20,
-    Default = 10,
+    Max = 35,
+    Default = 8,
     Rounding = 1,
     Callback = function(v)
         flipHeight = v
@@ -835,9 +835,9 @@ LeftOther:AddSlider("FlipHeight", {
 
 LeftOther:AddSlider("FlipDistance", {
     Text = "Flip Distance",
-    Min = 20,
-    Max = 60,
-    Default = 35,
+    Min = 5,
+    Max = 35,
+    Default = 8,
     Rounding = 1,
     Callback = function(v)
         flipDistance = v
