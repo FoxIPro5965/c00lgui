@@ -1292,4 +1292,9 @@ task.spawn(function()
     end
 end)
 
+local ConfigLeft = ConfigTab:AddLeftGroupbox("Gui")
+ConfigLeft:AddButton("Destroy GUI", function()
+    Library:Unload()
+end)
+
 Library:Notify("c00lSaken loaded! Press RightControl to toggle", 8)
