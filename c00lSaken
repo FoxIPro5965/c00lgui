@@ -17,9 +17,9 @@ local BackstabTab = Window:AddTab({ Name = "AutoBackstab", Icon = "swords" })
 local VisualTab = Window:AddTab({ Name = "Visuals", Icon = "eye" })
 local AntiTab = Window:AddTab({ Name = "Anti", Icon = "ban" })
 local OtherTab = Window:AddTab({ Name = "Other", Icon = "settings" })
+local StaminaTab = Window:AddTab({ Name = "Stamina", Icon = "zap" })
 local ConfigTab = Window:AddTab({ Name = "Config", Icon = "folder" })
 
-ThemeManager:SetLibrary(Library)
 ThemeManager:SetLibrary(Library)
 SaveManager:SetLibrary(Library)
 SaveManager:IgnoreThemeSettings()
@@ -104,7 +104,6 @@ do
 end
 
 do
-    local ReplicatedStorage = game:GetService("ReplicatedStorage")
     local player = Players.LocalPlayer
     local device = "Mobile"
 
@@ -277,7 +276,6 @@ local showKiller = false
 local showSurvivor = false
 local showItems = false
 local showGen = false
-local infStamina = true
 local jumpEnabled = false
 local hitbox = false
 local HitboxModule
@@ -328,7 +326,6 @@ LeftVis:AddToggle("Generator", {Text = "Generator", Default = false, Callback = 
 LeftVis:AddToggle("Items", {Text = "Medkit & BloxyCola", Default = false, Callback = function(v) showItems = v end})
 
 local LeftOther = OtherTab:AddLeftGroupbox("Misc")
-LeftOther:AddToggle("InfStamina", {Text = "INF STAMINA", Default = true, Callback = function(v) infStamina = v end})
 LeftOther:AddToggle("Jump", {Text = "Jump", Default = false, Callback = function(v) jumpEnabled = v end})
 LeftOther:AddToggle("Hitbox", {Text = "Hitbox", Default = false, Callback = function(v)
     hitbox = v
@@ -427,6 +424,45 @@ LeftOther:AddToggle("HakariDance", {
         end
     end
 })
+
+local customMaxStamina = 100
+local customStaminaGain = 18
+local customStaminaLoss = 7
+local customSprintSpeed = 28
+
+local SprintingModule = require(ReplicatedStorage.Systems.Character.Game.Sprinting)
+
+task.spawn(function()
+    while task.wait(0.1) do
+        if SprintingModule then
+            SprintingModule.MaxStamina = customMaxStamina
+            SprintingModule.StaminaGain = customStaminaGain
+            SprintingModule.StaminaLoss = customStaminaLoss
+            SprintingModule.SprintSpeed = customSprintSpeed
+        end
+    end
+end)
+
+local StaminaGroup = StaminaTab:AddLeftGroupbox("Stamina Settings")
+StaminaGroup:AddInput("MaxStamina", {Text = "Max Stamina", Default = "100", Numeric = false, Callback = function(v) customMaxStamina = tonumber(v) or 100 end})
+StaminaGroup:AddInput("StaminaGain", {Text = "Stamina Gain", Default = "18", Numeric = false, Callback = function(v) customStaminaGain = tonumber(v) or 10 end})
+StaminaGroup:AddInput("StaminaLoss", {Text = "Stamina Loss", Default = "7", Numeric = false, Callback = function(v) customStaminaLoss = tonumber(v) or 15 end})
+StaminaGroup:AddInput("SprintSpeed", {Text = "Sprint Speed", Default = "28", Numeric = false, Callback = function(v) customSprintSpeed = tonumber(v) or 25 end})
+
+local SkinGroup = RoleTab:AddLeftGroupbox("Skin")
+SkinGroup:AddToggle("JasonSkin", {
+    Text = "Jason",
+    Default = false,
+    Callback = function(v)
+        if v then
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/FoxIPro5965/c00lgui/main/Jason.lua"))()
+            Library:Notify("Jason skin enabled!", 4)
+        else
+            Library:Notify("Jason skin disabled (restart to revert)", 4)
+        end
+    end
+})
+SkinGroup:AddLabel("Slasher → Jason skin")
 
 local antiStun=false
 local antiSlow=false
@@ -1132,156 +1168,10 @@ end
 hookAutoGen()
 
 task.spawn(function()
-    local sprint = require(ReplicatedStorage.Systems.Character.Game.Sprinting)
-    while task.wait(3) do
-        if infStamina then sprint.Stamina = sprint.MaxStamina or 100 end
-    end
-end)
-
-task.spawn(function()
     while task.wait(0.2) do
         local hum = lp.Character and lp.Character:FindFirstChildOfClass("Humanoid")
         if hum then hum.JumpPower = jumpEnabled and 60 or 0 end
     end
 end)
-
-do
-    local JasonEnabled = false
-    local OriginalParts = {}
-
-    local Players = game:GetService("Players")
-    local lp = Players.LocalPlayer
-
-    local Jason = game:GetService("ReplicatedStorage").Assets.Killers.Jason
-    local Slasher = game:GetService("ReplicatedStorage").Assets.Killers.Slasher
-
-    local function ApplyJason()
-        require(Slasher.Behavior).Abilities.Slash.Icon = require(Jason.Behavior).Abilities.Slash.Icon
-        require(Slasher.Behavior).Abilities.Behead.Icon = require(Jason.Behavior).Abilities.Behead.Icon
-        require(Slasher.Behavior).Abilities.GashingWound.Icon = require(Jason.Behavior).Abilities.GashingWound.Icon
-        require(Slasher.Behavior).Abilities.RagingPace.Icon = require(Jason.Behavior).Abilities.RagingPace.Icon
-        local SoundsSlasher = require(Slasher.Config).Sounds
-        SoundsSlasher.TerrorRadiusThemes = require(Jason.Config).Sounds.TerrorRadiusThemes
-        require(Slasher.Config).DisplayName = "Jason"
-        require(Slasher.Config).RenderImage = require(Jason.Config).RenderImage
-    end
-
-    local function AddJasonMask(char)
-        local head = char:FindFirstChild("Head")
-        if not head then return end
-        if head:FindFirstChild("JasonMask") then return end
-
-        local mask = Instance.new("Part")
-        mask.Name = "JasonMask"
-        mask.Size = Vector3.new(1,1,1)
-        mask.CanCollide = false
-        mask.Massless = true
-        mask.Transparency = 0
-        mask.Parent = head
-
-        local mesh = Instance.new("SpecialMesh")
-        mesh.MeshId = "rbxassetid://17176629012"
-        mesh.TextureId = "rbxassetid://17176629042"
-        mesh.Scale = Vector3.new(1.05,1.05,1.05)
-        mesh.Parent = mask
-
-        local motor = Instance.new("Motor6D")
-        motor.Part0 = head
-        motor.Part1 = mask
-        motor.C0 = CFrame.new(0, 0.05, -0.6)
-        motor.Parent = head
-
-        return mask
-    end
-
-    local function OnCharacter(char)
-        if char.Name ~= "Slasher" or char.Parent ~= workspace.Players.Killers or char:GetAttribute("SkinName") ~= "" then return end
-
-        OriginalParts[char] = {
-            Shirt = char:FindFirstChildOfClass("Shirt"),
-            Pants = char:FindFirstChildOfClass("Pants"),
-            OldMask = char:FindFirstChild("Mask"),
-            ChainsawNote = char:FindFirstChild("Chainsaw") and char.Chainsaw:FindFirstChild("Note"),
-            SlasherExport = char:FindFirstChild("Slasher Export"),
-            LimbsTransparency = {}
-        }
-
-        local orig = OriginalParts[char]
-        for _, limb in pairs({"Head","Torso","Left Arm","Right Arm","Left Leg","Right Leg"}) do
-            local part = char:FindFirstChild(limb)
-            if part then orig.LimbsTransparency[limb] = part.Transparency end
-        end
-
-        if JasonEnabled then
-            if orig.SlasherExport then orig.SlasherExport:Destroy() end
-            if orig.ChainsawNote then orig.ChainsawNote:Destroy() end
-            if orig.OldMask then orig.OldMask:Destroy() end
-
-            for _, limb in pairs({"Head","Torso","Left Arm","Right Arm","Left Leg","Right Leg"}) do
-                local part = char:FindFirstChild(limb)
-                if part then part.Transparency = 0 end
-            end
-
-            local shirt = Instance.new("Shirt", char)
-            shirt.ShirtTemplate = "http://www.roblox.com/asset/?id=1502643168"
-            local pants = Instance.new("Pants", char)
-            pants.PantsTemplate = "http://www.roblox.com/asset/?id=1502651303"
-
-            AddJasonMask(char)
-        end
-    end
-
-    local function RevertJason(char)
-        local orig = OriginalParts[char]
-        if not orig then return end
-
-        if char:FindFirstChildOfClass("Shirt") and char:FindFirstChildOfClass("Shirt") ~= orig.Shirt then
-            char:FindFirstChildOfClass("Shirt"):Destroy()
-        end
-        if char:FindFirstChildOfClass("Pants") and char:FindFirstChildOfClass("Pants") ~= orig.Pants then
-            char:FindFirstChildOfClass("Pants"):Destroy()
-        end
-
-        local mask = char:FindFirstChild("Head") and char.Head:FindFirstChild("JasonMask")
-        if mask then mask:Destroy() end
-
-        for limb, trans in pairs(orig.LimbsTransparency) do
-            local part = char:FindFirstChild(limb)
-            if part then part.Transparency = trans end
-        end
-
-        OriginalParts[char] = nil
-    end
-
-    lp.CharacterAdded:Connect(function(char)
-        if JasonEnabled then ApplyJason() end
-        task.wait(1)
-        OnCharacter(char)
-    end)
-
-    if lp.Character then
-        task.wait(1)
-        OnCharacter(lp.Character)
-    end
-
-    local SkinGroup = RoleTab:AddLeftGroupbox("Skin")
-
-    SkinGroup:AddToggle("JasonSkin", {
-        Text = "Jason",
-        Default = false,
-        Callback = function(v)
-            JasonEnabled = v
-            if v then
-                ApplyJason()
-                Library:Notify("Jason skin enabled!", 4)
-                if lp.Character then OnCharacter(lp.Character) end
-            else
-                Library:Notify("Jason skin disabled - reverted to default Slasher", 4)
-                if lp.Character then RevertJason(lp.Character) end
-            end
-        end
-    })
-    SkinGroup:AddLabel("default Slasher to Jason skin")
-end
 
 Library:Notify("c00lSaken loaded! Press RightControl to toggle", 8)
