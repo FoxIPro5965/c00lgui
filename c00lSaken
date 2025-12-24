@@ -424,11 +424,14 @@ LeftOther:AddToggle("HakariDance", {
         end
     end
 })
+
+
 local customMaxStamina = 100
 local customStaminaGain = 20
-local customStaminaLoss = 6
-local customSprintSpeed = 25
+local customStaminaLoss = 5
+local customSprintSpeed = 28
 
+local infStamina = true
 local enableMaxStamina = false
 local enableStaminaGain = false
 local enableStaminaLoss = false
@@ -439,17 +442,21 @@ local SprintingModule = require(ReplicatedStorage.Systems.Character.Game.Sprinti
 task.spawn(function()
     while task.wait(0.1) do
         if SprintingModule then
-            if enableMaxStamina then
-                SprintingModule.MaxStamina = customMaxStamina
-            end
-            if enableStaminaGain then
-                SprintingModule.StaminaGain = customStaminaGain
-            end
-            if enableStaminaLoss then
-                SprintingModule.StaminaLoss = customStaminaLoss
-            end
-            if enableSprintSpeed then
-                SprintingModule.SprintSpeed = customSprintSpeed
+            if infStamina then
+                SprintingModule.Stamina = SprintingModule.MaxStamina or 100
+            else
+                if enableMaxStamina then
+                    SprintingModule.MaxStamina = customMaxStamina
+                end
+                if enableStaminaGain then
+                    SprintingModule.StaminaGain = customStaminaGain
+                end
+                if enableStaminaLoss then
+                    SprintingModule.StaminaLoss = customStaminaLoss
+                end
+                if enableSprintSpeed then
+                    SprintingModule.SprintSpeed = customSprintSpeed
+                end
             end
         end
     end
@@ -457,6 +464,14 @@ end)
 
 local LeftStamina = StaminaTab:AddLeftGroupbox("Toggles")
 local RightStamina = StaminaTab:AddRightGroupbox("Values")
+
+LeftStamina:AddToggle("InfStamina", {
+    Text = "Infinite Stamina",
+    Default = true,
+    Callback = function(v)
+        infStamina = v
+    end
+})
 
 LeftStamina:AddToggle("EnableMaxStamina", {
     Text = "Max Stamina",
@@ -501,7 +516,7 @@ RightStamina:AddInput("MaxStamina", {
 
 RightStamina:AddInput("StaminaGain", {
     Text = "Stamina Gain",
-    Default = "10",
+    Default = "20",
     Numeric = true,
     Callback = function(v)
         customStaminaGain = tonumber(v) or 10
@@ -510,7 +525,7 @@ RightStamina:AddInput("StaminaGain", {
 
 RightStamina:AddInput("StaminaLoss", {
     Text = "Stamina Loss",
-    Default = "15",
+    Default = "5",
     Numeric = true,
     Callback = function(v)
         customStaminaLoss = tonumber(v) or 15
@@ -519,7 +534,7 @@ RightStamina:AddInput("StaminaLoss", {
 
 RightStamina:AddInput("SprintSpeed", {
     Text = "Sprint Speed",
-    Default = "25",
+    Default = "28",
     Numeric = true,
     Callback = function(v)
         customSprintSpeed = tonumber(v) or 25
