@@ -425,7 +425,6 @@ LeftOther:AddToggle("HakariDance", {
     end
 })
 
-
 local customMaxStamina = 100
 local customStaminaGain = 20
 local customStaminaLoss = 5
@@ -437,27 +436,54 @@ local enableStaminaGain = false
 local enableStaminaLoss = false
 local enableSprintSpeed = false
 
+local originalMaxStamina = nil
+local originalStaminaGain = nil
+local originalStaminaLoss = nil
+local originalSprintSpeed = nil
+
 local SprintingModule = require(ReplicatedStorage.Systems.Character.Game.Sprinting)
 
 task.spawn(function()
     while task.wait(0.1) do
         if SprintingModule then
             if infStamina then
-                SprintingModule.Stamina = SprintingModule.MaxStamina or 100
+                SprintingModule.Stamina = SprintingModule.MaxStamina
             else
                 if enableMaxStamina then
                     SprintingModule.MaxStamina = customMaxStamina
+                elseif originalMaxStamina ~= nil then
+                    SprintingModule.MaxStamina = originalMaxStamina
                 end
+
                 if enableStaminaGain then
                     SprintingModule.StaminaGain = customStaminaGain
+                elseif originalStaminaGain ~= nil then
+                    SprintingModule.StaminaGain = originalStaminaGain
                 end
+
                 if enableStaminaLoss then
                     SprintingModule.StaminaLoss = customStaminaLoss
+                elseif originalStaminaLoss ~= nil then
+                    SprintingModule.StaminaLoss = originalStaminaLoss
                 end
+
                 if enableSprintSpeed then
                     SprintingModule.SprintSpeed = customSprintSpeed
+                elseif originalSprintSpeed ~= nil then
+                    SprintingModule.SprintSpeed = originalSprintSpeed
                 end
             end
+        end
+    end
+end)
+
+task.spawn(function()
+    while task.wait(1) do
+        if SprintingModule then
+            if originalMaxStamina == nil then originalMaxStamina = SprintingModule.MaxStamina end
+            if originalStaminaGain == nil then originalStaminaGain = SprintingModule.StaminaGain end
+            if originalStaminaLoss == nil then originalStaminaLoss = SprintingModule.StaminaLoss end
+            if originalSprintSpeed == nil then originalSprintSpeed = SprintingModule.SprintSpeed end
         end
     end
 end)
@@ -474,7 +500,7 @@ LeftStamina:AddToggle("InfStamina", {
 })
 
 LeftStamina:AddToggle("EnableMaxStamina", {
-    Text = "Max Stamina",
+    Text = "Custom Max Stamina",
     Default = false,
     Callback = function(v)
         enableMaxStamina = v
@@ -482,7 +508,7 @@ LeftStamina:AddToggle("EnableMaxStamina", {
 })
 
 LeftStamina:AddToggle("EnableStaminaGain", {
-    Text = "Stamina Gain",
+    Text = "Custom Stamina Gain",
     Default = false,
     Callback = function(v)
         enableStaminaGain = v
@@ -490,7 +516,7 @@ LeftStamina:AddToggle("EnableStaminaGain", {
 })
 
 LeftStamina:AddToggle("EnableStaminaLoss", {
-    Text = "Stamina Loss",
+    Text = "Custom Stamina Loss",
     Default = false,
     Callback = function(v)
         enableStaminaLoss = v
@@ -498,7 +524,7 @@ LeftStamina:AddToggle("EnableStaminaLoss", {
 })
 
 LeftStamina:AddToggle("EnableSprintSpeed", {
-    Text = "Sprint Speed",
+    Text = "Custom Sprint Speed",
     Default = false,
     Callback = function(v)
         enableSprintSpeed = v
@@ -540,6 +566,7 @@ RightStamina:AddInput("SprintSpeed", {
         customSprintSpeed = tonumber(v) or 25
     end
 })
+    
 local SkinGroup = RoleTab:AddLeftGroupbox("Skin")
 SkinGroup:AddToggle("JasonSkin", {
     Text = "Jason",
