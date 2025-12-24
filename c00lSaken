@@ -12,12 +12,12 @@ local Window = Library:CreateWindow({
 })
 
 local RoleTab = Window:AddTab({ Name = "Role", Icon = "user" })
+local StaminaTab = Window:AddTab({ Name = "Stamina", Icon = "zap" })
 local AutoBlockTab = Window:AddTab({ Name = "Autoblock", Icon = "shield" })
 local BackstabTab = Window:AddTab({ Name = "AutoBackstab", Icon = "swords" })
 local VisualTab = Window:AddTab({ Name = "Visuals", Icon = "eye" })
 local AntiTab = Window:AddTab({ Name = "Anti", Icon = "ban" })
 local OtherTab = Window:AddTab({ Name = "Other", Icon = "settings" })
-local StaminaTab = Window:AddTab({ Name = "Stamina", Icon = "zap" })
 local ConfigTab = Window:AddTab({ Name = "Config", Icon = "folder" })
 
 ThemeManager:SetLibrary(Library)
@@ -424,47 +424,107 @@ LeftOther:AddToggle("HakariDance", {
         end
     end
 })
-local infStamina = true
 local customMaxStamina = 100
-local customStaminaGain = 18
-local customStaminaLoss = 7
-local customSprintSpeed = 28
+local customStaminaGain = 20
+local customStaminaLoss = 6
+local customSprintSpeed = 25
+
+local enableMaxStamina = false
+local enableStaminaGain = false
+local enableStaminaLoss = false
+local enableSprintSpeed = false
 
 local SprintingModule = require(ReplicatedStorage.Systems.Character.Game.Sprinting)
 
 task.spawn(function()
     while task.wait(0.1) do
         if SprintingModule then
-            SprintingModule.MaxStamina = customMaxStamina
-            SprintingModule.StaminaGain = customStaminaGain
-            SprintingModule.StaminaLoss = customStaminaLoss
-            SprintingModule.SprintSpeed = customSprintSpeed
+            if enableMaxStamina then
+                SprintingModule.MaxStamina = customMaxStamina
+            end
+            if enableStaminaGain then
+                SprintingModule.StaminaGain = customStaminaGain
+            end
+            if enableStaminaLoss then
+                SprintingModule.StaminaLoss = customStaminaLoss
+            end
+            if enableSprintSpeed then
+                SprintingModule.SprintSpeed = customSprintSpeed
+            end
         end
     end
 end)
 
-task.spawn(function()
-    local sprint = require(ReplicatedStorage.Systems.Character.Game.Sprinting)
-    while task.wait(3) do
-        if infStamina then 
-            sprint.Stamina = sprint.MaxStamina or 100 
-        end
-    end
-end)
+local LeftStamina = StaminaTab:AddLeftGroupbox("Toggles")
+local RightStamina = StaminaTab:AddRightGroupbox("Values")
 
-local StaminaGroup = StaminaTab:AddLeftGroupbox("Stamina Settings")
-StaminaGroup:AddToggle("InfStamina", {
-    Text = "Infinite Stamina",
-    Default = true,
+LeftStamina:AddToggle("EnableMaxStamina", {
+    Text = "Max Stamina",
+    Default = false,
     Callback = function(v)
-        infStamina = v
+        enableMaxStamina = v
     end
 })
-StaminaGroup:AddInput("MaxStamina", {Text = "Max Stamina", Default = "100", Numeric = false, Callback = function(v) customMaxStamina = tonumber(v) or 100 end})
-StaminaGroup:AddInput("StaminaGain", {Text = "Stamina Gain", Default = "18", Numeric = false, Callback = function(v) customStaminaGain = tonumber(v) or 10 end})
-StaminaGroup:AddInput("StaminaLoss", {Text = "Stamina Loss", Default = "7", Numeric = false, Callback = function(v) customStaminaLoss = tonumber(v) or 15 end})
-StaminaGroup:AddInput("SprintSpeed", {Text = "Sprint Speed", Default = "28", Numeric = false, Callback = function(v) customSprintSpeed = tonumber(v) or 25 end})
 
+LeftStamina:AddToggle("EnableStaminaGain", {
+    Text = "Stamina Gain",
+    Default = false,
+    Callback = function(v)
+        enableStaminaGain = v
+    end
+})
+
+LeftStamina:AddToggle("EnableStaminaLoss", {
+    Text = "Stamina Loss",
+    Default = false,
+    Callback = function(v)
+        enableStaminaLoss = v
+    end
+})
+
+LeftStamina:AddToggle("EnableSprintSpeed", {
+    Text = "Sprint Speed",
+    Default = false,
+    Callback = function(v)
+        enableSprintSpeed = v
+    end
+})
+
+RightStamina:AddInput("MaxStamina", {
+    Text = "Max Stamina",
+    Default = "100",
+    Numeric = true,
+    Callback = function(v)
+        customMaxStamina = tonumber(v) or 100
+    end
+})
+
+RightStamina:AddInput("StaminaGain", {
+    Text = "Stamina Gain",
+    Default = "10",
+    Numeric = true,
+    Callback = function(v)
+        customStaminaGain = tonumber(v) or 10
+    end
+})
+
+RightStamina:AddInput("StaminaLoss", {
+    Text = "Stamina Loss",
+    Default = "15",
+    Numeric = true,
+    Callback = function(v)
+        customStaminaLoss = tonumber(v) or 15
+    end
+})
+
+RightStamina:AddInput("SprintSpeed", {
+    Text = "Sprint Speed",
+    Default = "25",
+    Numeric = true,
+    Callback = function(v)
+        customSprintSpeed = tonumber(v) or 25
+    end
+})
 local SkinGroup = RoleTab:AddLeftGroupbox("Skin")
 SkinGroup:AddToggle("JasonSkin", {
     Text = "Jason",
