@@ -19,6 +19,7 @@ local VisualTab = Window:AddTab({ Name = "Visuals", Icon = "eye" })
 local AntiTab = Window:AddTab({ Name = "Anti", Icon = "ban" })
 local OtherTab = Window:AddTab({ Name = "Other", Icon = "settings" })
 local ConfigTab = Window:AddTab({ Name = "Config", Icon = "folder" })
+local DestroyTab = Window:AddTab({ Name = "Destroy", Icon = "trash" })
 
 ThemeManager:SetLibrary(Library)
 SaveManager:SetLibrary(Library)
@@ -1292,9 +1293,10 @@ task.spawn(function()
     end
 end)
 
-local ConfigLeft = ConfigTab:AddLeftGroupbox("Gui")
-ConfigLeft:AddButton("Destroy GUI", function()
+local DestroyGroup = DestroyTab:AddLeftGroupbox("Unload")
+DestroyGroup:AddButton("Unload GUI", function()
     Library:Unload()
 end)
+DestroyGroup:AddLabel("Click to destroy UI")
 
 Library:Notify("c00lSaken loaded! Press RightControl to toggle", 8)
