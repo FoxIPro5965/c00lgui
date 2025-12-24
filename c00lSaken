@@ -424,7 +424,7 @@ LeftOther:AddToggle("HakariDance", {
         end
     end
 })
-
+local infStamina = true
 local customMaxStamina = 100
 local customStaminaGain = 18
 local customStaminaLoss = 7
@@ -443,7 +443,23 @@ task.spawn(function()
     end
 end)
 
+task.spawn(function()
+    local sprint = require(ReplicatedStorage.Systems.Character.Game.Sprinting)
+    while task.wait(3) do
+        if infStamina then 
+            sprint.Stamina = sprint.MaxStamina or 100 
+        end
+    end
+end)
+
 local StaminaGroup = StaminaTab:AddLeftGroupbox("Stamina Settings")
+StaminaGroup:AddToggle("InfStamina", {
+    Text = "Infinite Stamina",
+    Default = true,
+    Callback = function(v)
+        infStamina = v
+    end
+})
 StaminaGroup:AddInput("MaxStamina", {Text = "Max Stamina", Default = "100", Numeric = false, Callback = function(v) customMaxStamina = tonumber(v) or 100 end})
 StaminaGroup:AddInput("StaminaGain", {Text = "Stamina Gain", Default = "18", Numeric = false, Callback = function(v) customStaminaGain = tonumber(v) or 10 end})
 StaminaGroup:AddInput("StaminaLoss", {Text = "Stamina Loss", Default = "7", Numeric = false, Callback = function(v) customStaminaLoss = tonumber(v) or 15 end})
