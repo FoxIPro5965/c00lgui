@@ -117,22 +117,3 @@ do
         task.wait(1)
         OnCharacter(lp.Character)
     end
-
-    local SkinGroup = RoleTab:AddLeftGroupbox("Skin")
-
-    SkinGroup:AddToggle("JasonSkin", {
-        Text = "Jason",
-        Default = false,
-        Callback = function(v)
-            JasonEnabled = v
-            if v then
-                ApplyJason()
-                Library:Notify("Jason skin enabled!", 4)
-                if lp.Character then OnCharacter(lp.Character) end
-            else
-                Library:Notify("Jason skin disabled - reverted to default Slasher", 4)
-                if lp.Character then RevertJason(lp.Character) end
-            end
-        end
-    })
-end
