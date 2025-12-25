@@ -1291,7 +1291,7 @@ task.spawn(function()
         if hum then hum.JumpPower = jumpEnabled and 60 or 0 end
     end
 end)
-local ShedletskyGroup = RoleTab:AddLeftGroupbox("Shedletsky")
+local ShedletskyGroup = RoleTab:AddRightGroupbox("Shedletsky")
 
 local tpSlashEnabled = false
 local tpSlashRange = 10
@@ -1380,7 +1380,7 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
-local DestroyGroup = Config:AddLeftGroupbox("Unload")
+local DestroyGroup = ConfigTab:AddLeftGroupbox("Unload")
 DestroyGroup:AddButton("Unload GUI", function()
     Library:Unload()
 end)
