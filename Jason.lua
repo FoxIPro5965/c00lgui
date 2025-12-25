@@ -48,42 +48,43 @@ do
     end
 
     local function OnCharacter(char)
-        if char.Name ~= "Slasher" or char.Parent ~= workspace.Players.Killers or char:GetAttribute("SkinName") ~= "" then return end
+    if char.Parent ~= workspace.Players.Killers then return end
+    if not char:FindFirstChild("Head") then return end
 
-        OriginalParts[char] = {
-            Shirt = char:FindFirstChildOfClass("Shirt"),
-            Pants = char:FindFirstChildOfClass("Pants"),
-            OldMask = char:FindFirstChild("Mask"),
-            ChainsawNote = char:FindFirstChild("Chainsaw") and char.Chainsaw:FindFirstChild("Note"),
-            SlasherExport = char:FindFirstChild("Slasher Export"),
-            LimbsTransparency = {}
-        }
+    OriginalParts[char] = {
+        Shirt = char:FindFirstChildOfClass("Shirt"),
+        Pants = char:FindFirstChildOfClass("Pants"),
+        OldMask = char:FindFirstChild("Mask"),
+        ChainsawNote = char:FindFirstChild("Chainsaw") and char.Chainsaw:FindFirstChild("Note"),
+        SlasherExport = char:FindFirstChild("Slasher Export"),
+        LimbsTransparency = {}
+    }
 
-        local orig = OriginalParts[char]
-        for _, limb in pairs({"Head","Torso","Left Arm","Right Arm","Left Leg","Right Leg"}) do
-            local part = char:FindFirstChild(limb)
-            if part then orig.LimbsTransparency[limb] = part.Transparency end
-        end
-
-        if JasonEnabled then
-            if orig.SlasherExport then orig.SlasherExport:Destroy() end
-            if orig.ChainsawNote then orig.ChainsawNote:Destroy() end
-            if orig.OldMask then orig.OldMask:Destroy() end
-
-            for _, limb in pairs({"Head","Torso","Left Arm","Right Arm","Left Leg","Right Leg"}) do
-                local part = char:FindFirstChild(limb)
-                if part then part.Transparency = 0 end
-            end
-
-            local shirt = Instance.new("Shirt", char)
-            shirt.ShirtTemplate = "http://www.roblox.com/asset/?id=1502643168"
-            local pants = Instance.new("Pants", char)
-            pants.PantsTemplate = "http://www.roblox.com/asset/?id=1502651303"
-
-            AddJasonMask(char)
-        end
+    local orig = OriginalParts[char]
+    for _, limb in pairs({"Head","Torso","Left Arm","Right Arm","Left Leg","Right Leg"}) do
+        local part = char:FindFirstChild(limb)
+        if part then orig.LimbsTransparency[limb] = part.Transparency end
     end
 
+    if JasonEnabled then
+        if orig.SlasherExport then orig.SlasherExport:Destroy() end
+        if orig.ChainsawNote then orig.ChainsawNote:Destroy() end
+        if orig.OldMask then orig.OldMask:Destroy() end
+
+        for _, limb in pairs({"Head","Torso","Left Arm","Right Arm","Left Leg","Right Leg"}) do
+            local part = char:FindFirstChild(limb)
+            if part then part.Transparency = 0 end
+        end
+
+        local shirt = Instance.new("Shirt", char)
+        shirt.ShirtTemplate = "http://www.roblox.com/asset/?id=1502643168"
+
+        local pants = Instance.new("Pants", char)
+        pants.PantsTemplate = "http://www.roblox.com/asset/?id=1502651303"
+
+        AddJasonMask(char)
+    end
+    end
     local function RevertJason(char)
         local orig = OriginalParts[char]
         if not orig then return end
