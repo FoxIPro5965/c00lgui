@@ -1297,12 +1297,13 @@ local ShedletskyGroup = RoleTab:AddRightGroupbox("Shedletsky")
 local tpSlashEnabled = false
 local tpSlashRange = 8
 local tpSlashDistance = 0.3
+local tpSlashDelay = 0.08  
 local tpSlashHoldTime = 0.58
 local tpSlashCooldown = 10
 local lastTpSlashTime = 0
 
-ShedletskyGroup:AddToggle("AutoSlash", {
-    Text = "Auto Slash",
+ShedletskyGroup:AddToggle("AutoTPSlash", {
+    Text = "Auto TP Slash",
     Default = false,
     Callback = function(v)
         tpSlashEnabled = v
@@ -1330,6 +1331,22 @@ ShedletskyGroup:AddInput("TPSlashDis", {
         else
             tpSlashDistance = 0.5
             Library:Notify("TP Distance must be between 0.3 and 3!", 3)
+        end
+    end
+})
+
+ShedletskyGroup:AddInput("TPSlashDelay", {
+    Text = "Slash Delay (s)",
+    Default = "0.08",
+    Numeric = true,
+    PlaceholderText = "0 - 1",
+    Callback = function(text)
+        local num = tonumber(text)
+        if num and num >= 0 and num <= 1 then
+            tpSlashDelay = num
+        else
+            tpSlashDelay = 0
+            Library:Notify("Slash Delay must be between 0 and 1!", 3)
         end
     end
 })
@@ -1363,9 +1380,6 @@ RunService.Heartbeat:Connect(function()
         local kRoot = targetKiller:FindFirstChild("HumanoidRootPart")
         if kRoot then
             lastTpSlashTime = tick()
-
-            click("Slash")
-
             local holdStart = tick()
             local holdConn
             holdConn = RunService.Heartbeat:Connect(function()
@@ -1375,6 +1389,11 @@ RunService.Heartbeat:Connect(function()
                 end
                 if myRoot and kRoot and kRoot.Parent then
                     myRoot.CFrame = CFrame.new(kRoot.Position + kRoot.CFrame.LookVector * tpSlashDistance, kRoot.Position)
+                end
+            end)
+            task.delay(tpSlashDelay, function()
+                if tpSlashEnabled and myRoot and kRoot and kRoot.Parent then
+                    click("Slash")
                 end
             end)
         end
