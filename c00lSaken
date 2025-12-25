@@ -1292,7 +1292,7 @@ task.spawn(function()
     end
 end)
 
-local ShedletskyGroup = RoleTab:AddLeftGroupbox("Shedletsky")
+local ShedletskyGroup = RoleTab:AddRightGroupbox("Shedletsky")
 
 local tpSlashEnabled = false
 local tpSlashRange = 10
@@ -1377,9 +1377,6 @@ RunService.Heartbeat:Connect(function()
                     myRoot.CFrame = CFrame.new(kRoot.Position + kRoot.CFrame.LookVector * tpSlashDistance, kRoot.Position)
                 end
             end)
-        end
-    end
-end)
 
 local DestroyGroup = ConfigTab:AddLeftGroupbox("Unload")
 DestroyGroup:AddButton("Unload GUI", function()
