@@ -1291,77 +1291,7 @@ task.spawn(function()
         if hum then hum.JumpPower = jumpEnabled and 60 or 0 end
     end
 end)
-local ShedletskyGroup = RoleTab:AddRightGroupbox("Shedletsky")
 
-local tpSlashEnabled = false
-local tpSlashRange = 10
-local tpSlashDistance = 0.3       
-local tpSlashHoldTime = 0.58
-local tpSlashCooldown = 8
-local lastTpSlashTime = 0
-
-ShedletskyGroup:AddToggle("AutoTPSlash", {
-    Text = "Auto TP Slash",
-    Default = false,
-    Callback = function(v)
-        tpSlashEnabled = v
-    end
-})
-
-ShedletskyGroup:AddInput("TPSlashRange", {
-    Text = "Range",
-    Default = "10",
-    Numeric = true,
-    Callback = function(t)
-        tpSlashRange = tonumber(t) or 10
-    end
-})
-
-ShedletskyGroup:AddInput("TPSlashDis", {
-    Text = "TP Distance",
-    Default = "0.3",
-    Numeric = true,
-    PlaceholderText = "0 - 2",
-    Callback = function(text)
-        local num = tonumber(text)
-        if num and num >= 0.5 and num <= 3 then
-            tpSlashDistance = num
-        else
-            tpSlashDistance = 1
-            Library:Notify("TP Distance must be between 0.5 and 3!", 3)
-        end
-    end
-})
-
-RunService.Heartbeat:Connect(function()
-    if not tpSlashEnabled then return end
-    if tick() - lastTpSlashTime < tpSlashCooldown then return end
-
-    local myChar = lp.Character
-    local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
-    if not myRoot then return end
-
-    local killersFolder = workspace:FindFirstChild("Players") and workspace.Players:FindFirstChild("Killers")
-    if not killersFolder then return end
-
-    local targetKiller = nil
-    local closestDist = math.huge
-
-    for _, killer in ipairs(killersFolder:GetChildren()) do
-        local kRoot = killer:FindFirstChild("HumanoidRootPart")
-        if kRoot and killer:FindFirstChild("Humanoid") and killer.Humanoid.Health > 0 then
-            local dist = (kRoot.Position - myRoot.Position).Magnitude
-            if dist <= tpSlashRange and dist < closestDist then
-                closestDist = dist
-                targetKiller = killer
-            end
-        end
-    end
-
-    if targetKiller then
-        local kRoot = targetKiller:FindFirstChild("HumanoidRootPart")
-        if kRoot then
-            lastTpSlashTime = tick()
 local ShedletskyGroup = RoleTab:AddLeftGroupbox("Shedletsky")
 
 local tpSlashEnabled = false
