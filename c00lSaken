@@ -1,3 +1,4 @@
+Sao Jason mode tgle của t bật lên ko đổi skin giống t mong nuốn xem t sai  ở đâu
 local repo="https://raw.githubusercontent.com/deividcomsono/Obsidian/refs/heads/main/"
 local Library=loadstring(game:HttpGet(repo.."Library.lua"))()
 local ThemeManager=loadstring(game:HttpGet(repo.."addons/ThemeManager.lua"))()
@@ -1435,7 +1436,6 @@ do
     end
 
     local function OnCharacter(char)
-    local function OnCharacter(char)
     if char.Parent ~= workspace.Players.Killers then return end
     if not char:FindFirstChild("Head") then return end
 
@@ -1524,7 +1524,6 @@ end
             end
         end
     })
-end 
 SkinGroup:AddLabel("Slasher → Jason skin")
 
 local DestroyGroup = ConfigTab:AddLeftGroupbox("Unload")
