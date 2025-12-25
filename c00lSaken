@@ -1298,7 +1298,7 @@ local tpSlashEnabled = false
 local tpSlashRange = 8
 local tpSlashDistance = 0.5
 local tpSlashHoldTime = 0.58
-local tpSlashCooldown = 8
+local tpSlashCooldown = 10
 local lastTpSlashTime = 0
 
 ShedletskyGroup:AddToggle("AutoTPSlash", {
@@ -1314,7 +1314,7 @@ ShedletskyGroup:AddInput("TPSlashRange", {
     Default = "8",
     Numeric = true,
     Callback = function(t)
-        tpSlashRange = tonumber(t) or 10
+        tpSlashRange = tonumber(t) or 8
     end
 })
 
@@ -1322,14 +1322,14 @@ ShedletskyGroup:AddInput("TPSlashDis", {
     Text = "TP Distance",
     Default = "0.5",
     Numeric = true,
-    PlaceholderText = "0 - 2",
+    PlaceholderText = "0.3 - 3",
     Callback = function(text)
         local num = tonumber(text)
-        if num and num >= 0 and num <= 2 then
+        if num and num >= 0.3 and num <= 3 then
             tpSlashDistance = num
         else
-            tpSlashDistance = 0.35
-            Library:Notify("TP Distance must be between 0 and 2!", 3)
+            tpSlashDistance = 0.5
+            Library:Notify("TP Distance must be between 0.3 and 3!", 3)
         end
     end
 })
@@ -1377,6 +1377,9 @@ RunService.Heartbeat:Connect(function()
                     myRoot.CFrame = CFrame.new(kRoot.Position + kRoot.CFrame.LookVector * tpSlashDistance, kRoot.Position)
                 end
             end)
+        end
+    end
+end)
 
 local DestroyGroup = ConfigTab:AddLeftGroupbox("Unload")
 DestroyGroup:AddButton("Unload GUI", function()
