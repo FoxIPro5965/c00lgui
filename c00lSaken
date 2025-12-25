@@ -571,9 +571,7 @@ local SkinGroup = RoleTab:AddLeftGroupbox("Skin")
 SkinGroup:AddToggle("JasonSkin", {
     Text = "Jason",
     Default = false,
-    Callback = function(v)
-        if v then
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/FoxIPro5965/c00lgui/main/Jason.lua"))()
+    Callback = loadstring(game:HttpGet("https://raw.githubusercontent.com/FoxIPro5965/c00lgui/main/Jason.lua"))()
             Library:Notify("Jason skin enabled!", 4)
         else
             Library:Notify("Jason skin disabled (restart to revert)", 4)
