@@ -19,7 +19,6 @@ local VisualTab = Window:AddTab({ Name = "Visuals", Icon = "eye" })
 local AntiTab = Window:AddTab({ Name = "Anti", Icon = "ban" })
 local OtherTab = Window:AddTab({ Name = "Other", Icon = "settings" })
 local ConfigTab = Window:AddTab({ Name = "Config", Icon = "folder" })
-local DestroyTab = Window:AddTab({ Name = "Destroy", Icon = "trash" })
 
 ThemeManager:SetLibrary(Library)
 SaveManager:SetLibrary(Library)
@@ -1292,8 +1291,96 @@ task.spawn(function()
         if hum then hum.JumpPower = jumpEnabled and 60 or 0 end
     end
 end)
+local ShedletskyGroup = RoleTab:AddLeftGroupbox("Shedletsky")
 
-local DestroyGroup = DestroyTab:AddLeftGroupbox("Unload")
+local tpSlashEnabled = false
+local tpSlashRange = 10
+local tpSlashDistance = 0.8       
+local tpSlashHoldTime = 0.5
+local tpSlashCooldown = 8
+local lastTpSlashTime = 0
+
+ShedletskyGroup:AddToggle("AutoTPSlash", {
+    Text = "Auto TP Slash",
+    Default = false,
+    Callback = function(v)
+        tpSlashEnabled = v
+    end
+})
+
+ShedletskyGroup:AddInput("TPSlashRange", {
+    Text = "Range",
+    Default = "10",
+    Numeric = true,
+    Callback = function(t)
+        tpSlashRange = tonumber(t) or 10
+    end
+})
+
+ShedletskyGroup:AddInput("TPSlashDis", {
+    Text = "TP Distance",
+    Default = "0.8",
+    Numeric = true,
+    PlaceholderText = "0.5 - 3",
+    Callback = function(text)
+        local num = tonumber(text)
+        if num and num >= 0.5 and num <= 3 then
+            tpSlashDistance = num
+        else
+            tpSlashDistance = 1
+            Library:Notify("TP Distance must be between 0.5 and 3!", 3)
+        end
+    end
+})
+
+RunService.Heartbeat:Connect(function()
+    if not tpSlashEnabled then return end
+    if tick() - lastTpSlashTime < tpSlashCooldown then return end
+
+    local myChar = lp.Character
+    local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
+    if not myRoot then return end
+
+    local killersFolder = workspace:FindFirstChild("Players") and workspace.Players:FindFirstChild("Killers")
+    if not killersFolder then return end
+
+    local targetKiller = nil
+    local closestDist = math.huge
+
+    for _, killer in ipairs(killersFolder:GetChildren()) do
+        local kRoot = killer:FindFirstChild("HumanoidRootPart")
+        if kRoot and killer:FindFirstChild("Humanoid") and killer.Humanoid.Health > 0 then
+            local dist = (kRoot.Position - myRoot.Position).Magnitude
+            if dist <= tpSlashRange and dist < closestDist then
+                closestDist = dist
+                targetKiller = killer
+            end
+        end
+    end
+
+    if targetKiller then
+        local kRoot = targetKiller:FindFirstChild("HumanoidRootPart")
+        if kRoot then
+            lastTpSlashTime = tick()
+
+            click("Slash")
+
+            local holdStart = tick()
+            local holdConn
+            holdConn = RunService.Heartbeat:Connect(function()
+                if tick() - holdStart >= tpSlashHoldTime then
+                    holdConn:Disconnect()
+                    return
+                end
+                if myRoot and kRoot and kRoot.Parent then
+                    myRoot.CFrame = CFrame.new(kRoot.Position - kRoot.CFrame.LookVector * tpSlashDistance, kRoot.Position)
+                end
+            end)
+        end
+    end
+end)
+
+local DestroyGroup = Config:AddLeftGroupbox("Unload")
 DestroyGroup:AddButton("Unload GUI", function()
     Library:Unload()
 end)
