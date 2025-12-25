@@ -1301,8 +1301,8 @@ local tpSlashHoldTime = 0.58
 local tpSlashCooldown = 10
 local lastTpSlashTime = 0
 
-ShedletskyGroup:AddToggle("AutoTPSlash", {
-    Text = "Auto TP Slash",
+ShedletskyGroup:AddToggle("AutoSlash", {
+    Text = "Auto Slash",
     Default = false,
     Callback = function(v)
         tpSlashEnabled = v
