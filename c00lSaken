@@ -223,25 +223,22 @@ do
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
     local Jason, Slasher
-
     spawn(function()
         local success = pcall(function()
             local Assets = ReplicatedStorage:WaitForChild("Assets", 15)
-            local Killers = Assets and Assets:WaitForChild("Killers", 15)
-            if Killers then
-                Jason = Killers:WaitForChild("Jason", 10)
-                Slasher = Killers:WaitForChild("Slasher", 10)
-            end
+            local Killers = Assets:WaitForChild("Killers", 15)
+            Jason = Killers:WaitForChild("Jason", 10)
+            Slasher = Killers:WaitForChild("Slasher", 10)
         end)
         if not success or not Jason or not Slasher then
-            warn("[Jason Skin] Không tìm thấy Jason hoặc Slasher trong ReplicatedStorage. Jason skin sẽ bị disable.")
+            warn("[Jason Skin] Không tìm thấy Jason hoặc Slasher → Jason skin sẽ bị disable.")
         end
     end)
 
     local function ApplyJason()
         if not Jason or not Slasher then return end
 
-        local success = pcall(function()
+        pcall(function()
             require(Slasher.Behavior).Abilities.Slash.Icon = require(Jason.Behavior).Abilities.Slash.Icon
             require(Slasher.Behavior).Abilities.Behead.Icon = require(Jason.Behavior).Abilities.Behead.Icon
             require(Slasher.Behavior).Abilities.GashingWound.Icon = require(Jason.Behavior).Abilities.GashingWound.Icon
@@ -253,10 +250,6 @@ do
             require(Slasher.Config).DisplayName = "Jason"
             require(Slasher.Config).RenderImage = require(Jason.Config).RenderImage
         end)
-
-        if not success then
-            warn("[Jason Skin] Lỗi khi apply icon/sound cho Jason")
-        end
     end
 
     local function AddJasonMask(char)
@@ -282,12 +275,15 @@ do
         motor.Part1 = mask
         motor.C0 = CFrame.new(0, 0.05, -0.6)
         motor.Parent = head
-
-        return mask
     end
 
     local function OnCharacter(char)
+        -- Hạn chế: chỉ apply khi là Slasher gốc (không phải skin khác)
         if not char or char.Parent ~= workspace.Players.Killers then return end
+        if char.Name ~= "Slasher" then return end
+        local skinName = char:GetAttribute("SkinName")
+        if skinName and skinName ~= "" then return end  -- Đã có skin khác → bỏ qua
+
         if not char:FindFirstChild("Head") then return end
 
         OriginalParts[char] = {
@@ -381,7 +377,7 @@ do
         end
     })
     SkinGroup:AddLabel("Slasher → Jason skin")
-end
+end               
 local autoBlockTriggerSounds = {
 ["102228729296384"]=true,["140242176732868"]=true,["112809109188560"]=true,["136323728355613"]=true,
 ["115026634746636"]=true,["84116622032112"]=true,["108907358619313"]=true,["127793641088496"]=true,
