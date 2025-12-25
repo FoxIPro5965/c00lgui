@@ -47,8 +47,8 @@ do
     end
 
     local function OnCharacter(char)
-        if char.Name ~= "Slasher" or char.Parent ~= workspace.Players.Killers or char:GetAttribute("SkinName") ~= "" then return end
-
+    if char.Name ~= "Slasher" or char.Parent ~= workspace.Players.Killers then return end
+    end
         OriginalParts[char] = {
             Shirt = char:FindFirstChildOfClass("Shirt"),
             Pants = char:FindFirstChildOfClass("Pants"),
