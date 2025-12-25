@@ -4,10 +4,9 @@ do
 
     local Players = game:GetService("Players")
     local lp = Players.LocalPlayer
-    local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-    local Jason = ReplicatedStorage.Assets.Killers.Jason
-    local Slasher = ReplicatedStorage.Assets.Killers.Slasher
+    local Jason = game:GetService("ReplicatedStorage").Assets.Killers.Jason
+    local Slasher = game:GetService("ReplicatedStorage").Assets.Killers.Slasher
 
     local function ApplyJason()
         require(Slasher.Behavior).Abilities.Slash.Icon = require(Jason.Behavior).Abilities.Slash.Icon
@@ -44,11 +43,13 @@ do
         motor.Part1 = mask
         motor.C0 = CFrame.new(0, 0.05, -0.6)
         motor.Parent = head
+
+        return mask
     end
 
     local function OnCharacter(char)
-    if char.Name ~= "Slasher" or char.Parent ~= workspace.Players.Killers then return end
-    end
+        if char.Name ~= "Slasher" or char.Parent ~= workspace.Players.Killers or char:GetAttribute("SkinName") ~= "" then return end
+
         OriginalParts[char] = {
             Shirt = char:FindFirstChildOfClass("Shirt"),
             Pants = char:FindFirstChildOfClass("Pants"),
@@ -105,9 +106,8 @@ do
         OriginalParts[char] = nil
     end
 
-    ApplyJason()
-
     lp.CharacterAdded:Connect(function(char)
+        if JasonEnabled then ApplyJason() end
         task.wait(1)
         OnCharacter(char)
     end)
@@ -117,17 +117,21 @@ do
         OnCharacter(lp.Character)
     end
 
-    workspace.Players.Killers.ChildAdded:Connect(function(child)
-        if child.Name == "Slasher" then
-            child:GetAttributeChangedSignal("SkinName"):Connect(function()
-                if child:GetAttribute("SkinName") == "" then
-                    OnCharacter(child)
-                end
-            end)
-            if child:GetAttribute("SkinName") == "" then
-                task.wait(1)
-                OnCharacter(child)
+    local SkinGroup = RoleTab:AddLeftGroupbox("Skin")
+
+    SkinGroup:AddToggle("JasonSkin", {
+        Text = "Jason",
+        Default = false,
+        Callback = function(v)
+            JasonEnabled = v
+            if v then
+                ApplyJason()
+                Library:Notify("Jason skin enabled!", 4)
+                if lp.Character then OnCharacter(lp.Character) end
+            else
+                Library:Notify("Jason skin disabled - reverted to default Slasher", 4)
+                if lp.Character then RevertJason(lp.Character) end
             end
         end
-    end)
+    })
 end
