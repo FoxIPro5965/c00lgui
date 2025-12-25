@@ -1296,7 +1296,7 @@ local ShedletskyGroup = RoleTab:AddRightGroupbox("Shedletsky")
 
 local tpSlashEnabled = false
 local tpSlashRange = 8
-local tpSlashDistance = 0.5
+local tpSlashDistance = 0.3
 local tpSlashHoldTime = 0.58
 local tpSlashCooldown = 10
 local lastTpSlashTime = 0
@@ -1320,7 +1320,7 @@ ShedletskyGroup:AddInput("TPSlashRange", {
 
 ShedletskyGroup:AddInput("TPSlashDis", {
     Text = "TP Distance",
-    Default = "0.5",
+    Default = "0.3",
     Numeric = true,
     PlaceholderText = "0.3 - 3",
     Callback = function(text)
