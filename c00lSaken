@@ -568,19 +568,25 @@ RightStamina:AddInput("SprintSpeed", {
 })
     
 local SkinGroup = RoleTab:AddLeftGroupbox("Skin")
+    local SkinGroup = RoleTab:AddLeftGroupbox("Skin")
 
-SkinGroup:AddToggle("JasonSkin", {
-    Text = "Jason",
-    Default = false,
-    Callback = function(v)
-        if v then
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/FoxIPro5965/c00lgui/main/Jason.lua"))()
-            Library:Notify("Jason skin enabled!", 4)
-        else
-            Library:Notify("Jason skin disabled (rejoin to revert)", 4)
+    SkinGroup:AddToggle("JasonSkin", {
+        Text = "Jason",
+        Default = false,
+        Callback = function(v)
+            JasonEnabled = v
+            if v then
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/FoxIPro5965/c00lgui/main/Jason.lua"))()
+                ApplyJason()
+                Library:Notify("Jason skin enabled!", 4)
+                if lp.Character then OnCharacter(lp.Character) end
+            else
+                Library:Notify("Jason skin disabled - reverted to default Slasher", 4)
+                if lp.Character then RevertJason(lp.Character) end
+            end
         end
-    end
-})
+    })
+end
 
 SkinGroup:AddLabel("Slasher → Jason skin")
 
