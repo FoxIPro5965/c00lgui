@@ -327,11 +327,11 @@ LeftVis:AddToggle("Items", {Text = "Medkit & BloxyCola", Default = false, Callba
 
 local LeftOther = OtherTab:AddLeftGroupbox("Misc")
 LeftOther:AddToggle("Jump", {Text = "Jump", Default = false, Callback = function(v) jumpEnabled = v end})
-RightOther:AddToggle("HitboxExpander", { 
+LeftOther:AddToggle("HitboxExpander", { 
     Text = "Reach Expander",
     Default = false,
 })
-RightOther:AddSlider("HitboxExpanderRange", {
+LeftOther:AddSlider("HitboxExpanderRange", {
     Text = "Reach Distance",
     Default = 10,
     Min = 5,
@@ -408,7 +408,7 @@ task.spawn(function()
         end
     end
 end)
-RightOther:AddToggle("KillerAimAssist", { 
+LeftOther:AddToggle("KillerAimAssist", { 
     Text = "Killer Aim Assist",
     Tooltip = "helps you hit by aiming your character at the nearest survivor",
     Callback = function()
@@ -511,7 +511,7 @@ LeftOther:AddToggle("HakariDance", {
     end
 })
 _G.showChat = _G.showChat or false
-local RightOther = OtherTab:AddLeftGroupbox("chat")
+local RightOther = OtherTab:AddRightGroupbox("chat")
 
 RightOther:AddToggle('AlwaysShowChat', {
     Text = "Always Show Chat",
