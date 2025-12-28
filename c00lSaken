@@ -266,7 +266,7 @@ local showItems = false
 local showGen = false
 local jumpEnabled = false
 local undetectedMode = false
-local backdis = 2.2
+local backdis = 2
 
 local LeftAB = AutoBlockTab:AddLeftGroupbox("Auto Block")
 local RightAB = AutoBlockTab:AddRightGroupbox("Autopunch")
@@ -314,13 +314,12 @@ LeftOther:AddToggle("Jump", {Text = "Jump", Default = false, Callback = function
 LeftOther:AddToggle("HitboxExpander", { 
     Text = "Reach Expander",
     Default = false,
-    Tooltip = "Extends your attack reach when swinging"
 })
 LeftOther:AddSlider("HitboxExpanderRange", {
     Text = "Reach Distance",
-    Default = 10,
-    Min = 5,
-    Max = 100,
+    Default = 37,
+    Min = 20,
+    Max = 200,
     Rounding = 0
 })
 LeftOther:AddToggle("AutoGen", {Text = "Auto gen", Default = true, Callback = function(v) autoGen = v end})
@@ -1404,76 +1403,68 @@ end)
 
 task.spawn(function()
     local RunService = game:GetService("RunService")
-    local Players = game:GetService("Players")
-    local lp = Players.LocalPlayer
     local RNG = Random.new()
 
-    local function getCharacter()
-        return lp.Character or lp.CharacterAdded:Wait()
-    end
+    local Character = lp.Character or lp.CharacterAdded:Wait()
+    local Humanoid = Character:WaitForChild("Humanoid")
+    local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
 
-    local function getHumanoidAndRoot(char)
-        return char:FindFirstChildOfClass("Humanoid"), char:FindFirstChild("HumanoidRootPart")
-    end
+    lp.CharacterAdded:Connect(function(char)
+        Character = char
+        Humanoid = char:WaitForChild("Humanoid")
+        HumanoidRootPart = char:WaitForChild("HumanoidRootPart")
+    end)
 
-    RunService.Heartbeat:Connect(function()
-        if not Options.HitboxExpander.Value then return end
-
-        local char = getCharacter()
-        local Humanoid, HumanoidRootPart = getHumanoidAndRoot(char)
-        if not Humanoid or not HumanoidRootPart or Humanoid.Health <= 0 then return end
-
-        local playingAttack = false
-        local animator = Humanoid:FindFirstChildOfClass("Animator")
-        if animator then
-            for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
-                local animId = tostring(track.Animation.AnimationId):match("%d+")
-                if animId and table.find(AttackAnimations, animId) then
-                    if track.TimePosition / track.Length < 0.8 then
-                        playingAttack = true
-                        break
-                    end
+    while task.wait() do
+        if Options.HitboxExpander.Value and HumanoidRootPart then
+            local playing = false
+            for _, track in ipairs(Humanoid:GetPlayingAnimationTracks()) do
+                local animId = track.Animation.AnimationId
+                if table.find(AttackAnimations, tostring(animId):match("%d+")) and (track.TimePosition / track.Length < 0.75) then
+                    playing = true
+                    break
                 end
             end
-        end
 
-        if not playingAttack then return end
+            if playing then
+                local Target
+                local NearestDist = Options.HitboxExpanderRange.Value
 
-        local maxRange = Options.HitboxExpanderRange.Value or 10
-        local closestTarget = nil
-        local closestDist = maxRange
-
-        local playersFolder = workspace:FindFirstChild("Players")
-        if playersFolder then
-            for _, folder in pairs(playersFolder:GetChildren()) do
-                for _, targetChar in ipairs(folder:GetChildren()) do
-                    if targetChar ~= char and targetChar:FindFirstChild("HumanoidRootPart") and targetChar:FindFirstChildOfClass("Humanoid") then
-                        local tHum = targetChar.Humanoid
-                        if tHum.Health > 0 then
-                            local dist = (targetChar.HumanoidRootPart.Position - HumanoidRootPart.Position).Magnitude
-                            if dist < closestDist then
-                                closestDist = dist
-                                closestTarget = targetChar
+                local function scanGroup(group)
+                    for _, obj in ipairs(group) do
+                        if obj ~= Character and obj:FindFirstChild("HumanoidRootPart") and obj:FindFirstChild("Humanoid") and obj:FindFirstChild("Humanoid").Health > 0 then
+                            local dist = (obj.HumanoidRootPart.Position - HumanoidRootPart.Position).Magnitude
+                            if dist < NearestDist then
+                                NearestDist = dist
+                                Target = obj
                             end
                         end
                     end
                 end
+
+                local playersFolder = workspace:FindFirstChild("Players")
+                if playersFolder then
+                    scanGroup(playersFolder:GetDescendants())
+                end
+                local npcs = workspace:FindFirstChild("Map", true) and workspace.Map:FindFirstChild("NPCs", true)
+                if npcs then
+                    scanGroup(npcs:GetChildren())
+                end
+
+                if Target then
+                    local ping = lp:GetNetworkPing()
+                    local randomOffset = Vector3.new(RNG:NextNumber(-1.5, 1.5), 0, RNG:NextNumber(-1.5, 1.5))
+                    local predicted = Target.HumanoidRootPart.Position + randomOffset + (Target.HumanoidRootPart.Velocity * (ping * 1.25))
+                    local neededVelocity = (predicted - HumanoidRootPart.Position) / (ping * 2)
+
+                    local oldVelocity = HumanoidRootPart.Velocity
+                    HumanoidRootPart.Velocity = neededVelocity
+                    RunService.RenderStepped:Wait()
+                    HumanoidRootPart.Velocity = oldVelocity
+                end
             end
         end
-
-        if closestTarget and closestTarget:FindFirstChild("HumanoidRootPart") then
-            local targetHRP = closestTarget.HumanoidRootPart
-            local ping = lp:GetNetworkPing() or 0.1
-            local randomOffset = Vector3.new(RNG:NextNumber(-1.2, 1.2), 0, RNG:NextNumber(-1.2, 1.2))
-            local predictedPos = targetHRP.Position + randomOffset + (targetHRP.Velocity * ping * 1.3)
-            local velocityNeeded = (predictedPos - HumanoidRootPart.Position) / (ping * 2)
-
-            local oldVel = HumanoidRootPart.Velocity
-            HumanoidRootPart.Velocity = velocityNeeded
-            task.wait()
-            HumanoidRootPart.Velocity = oldVel
-        end
-    end)
+    end
 end)
 
 local DestroyGroup = ConfigTab:AddLeftGroupbox("Unload")
