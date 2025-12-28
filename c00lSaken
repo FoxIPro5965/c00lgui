@@ -347,7 +347,7 @@ function assist(target, dist)
         localPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(Vector3.new(pos.X, pos.Y, pos.Z), Vector3.new(targetPos.X, pos.Y, targetPos.Z))
     end
 end
-KillerMisc:AddToggle("KillerAimAssist", { 
+LeftOther:AddToggle("KillerAimAssist", { 
     Text = "Killer Aim Assist",
     Tooltip = "helps you hit by aiming your character at the nearest survivor",
     Callback = function()
