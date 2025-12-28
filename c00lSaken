@@ -327,15 +327,52 @@ LeftVis:AddToggle("Items", {Text = "Medkit & BloxyCola", Default = false, Callba
 
 local LeftOther = OtherTab:AddLeftGroupbox("Misc")
 LeftOther:AddToggle("Jump", {Text = "Jump", Default = false, Callback = function(v) jumpEnabled = v end})
-LeftOther:AddToggle("Hitbox", {Text = "Hitbox", Default = false, Callback = function(v)
-    hitbox = v
-    if v then
-        HitboxModule = HitboxModule or loadstring(game:HttpGet("https://raw.githubusercontent.com/FoxIPro5965/c00lgui/main/Hitbox.lua"))()
-        HitboxModule:ExtendHitbox(1.25, 585)
-    elseif HitboxModule then
-        HitboxModule:StopExtendingHitbox()
+LeftOther:AddToggle("HitboxExpander", { 
+    Text = "Reach Expander",
+    Default = false,
+    Callback = function(state)
     end
-end})
+})
+
+LeftOther:AddSlider("HitboxExpanderRange", {
+    Text = "Reach Distance",
+    Default = 10,
+    Min = 5,
+    Max = 100,
+    Rounding = 0,
+    Callback = function(value)
+    end
+})
+
+function assist(target, dist)
+    if target and dist <= 25 then
+        local pos = localPlayer.Character.HumanoidRootPart.Position
+        local targetPos = target.HumanoidRootPart.Position
+
+        localPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(Vector3.new(pos.X, pos.Y, pos.Z), Vector3.new(targetPos.X, pos.Y, targetPos.Z))
+    end
+end
+
+RunService.Heartbeat:Connect(function()
+    if not LeftOther.Options.HitboxExpander.Value then return end
+
+    local character = localPlayer.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+
+    local hrp = character.HumanoidRootPart
+    local reachDistance = LeftOther.Options.HitboxExpanderRange.Value
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= localPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local targetHrp = player.Character.HumanoidRootPart
+            local distance = (hrp.Position - targetHrp.Position).Magnitude
+
+            if distance <= reachDistance then
+                assist(player.Character, distance)
+            end
+        end
+    end
+end)
 LeftOther:AddToggle("AutoGen", {Text = "Auto gen", Default = true, Callback = function(v) autoGen = v end})
 LeftOther:AddInput("GenSpeed", {
     Text = "Gen Speed",
@@ -424,6 +461,36 @@ LeftOther:AddToggle("HakariDance", {
         end
     end
 })
+_G.showChat = _G.showChat or false
+local LeftOther = OtherTab:AddLeftGroupbox("Misc")
+
+-- Always Show Chat
+LeftOther:AddToggle('AlwaysShowChat', {
+    Text = "Always Show Chat",
+    Callback = function(state)
+        if state then
+            _G.showChat = true
+            task.spawn(function()
+                while _G.showChat and task.wait() do
+                    local chatConfig = game:GetService("TextChatService"):FindFirstChildOfClass("ChatWindowConfiguration")
+                    if chatConfig then
+                        chatConfig.Enabled = true
+                    end
+                end
+            end)
+        else
+            _G.showChat = false
+            local playingState = lp:GetAttribute("PlayingState") or "Playing" -- fallback nếu không có attribute
+            if playingState ~= "Spectating" then
+                local chatConfig = game:GetService("TextChatService"):FindFirstChildOfClass("ChatWindowConfiguration")
+                if chatConfig then
+                    chatConfig.Enabled = false
+                end
+            end
+        end
+    end
+})
+
 
 local customMaxStamina = 100
 local customStaminaGain = 20
