@@ -229,34 +229,22 @@ local autoBlockTriggerSounds = {
 ["119089145505438"]=true,["121954639447247"]=true,["125213046326879"]=true,["131406927389838"]=true
 }
 
-local autoBlockTriggerAnims = {
-    ["126830014841198"]=true, ["126355327951215"]=true, ["121086746534252"]=true,
-    ["18885909645"]=true, ["98456918873918"]=true, ["105458270463374"]=true,
-    ["83829782357897"]=true, ["125403313786645"]=true, ["118298475669935"]=true,
-    ["82113744478546"]=true, ["70371667919898"]=true, ["99135633258223"]=true,
-    ["97167027849946"]=true, ["109230267448394"]=true, ["139835501033932"]=true,
-    ["126896426760253"]=true, ["109667959938617"]=true, ["126681776859538"]=true,
-    ["129976080405072"]=true, ["121293883585738"]=true, ["81639435858902"]=true,
-    ["137314737492715"]=true, ["92173139187970"]=true, ["122709416391"]=true,
-    ["879895330952"]=true,
-
-    ["131430497821198"]=true, ["127172483138092"]=true, ["18885919947"]=true,
-    ["87259391926321"]=true, ["106014898528300"]=true, ["86545133269813"]=true,
-    ["89448354637442"]=true, ["90499469533503"]=true, ["116618003477002"]=true,
-    ["106086955212611"]=true, ["107640065977686"]=true, ["77124578197357"]=true,
-    ["101771617803133"]=true, ["134958187822107"]=true, ["111313169447787"]=true,
-    ["71685573690338"]=true, ["129843313690921"]=true, ["97623143664485"]=true,
-    ["136007065400978"]=true, ["86096387000557"]=true, ["108807732150251"]=true,
-    ["138040001965654"]=true, ["73502073176819"]=true, ["86709774283672"]=true,
-    ["140703210927645"]=true, ["96173857867228"]=true, ["121255898612475"]=true,
-    ["98031287364865"]=true, ["119462383658044"]=true, ["77448521277146"]=true,
-    ["103741352379819"]=true, ["131696603025265"]=true, ["122503338277352"]=true,
-    ["97648548303678"]=true, ["94162446513587"]=true, ["84426150435898"]=true,
-    ["93069721274110"]=true, ["114620047310688"]=true, ["97433060861952"]=true,
-    ["82183356141401"]=true, ["100592913030351"]=true, ["70447634862911"]=true,
-    ["106847695270773"]=true, ["120112897026015"]=true, ["74707328554358"]=true,
-    ["133336594357903"]=true, ["86204001129974"]=true, ["124243639579224"]=true,
-    ["131543461321709"]=true, ["136323728355613"]=true
+local AttackAnimations = {
+"126830014841198","126355327951215","121086746534252","18885909645","98456918873918",
+"105458270463374","83829782357897","125403313786645","118298475669935","82113744478546",
+"70371667919898","99135633258223","97167027849946","109230267448394","139835501033932",
+"126896426760253","109667959938617","126681776859538","129976080405072","121293883585738",
+"81639435858902","137314737492715","92173139187970","122709416391","879895330952",
+"131430497821198","127172483138092","18885919947","87259391926321","106014898528300",
+"86545133269813","89448354637442","90499469533503","116618003477002","106086955212611",
+"107640065977686","77124578197357","101771617803133","134958187822107","111313169447787",
+"71685573690338","129843313690921","97623143664485","136007065400978","86096387000557",
+"108807732150251","138040001965654","73502073176819","86709774283672","140703210927645",
+"96173857867228","121255898612475","98031287364865","119462383658044","77448521277146",
+"103741352379819","131696603025265","122503338277352","97648548303678","94162446513587",
+"84426150435898","93069721274110","114620047310688","97433060861952","82183356141401",
+"100592913030351","70447634862911","106847695270773","120112897026015","74707328554358",
+"133336594357903","86204001129974","124243639579224","131543461321709","136323728355613"
 }
 
 local autoBlockOn = false
@@ -277,10 +265,6 @@ local showSurvivor = false
 local showItems = false
 local showGen = false
 local jumpEnabled = false
-local hitbox = false
-local HitboxModule
-local autoGen = true
-local autoGenSpeed = 0.1
 local undetectedMode = false
 local backdis = 2.2
 
@@ -330,97 +314,14 @@ LeftOther:AddToggle("Jump", {Text = "Jump", Default = false, Callback = function
 LeftOther:AddToggle("HitboxExpander", { 
     Text = "Reach Expander",
     Default = false,
+    Tooltip = "Extends your attack reach when swinging"
 })
 LeftOther:AddSlider("HitboxExpanderRange", {
     Text = "Reach Distance",
     Default = 10,
     Min = 5,
     Max = 100,
-    Rounding = 0,
-})
-
-function assist(target, dist)
-    if target and dist <= 20 then
-        local pos = localPlayer.Character.HumanoidRootPart.Position
-        local targetPos = target.HumanoidRootPart.Position
-
-        localPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(Vector3.new(pos.X, pos.Y, pos.Z), Vector3.new(targetPos.X, pos.Y, targetPos.Z))
-    end
-end
-task.spawn(function()
-    local RunService = game:GetService("RunService")
-    local RNG = Random.new()
-
-    local Character = lplr.Character or lplr.CharacterAdded:Wait()
-    local Humanoid = Character:WaitForChild("Humanoid")
-    local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
-
-    lplr.CharacterAdded:Connect(function(char)
-        Character = char
-        Humanoid = char:WaitForChild("Humanoid")
-        HumanoidRootPart = char:WaitForChild("HumanoidRootPart")
-    end)
-
-    while task.wait() do
-        if Toggles.HitboxExpander.Value and HumanoidRootPart then
-            local playing = false
-            for _, track in ipairs(Humanoid:GetPlayingAnimationTracks()) do
-                if table.find(AttackAnimations, track.Animation.AnimationId) and (track.TimePosition / track.Length < 0.75) then
-                    playing = true
-                    break
-                end
-            end
-
-            if playing then
-                local Target
-                local NearestDist = Options.HitboxExpanderRange.Value
-
-                local function scanGroup(group)
-                    for _, obj in ipairs(group) do
-                        if obj ~= Character and obj:FindFirstChild("HumanoidRootPart") and obj:FindFirstChild("Humanoid") and obj:FindFirstChild("Humanoid").Health > 0 then
-                            local dist = (obj.HumanoidRootPart.Position - HumanoidRootPart.Position).Magnitude
-                            if dist < NearestDist then
-                                NearestDist = dist
-                                Target = obj
-                            end
-                        end
-                    end
-                end
-
-                scanGroup(workspace.Players:GetDescendants())
-                local npcs = workspace:FindFirstChild("Map", true) and workspace.Map:FindFirstChild("NPCs", true)
-                if npcs then
-                    scanGroup(npcs:GetChildren())
-                end
-
-                if Target then
-                    local ping = lplr:GetNetworkPing()
-                    local randomOffset = Vector3.new(RNG:NextNumber(-1.5, 1.5), 0, RNG:NextNumber(-1.5, 1.5))
-                    local predicted = Target.HumanoidRootPart.Position + randomOffset + (Target.HumanoidRootPart.Velocity * (ping * 1.25))
-                    local neededVelocity = (predicted - HumanoidRootPart.Position) / (ping * 2)
-
-                    local oldVelocity = HumanoidRootPart.Velocity
-                    HumanoidRootPart.Velocity = neededVelocity
-                    RunService.RenderStepped:Wait()
-                    HumanoidRootPart.Velocity = oldVelocity
-                end
-            end
-        end
-    end
-end)
-LeftOther:AddToggle("KillerAimAssist", { 
-    Text = "Killer Aim Assist",
-    Tooltip = "helps you hit by aiming your character at the nearest survivor",
-    Callback = function()
-        while Toggles.KillerAimAssist.Value and task.wait() do
-            pcall(function()
-                if isSurvivor then return end
-
-                local target, dist = getClosestSurvivor()
-                assist(target, dist)
-            end)
-        end
-    end
+    Rounding = 0
 })
 LeftOther:AddToggle("AutoGen", {Text = "Auto gen", Default = true, Callback = function(v) autoGen = v end})
 LeftOther:AddInput("GenSpeed", {
@@ -528,7 +429,7 @@ RightOther:AddToggle('AlwaysShowChat', {
             end)
         else
             _G.showChat = false
-            local playingState = lp:GetAttribute("PlayingState") or "Playing" -- fallback nếu không có attribute
+            local playingState = lp:GetAttribute("PlayingState") or "Playing"
             if playingState ~= "Spectating" then
                 local chatConfig = game:GetService("TextChatService"):FindFirstChildOfClass("ChatWindowConfiguration")
                 if chatConfig then
@@ -538,7 +439,6 @@ RightOther:AddToggle('AlwaysShowChat', {
         end
     end
 })
-
 
 local customMaxStamina = 100
 local customStaminaGain = 20
@@ -940,7 +840,7 @@ RunService.RenderStepped:Connect(function()
             if animator then
                 for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
                     local animId = tostring(track.Animation.AnimationId):match("%d+")
-                    if animId and autoBlockTriggerAnims[animId] then
+                    if animId and table.find(AttackAnimations, animId) then
                         if not facingCheckEnabled or isFacing(myRoot, hrp) then
                             task.wait(blockdelay)
                             click("Block")
@@ -1315,6 +1215,8 @@ task.spawn(function()
     end
 end)
 
+local autoGen = true
+local autoGenSpeed = 0.1
 local FlowGameModule
 local oldNew
 local hookedGen = false
@@ -1498,6 +1400,80 @@ RunService.Heartbeat:Connect(function()
             end)
         end
     end
+end)
+
+task.spawn(function()
+    local RunService = game:GetService("RunService")
+    local Players = game:GetService("Players")
+    local lp = Players.LocalPlayer
+    local RNG = Random.new()
+
+    local function getCharacter()
+        return lp.Character or lp.CharacterAdded:Wait()
+    end
+
+    local function getHumanoidAndRoot(char)
+        return char:FindFirstChildOfClass("Humanoid"), char:FindFirstChild("HumanoidRootPart")
+    end
+
+    RunService.Heartbeat:Connect(function()
+        if not Options.HitboxExpander.Value then return end
+
+        local char = getCharacter()
+        local Humanoid, HumanoidRootPart = getHumanoidAndRoot(char)
+        if not Humanoid or not HumanoidRootPart or Humanoid.Health <= 0 then return end
+
+        local playingAttack = false
+        local animator = Humanoid:FindFirstChildOfClass("Animator")
+        if animator then
+            for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
+                local animId = tostring(track.Animation.AnimationId):match("%d+")
+                if animId and table.find(AttackAnimations, animId) then
+                    if track.TimePosition / track.Length < 0.8 then
+                        playingAttack = true
+                        break
+                    end
+                end
+            end
+        end
+
+        if not playingAttack then return end
+
+        local maxRange = Options.HitboxExpanderRange.Value or 10
+        local closestTarget = nil
+        local closestDist = maxRange
+
+        local playersFolder = workspace:FindFirstChild("Players")
+        if playersFolder then
+            for _, folder in pairs(playersFolder:GetChildren()) do
+                for _, targetChar in ipairs(folder:GetChildren()) do
+                    if targetChar ~= char and targetChar:FindFirstChild("HumanoidRootPart") and targetChar:FindFirstChildOfClass("Humanoid") then
+                        local tHum = targetChar.Humanoid
+                        if tHum.Health > 0 then
+                            local dist = (targetChar.HumanoidRootPart.Position - HumanoidRootPart.Position).Magnitude
+                            if dist < closestDist then
+                                closestDist = dist
+                                closestTarget = targetChar
+                            end
+                        end
+                    end
+                end
+            end
+        end
+
+        if closestTarget and closestTarget:FindFirstChild("HumanoidRootPart") then
+            local targetHRP = closestTarget.HumanoidRootPart
+            local ping = lp:GetNetworkPing() or 0.1
+            local randomOffset = Vector3.new(RNG:NextNumber(-1.2, 1.2), 0, RNG:NextNumber(-1.2, 1.2))
+            local predictedPos = targetHRP.Position + randomOffset + (targetHRP.Velocity * ping * 1.3)
+            local velocityNeeded = (predictedPos - HumanoidRootPart.Position) / (ping * 2)
+
+            local oldVel = HumanoidRootPart.Velocity
+            HumanoidRootPart.Velocity = velocityNeeded
+            task.wait()
+            HumanoidRootPart.Velocity = oldVel
+        end
+    end)
 end)
 
 local DestroyGroup = ConfigTab:AddLeftGroupbox("Unload")
