@@ -327,11 +327,11 @@ LeftVis:AddToggle("Items", {Text = "Medkit & BloxyCola", Default = false, Callba
 
 local LeftOther = OtherTab:AddLeftGroupbox("Misc")
 LeftOther:AddToggle("Jump", {Text = "Jump", Default = false, Callback = function(v) jumpEnabled = v end})
-LeftOther:AddToggle("HitboxExpander", { 
+RightOther:AddToggle("HitboxExpander", { 
     Text = "Reach Expander",
     Default = false,
 })
-LeftOther:AddSlider("HitboxExpanderRange", {
+RightOther:AddSlider("HitboxExpanderRange", {
     Text = "Reach Distance",
     Default = 10,
     Min = 5,
@@ -340,14 +340,75 @@ LeftOther:AddSlider("HitboxExpanderRange", {
 })
 
 function assist(target, dist)
-    if target and dist <= 15 then
+    if target and dist <= 20 then
         local pos = localPlayer.Character.HumanoidRootPart.Position
         local targetPos = target.HumanoidRootPart.Position
 
         localPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(Vector3.new(pos.X, pos.Y, pos.Z), Vector3.new(targetPos.X, pos.Y, targetPos.Z))
     end
 end
-LeftOther:AddToggle("KillerAimAssist", { 
+task.spawn(function()
+    local RunService = game:GetService("RunService")
+    local RNG = Random.new()
+
+    local Character = lplr.Character or lplr.CharacterAdded:Wait()
+    local Humanoid = Character:WaitForChild("Humanoid")
+    local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+
+    lplr.CharacterAdded:Connect(function(char)
+        Character = char
+        Humanoid = char:WaitForChild("Humanoid")
+        HumanoidRootPart = char:WaitForChild("HumanoidRootPart")
+    end)
+
+    while task.wait() do
+        if Toggles.HitboxExpander.Value and HumanoidRootPart then
+            local playing = false
+            for _, track in ipairs(Humanoid:GetPlayingAnimationTracks()) do
+                if table.find(AttackAnimations, track.Animation.AnimationId) and (track.TimePosition / track.Length < 0.75) then
+                    playing = true
+                    break
+                end
+            end
+
+            if playing then
+                local Target
+                local NearestDist = Options.HitboxExpanderRange.Value
+
+                local function scanGroup(group)
+                    for _, obj in ipairs(group) do
+                        if obj ~= Character and obj:FindFirstChild("HumanoidRootPart") and obj:FindFirstChild("Humanoid") and obj:FindFirstChild("Humanoid").Health > 0 then
+                            local dist = (obj.HumanoidRootPart.Position - HumanoidRootPart.Position).Magnitude
+                            if dist < NearestDist then
+                                NearestDist = dist
+                                Target = obj
+                            end
+                        end
+                    end
+                end
+
+                scanGroup(workspace.Players:GetDescendants())
+                local npcs = workspace:FindFirstChild("Map", true) and workspace.Map:FindFirstChild("NPCs", true)
+                if npcs then
+                    scanGroup(npcs:GetChildren())
+                end
+
+                if Target then
+                    local ping = lplr:GetNetworkPing()
+                    local randomOffset = Vector3.new(RNG:NextNumber(-1.5, 1.5), 0, RNG:NextNumber(-1.5, 1.5))
+                    local predicted = Target.HumanoidRootPart.Position + randomOffset + (Target.HumanoidRootPart.Velocity * (ping * 1.25))
+                    local neededVelocity = (predicted - HumanoidRootPart.Position) / (ping * 2)
+
+                    local oldVelocity = HumanoidRootPart.Velocity
+                    HumanoidRootPart.Velocity = neededVelocity
+                    RunService.RenderStepped:Wait()
+                    HumanoidRootPart.Velocity = oldVelocity
+                end
+            end
+        end
+    end
+end)
+RightOther:AddToggle("KillerAimAssist", { 
     Text = "Killer Aim Assist",
     Tooltip = "helps you hit by aiming your character at the nearest survivor",
     Callback = function()
