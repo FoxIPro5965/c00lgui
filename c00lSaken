@@ -330,8 +330,6 @@ LeftOther:AddToggle("Jump", {Text = "Jump", Default = false, Callback = function
 LeftOther:AddToggle("HitboxExpander", { 
     Text = "Reach Expander",
     Default = false,
-    Callback = function(state)
-    end
 })
 
 LeftOther:AddSlider("HitboxExpanderRange", {
@@ -340,39 +338,60 @@ LeftOther:AddSlider("HitboxExpanderRange", {
     Min = 5,
     Max = 100,
     Rounding = 0,
-    Callback = function(value)
-    end
 })
 
-function assist(target, dist)
-    if target and dist <= 25 then
-        local pos = localPlayer.Character.HumanoidRootPart.Position
-        local targetPos = target.HumanoidRootPart.Position
+task.spawn(function()
+    local RunService = game:GetService("RunService")
+    local RNG = Random.new()
 
-        localPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(Vector3.new(pos.X, pos.Y, pos.Z), Vector3.new(targetPos.X, pos.Y, targetPos.Z))
-    end
-end
+    local Character = lplr.Character or lplr.CharacterAdded:Wait()
+    local Humanoid = Character:WaitForChild("Humanoid")
+    local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
 
-RunService.Heartbeat:Connect(function()
-    if not LeftOther.Options.HitboxExpander.Value then return end
+    lplr.CharacterAdded:Connect(function(char)
+        Character = char
+        Humanoid = char:WaitForChild("Humanoid")
+        HumanoidRootPart = char:WaitForChild("HumanoidRootPart")
+    end)
 
-    local character = localPlayer.Character
-    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+    while task.wait() do
+        if Toggles.HitboxExpander.Value and HumanoidRootPart then
+            local Target
+            local NearestDist = Options.HitboxExpanderRange.Value
 
-    local hrp = character.HumanoidRootPart
-    local reachDistance = LeftOther.Options.HitboxExpanderRange.Value
+            local function scanGroup(group)
+                for _, obj in ipairs(group) do
+                    if obj ~= Character and obj:FindFirstChild("HumanoidRootPart") and obj:FindFirstChild("Humanoid") and obj.Humanoid.Health > 0 then
+                        local dist = (obj.HumanoidRootPart.Position - HumanoidRootPart.Position).Magnitude
+                        if dist < NearestDist then
+                            NearestDist = dist
+                            Target = obj
+                        end
+                    end
+                end
+            end
 
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= localPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local targetHrp = player.Character.HumanoidRootPart
-            local distance = (hrp.Position - targetHrp.Position).Magnitude
+            scanGroup(workspace.Players:GetDescendants())
+            local npcs = workspace:FindFirstChild("Map", true) and workspace.Map:FindFirstChild("NPCs", true)
+            if npcs then
+                scanGroup(npcs:GetChildren())
+            end
 
-            if distance <= reachDistance then
-                assist(player.Character, distance)
+            if Target then
+                local ping = lplr:GetNetworkPing()
+                local randomOffset = Vector3.new(RNG:NextNumber(-1.5, 1.5), 0, RNG:NextNumber(-1.5, 1.5))
+                local predicted = Target.HumanoidRootPart.Position + randomOffset + (Target.HumanoidRootPart.Velocity * (ping * 1.25))
+                local neededVelocity = (predicted - HumanoidRootPart.Position) / (ping * 2)
+
+                local oldVelocity = HumanoidRootPart.Velocity
+                HumanoidRootPart.Velocity = neededVelocity
+                RunService.RenderStepped:Wait()
+                HumanoidRootPart.Velocity = oldVelocity
             end
         end
     end
 end)
+    
 LeftOther:AddToggle("AutoGen", {Text = "Auto gen", Default = true, Callback = function(v) autoGen = v end})
 LeftOther:AddInput("GenSpeed", {
     Text = "Gen Speed",
