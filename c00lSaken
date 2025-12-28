@@ -331,7 +331,6 @@ LeftOther:AddToggle("HitboxExpander", {
     Text = "Reach Expander",
     Default = false,
 })
-
 LeftOther:AddSlider("HitboxExpanderRange", {
     Text = "Reach Distance",
     Default = 10,
@@ -340,58 +339,28 @@ LeftOther:AddSlider("HitboxExpanderRange", {
     Rounding = 0,
 })
 
-task.spawn(function()
-    local RunService = game:GetService("RunService")
-    local RNG = Random.new()
+function assist(target, dist)
+    if target and dist <= 15 then
+        local pos = localPlayer.Character.HumanoidRootPart.Position
+        local targetPos = target.HumanoidRootPart.Position
 
-    local Character = lplr.Character or lplr.CharacterAdded:Wait()
-    local Humanoid = Character:WaitForChild("Humanoid")
-    local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+        localPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(Vector3.new(pos.X, pos.Y, pos.Z), Vector3.new(targetPos.X, pos.Y, targetPos.Z))
+    end
+end
+KillerMisc:AddToggle("KillerAimAssist", { 
+    Text = "Killer Aim Assist",
+    Tooltip = "helps you hit by aiming your character at the nearest survivor",
+    Callback = function()
+        while Toggles.KillerAimAssist.Value and task.wait() do
+            pcall(function()
+                if isSurvivor then return end
 
-    lplr.CharacterAdded:Connect(function(char)
-        Character = char
-        Humanoid = char:WaitForChild("Humanoid")
-        HumanoidRootPart = char:WaitForChild("HumanoidRootPart")
-    end)
-
-    while task.wait() do
-        if Toggles.HitboxExpander.Value and HumanoidRootPart then
-            local Target
-            local NearestDist = Options.HitboxExpanderRange.Value
-
-            local function scanGroup(group)
-                for _, obj in ipairs(group) do
-                    if obj ~= Character and obj:FindFirstChild("HumanoidRootPart") and obj:FindFirstChild("Humanoid") and obj.Humanoid.Health > 0 then
-                        local dist = (obj.HumanoidRootPart.Position - HumanoidRootPart.Position).Magnitude
-                        if dist < NearestDist then
-                            NearestDist = dist
-                            Target = obj
-                        end
-                    end
-                end
-            end
-
-            scanGroup(workspace.Players:GetDescendants())
-            local npcs = workspace:FindFirstChild("Map", true) and workspace.Map:FindFirstChild("NPCs", true)
-            if npcs then
-                scanGroup(npcs:GetChildren())
-            end
-
-            if Target then
-                local ping = lplr:GetNetworkPing()
-                local randomOffset = Vector3.new(RNG:NextNumber(-1.5, 1.5), 0, RNG:NextNumber(-1.5, 1.5))
-                local predicted = Target.HumanoidRootPart.Position + randomOffset + (Target.HumanoidRootPart.Velocity * (ping * 1.25))
-                local neededVelocity = (predicted - HumanoidRootPart.Position) / (ping * 2)
-
-                local oldVelocity = HumanoidRootPart.Velocity
-                HumanoidRootPart.Velocity = neededVelocity
-                RunService.RenderStepped:Wait()
-                HumanoidRootPart.Velocity = oldVelocity
-            end
+                local target, dist = getClosestSurvivor()
+                assist(target, dist)
+            end)
         end
     end
-end)
-    
+})
 LeftOther:AddToggle("AutoGen", {Text = "Auto gen", Default = true, Callback = function(v) autoGen = v end})
 LeftOther:AddInput("GenSpeed", {
     Text = "Gen Speed",
@@ -481,10 +450,9 @@ LeftOther:AddToggle("HakariDance", {
     end
 })
 _G.showChat = _G.showChat or false
-local LeftOther = OtherTab:AddLeftGroupbox("Misc")
+local RightOther = OtherTab:AddLeftGroupbox("chat")
 
--- Always Show Chat
-LeftOther:AddToggle('AlwaysShowChat', {
+RightOther:AddToggle('AlwaysShowChat', {
     Text = "Always Show Chat",
     Callback = function(state)
         if state then
