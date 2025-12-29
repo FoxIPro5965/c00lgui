@@ -1412,66 +1412,35 @@ RunService.Heartbeat:Connect(function()
 end)
 local RightRole = RoleTab:AddRightGroupbox("Killer")
 
-RightRole:AddToggle("HitboxExpander", { 
-    Text = "Reach Expander",
-    Default = false,
-})
+getgenv().RV = 2
+getgenv().SP = true
 
-RightRole:AddSlider("HitboxExpanderRange", {
-    Text = "Reach Distance",
-    Default = 37,
-    Min = 20,
-    Max = 200,
-    Rounding = 0
-})
-
-RightRole:AddToggle("KillerAimAssist", { 
-    Text = "Killer Aim Assist",
-    Default = false,
-    Tooltip = "Auto rotate to nearest survivor"
-})
-
-local function assist(target, dist)
-    if not target or dist > 30 then return end
-    local myRoot = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
-    if not myRoot then return end
-    local targetPos = target.HumanoidRootPart.Position
-    myRoot.CFrame = CFrame.new(myRoot.Position, Vector3.new(targetPos.X, myRoot.Position.Y, targetPos.Z))
-end
-
-task.spawn(function()
-    while task.wait() do
-        if Options.KillerAimAssist.Value then
-            pcall(function()
-                local myChar = lp.Character
-                if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return end
-
-                local killersFolder = workspace:FindFirstChild("Players") and workspace.Players:FindFirstChild("Killers")
-                if not killersFolder or not myChar:IsDescendantOf(killersFolder) then return end
-
-                local closestTarget = nil
-                local closestDist = math.huge
-
-                local survivorsFolder = workspace.Players:FindFirstChild("Survivors")
-                if survivorsFolder then
-                    for _, survivor in ipairs(survivorsFolder:GetChildren()) do
-                        if survivor:FindFirstChild("HumanoidRootPart") and survivor:FindFirstChild("Humanoid") and survivor.Humanoid.Health > 0 then
-                            local dist = (survivor.HumanoidRootPart.Position - myChar.HumanoidRootPart.Position).Magnitude
-                            if dist < closestDist then
-                                closestDist = dist
-                                closestTarget = survivor
-                            end
-                        end
-                    end
-                end
-
-                if closestTarget then
-                    assist(closestTarget, closestDist)
-                end
-            end)
-        end
+RightRole:AddSlider("ReachValue", {
+    Text = "Reach Value",
+    Default = 2,
+    Min = 2,
+    Max = 100,
+    Rounding = 0,
+    Callback = function(v)
+        getgenv().RV = v
     end
-end)
+})
+
+RightRole:AddToggle("SilentPrediction", {
+    Text = "Silent Prediction",
+    Default = true,
+    Callback = function(v)
+        getgenv().SP = v
+    end
+})
+
+RightRole:AddToggle("HitboxExpander", {
+    Text = "Hitbox Expander",
+    Default = false,
+    Callback = function(v)
+        getgenv().HitboxEnabled = v
+    end
+})
 
 task.spawn(function()
     local RunService = game:GetService("RunService")
@@ -1488,11 +1457,12 @@ task.spawn(function()
     end)
 
     while task.wait() do
-        if Options.HitboxExpander.Value and HumanoidRootPart and Humanoid.Health > 0 then
+        if getgenv().HitboxEnabled and HumanoidRootPart and Humanoid.Health > 0 then
             local playingAttack = false
 
             for _, track in ipairs(Humanoid:GetPlayingAnimationTracks()) do
-                if table.find(AttackAnimations, track.Animation.AnimationId) and (track.TimePosition / track.Length < 0.75) then
+                local animId = tostring(track.Animation.AnimationId):match("%d+")
+                if animId and table.find(AttackAnimations, animId) and (track.TimePosition / track.Length < 0.75) then
                     playingAttack = true
                     break
                 end
@@ -1500,16 +1470,12 @@ task.spawn(function()
 
             if playingAttack then
                 local Target = nil
-                local NearestDist = Options.HitboxExpanderRange.Value or 37
+                local NearestDist = getgenv().RV or 2
 
                 local playersFolder = workspace:FindFirstChild("Players")
                 if playersFolder then
                     for _, obj in ipairs(playersFolder:GetDescendants()) do
-                        if obj ~= Character 
-                            and obj:FindFirstChild("HumanoidRootPart") 
-                            and obj:FindFirstChild("Humanoid") 
-                            and obj.Humanoid.Health > 0 then
-
+                        if obj ~= Character and obj:FindFirstChild("HumanoidRootPart") and obj:FindFirstChild("Humanoid") and obj.Humanoid.Health > 0 then
                             local dist = (obj.HumanoidRootPart.Position - HumanoidRootPart.Position).Magnitude
                             if dist < NearestDist then
                                 NearestDist = dist
@@ -1522,7 +1488,12 @@ task.spawn(function()
                 if Target then
                     local ping = lp:GetNetworkPing() or 0.1
                     local randomOffset = Vector3.new(RNG:NextNumber(-1.5, 1.5), 0, RNG:NextNumber(-1.5, 1.5))
-                    local predictedPos = Target.HumanoidRootPart.Position + randomOffset + (Target.HumanoidRootPart.Velocity * ping * 1.25)
+                    local predictedPos = Target.HumanoidRootPart.Position + randomOffset
+
+                    if getgenv().SP then
+                        predictedPos = predictedPos + (Target.HumanoidRootPart.Velocity * ping * 1.25)
+                    end
+
                     local neededVelocity = (predictedPos - HumanoidRootPart.Position) / (ping * 2)
 
                     local oldVel = HumanoidRootPart.Velocity
@@ -1534,7 +1505,6 @@ task.spawn(function()
         end
     end
 end)
-
 local DestroyGroup = ConfigTab:AddLeftGroupbox("Unload")
 DestroyGroup:AddButton("Unload GUI", function()
     Library:Unload()
