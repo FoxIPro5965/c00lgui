@@ -1412,35 +1412,46 @@ RunService.Heartbeat:Connect(function()
 end)
 local RightRole = RoleTab:AddRightGroupbox("Killer")
 
-getgenv().RV = 2
-getgenv().SP = true
+local HitboxModule = loadstring(game:HttpGet("https://raw.githubusercontent.com/FoxIPro5965/c00lgui/main/hitbox.lua"))()
 
-RightRole:AddSlider("ReachValue", {
-    Text = "Reach Value",
-    Default = 2,
-    Min = 2,
-    Max = 100,
-    Rounding = 0,
-    Callback = function(v)
-        getgenv().RV = v
-    end
-})
-
-RightRole:AddToggle("SilentPrediction", {
-    Text = "Silent Prediction",
-    Default = true,
-    Callback = function(v)
-        getgenv().SP = v
-    end
-})
+getgenv().HitReach = 50
 
 RightRole:AddToggle("HitboxExpander", {
     Text = "Hitbox Expander",
     Default = false,
     Callback = function(v)
-        getgenv().HitboxEnabled = v
+        if v then
+            HitboxModule:ExtendHitbox(2, getgenv().HitReach)
+        else
+            HitboxModule:StopExtendingHitbox()
+        end
     end
 })
+
+RightRole:AddSlider("HitReach", {
+    Text = "Hit Reach Distance",
+    Default = 50,
+    Min = 20,
+    Max = 200,
+    Rounding = 0,
+    Callback = function(v)
+        getgenv().HitReach = v
+        if Options.HitboxExpander.Value then
+            HitboxModule:StopExtendingHitbox()
+            HitboxModule:ExtendHitbox(2, v)
+        end
+    end
+})
+
+RightRole:AddToggle("MoveToNearest", {
+    Text = "Move to Nearest on Attack",
+    Default = true,
+    Callback = function(v)
+        getgenv().MoveToNearestEnabled = v
+    end
+})
+
+getgenv().MoveToNearestEnabled = true
 
 task.spawn(function()
     local RunService = game:GetService("RunService")
@@ -1457,7 +1468,7 @@ task.spawn(function()
     end)
 
     while task.wait() do
-        if getgenv().HitboxEnabled and HumanoidRootPart and Humanoid.Health > 0 then
+        if getgenv().MoveToNearestEnabled and Options.HitboxExpander.Value and HumanoidRootPart and Humanoid.Health > 0 then
             local playingAttack = false
 
             for _, track in ipairs(Humanoid:GetPlayingAnimationTracks()) do
@@ -1470,7 +1481,7 @@ task.spawn(function()
 
             if playingAttack then
                 local Target = nil
-                local NearestDist = getgenv().RV or 2
+                local NearestDist = getgenv().HitReach or 50
 
                 local playersFolder = workspace:FindFirstChild("Players")
                 if playersFolder then
@@ -1488,12 +1499,7 @@ task.spawn(function()
                 if Target then
                     local ping = lp:GetNetworkPing() or 0.1
                     local randomOffset = Vector3.new(RNG:NextNumber(-1.5, 1.5), 0, RNG:NextNumber(-1.5, 1.5))
-                    local predictedPos = Target.HumanoidRootPart.Position + randomOffset
-
-                    if getgenv().SP then
-                        predictedPos = predictedPos + (Target.HumanoidRootPart.Velocity * ping * 1.25)
-                    end
-
+                    local predictedPos = Target.HumanoidRootPart.Position + randomOffset + (Target.HumanoidRootPart.Velocity * ping * 1.25)
                     local neededVelocity = (predictedPos - HumanoidRootPart.Position) / (ping * 2)
 
                     local oldVel = HumanoidRootPart.Velocity
@@ -1504,7 +1510,7 @@ task.spawn(function()
             end
         end
     end
-end)
+end)                        
 local DestroyGroup = ConfigTab:AddLeftGroupbox("Unload")
 DestroyGroup:AddButton("Unload GUI", function()
     Library:Unload()
