@@ -286,7 +286,7 @@ local showItems = false
 local showGen = false
 local jumpEnabled = false
 local undetectedMode = false
-local backdis = 2
+local backdis = 1.8
 
 local LeftAB = AutoBlockTab:AddLeftGroupbox("Auto Block")
 local RightAB = AutoBlockTab:AddRightGroupbox("Autopunch")
@@ -308,7 +308,7 @@ LeftBS:AddInput("BackstabRange", {Text = "Range", Default = "8", Numeric = true,
 LeftBS:AddDropdown("BackstabMode", {Text = "Mode", Default = "Around", Values = {"Behind", "Around"}, Callback = function(v) backstabMode = v end})
 LeftBS:AddInput("Backdis", {
     Text = "Backdis",
-    Default = "2",
+    Default = "1.8",
     Numeric = true,
     PlaceholderText = "0.5 - 5",
     Callback = function(text)
@@ -316,7 +316,7 @@ LeftBS:AddInput("Backdis", {
         if num and num >= 0.5 and num <= 5 then
             backdis = num
         else
-            backdis = 2.2
+            backdis = 1.8
             Library:Notify("Backdis must be between 0.5 and 5!", 3)
         end
     end
@@ -335,15 +335,15 @@ LeftOther:AddToggle("Jump", {Text = "Jump", Default = false, Callback = function
 LeftOther:AddToggle("AutoGen", {Text = "Auto gen", Default = true, Callback = function(v) autoGen = v end})
 LeftOther:AddInput("GenSpeed", {
     Text = "Gen Speed",
-    Default = "0.1",
+    Default = "0.08",
     Numeric = true,
-    PlaceholderText = "0.05 - 0.5",
+    PlaceholderText = "0.03 - 0.5",
     Callback = function(text)
         local num = tonumber(text)
-        if num and num >= 0.05 and num <= 0.5 then
+        if num and num >= 0.03 and num <= 0.5 then
             autoGenSpeed = num
         else
-            autoGenSpeed = 0.1
+            autoGenSpeed = 0.08
             Library:Notify("Gen Speed must be between 0.05 and 0.5!", 3)
         end
     end
@@ -593,8 +593,8 @@ RightStamina:AddInput("SprintSpeed", {
 
 local antiStun=false
 local antiSlow=false
-local antiBlindness=false
-local antiSubspace=false
+local antiBlindness=true
+local antiSubspace=true
 local antiHiddenStats=false
 local toggleState=false
 local originalValues={}
@@ -604,7 +604,7 @@ local anti1xConn
 
 AntiGroup:AddToggle("Anti1x", {
     Text = "Anti 1x1x1x1 popups",
-    Default = false,
+    Default = true,
     Callback = function(state)
         _G.no1x = state
 
@@ -655,7 +655,7 @@ while antiStun and task.wait() do
 local char=lp.Character
 if char and char:FindFirstChild("SpeedMultipliers") then
 local s=char.SpeedMultipliers:FindFirstChild("Stunned")
-if s then s.Value=2 end
+if s then s.Value=1.2 end
 end
 end
 end)
@@ -671,7 +671,7 @@ while antiSlow and task.wait() do
 local char=lp.Character
 if char and char:FindFirstChild("SpeedMultipliers") then
 for _,m in ipairs(char.SpeedMultipliers:GetChildren()) do
-if m.Value<1 then m.Value=1 end
+if m.Value<1 then m.Value=1.2 end
 end
 end
 end
@@ -680,7 +680,7 @@ end})
 
 AntiGroup:AddToggle("AntiBlind",{
 Text="Anti Blindness",
-Default=false,
+Default=true,
 Callback=function(v)
 antiBlindness=v
 task.spawn(function()
@@ -901,7 +901,7 @@ end)
 local killersFolder = workspace:WaitForChild("Players"):WaitForChild("Killers")
 local lastBackstab = 0
 local COOLDOWN = 10
-local HOLD = 0.29
+local HOLD = 0.295
 
 local function isBehind(hrp, khrp)
     if (hrp.Position - khrp.Position).Magnitude > backstabRange then return false end
@@ -962,7 +962,7 @@ local function clearVisual()
 end
 
 task.spawn(function()
-    while task.wait(0.5) do
+    while task.wait(1) do
         if not visualEnabled then clearVisual() bright(false) continue end
         bright(true)
         clearVisual()
@@ -998,7 +998,7 @@ local flipDistance = 20
 LeftOther:AddToggle("FrontFlip", { 
     Text = "Front Flip",
     Tooltip = "funny flip",
-    Default = true,
+    Default = false,
     Callback = function(v)
         getgenv().FlipUI.Enabled = v
     end
@@ -1225,7 +1225,7 @@ task.spawn(function()
 end)
 
 local autoGen = true
-local autoGenSpeed = 0.1
+local autoGenSpeed = 0.08
 local FlowGameModule
 local oldNew
 local hookedGen = false
@@ -1411,106 +1411,16 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 local RightRole = RoleTab:AddRightGroupbox("Killer")
-
-local HitboxModule = loadstring(game:HttpGet("https://raw.githubusercontent.com/FoxIPro5965/c00lgui/main/hitbox.lua"))()
-
-getgenv().HitReach = 50
-
-RightRole:AddToggle("HitboxExpander", {
-    Text = "Hitbox Expander",
-    Default = false,
-    Callback = function(v)
-        if v then
-            HitboxModule:ExtendHitbox(2, getgenv().HitReach)
-        else
-            HitboxModule:StopExtendingHitbox()
-        end
+RightRole:AddToggle("Hitbox", {Text = "Hitbox", Default = false, Callback = function(v)
+    hitbox = v
+    if v then
+        HitboxModule = HitboxModule or loadstring(game:HttpGet("https://raw.githubusercontent.com/FoxIPro5965/c00lgui/main/Hitbox.lua"))()
+        HitboxModule:ExtendHitbox(1.3, 500)
+    elseif HitboxModule then
+        HitboxModule:StopExtendingHitbox()
     end
-})
+end})
 
-RightRole:AddSlider("HitReach", {
-    Text = "Hit Reach Distance",
-    Default = 50,
-    Min = 20,
-    Max = 200,
-    Rounding = 0,
-    Callback = function(v)
-        getgenv().HitReach = v
-        if Options.HitboxExpander.Value then
-            HitboxModule:StopExtendingHitbox()
-            HitboxModule:ExtendHitbox(2, v)
-        end
-    end
-})
-
-RightRole:AddToggle("MoveToNearest", {
-    Text = "Move to Nearest on Attack",
-    Default = true,
-    Callback = function(v)
-        getgenv().MoveToNearestEnabled = v
-    end
-})
-
-getgenv().MoveToNearestEnabled = true
-
-task.spawn(function()
-    local RunService = game:GetService("RunService")
-    local RNG = Random.new()
-
-    local Character = lp.Character or lp.CharacterAdded:Wait()
-    local Humanoid = Character:WaitForChild("Humanoid")
-    local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
-
-    lp.CharacterAdded:Connect(function(char)
-        Character = char
-        Humanoid = char:WaitForChild("Humanoid")
-        HumanoidRootPart = char:WaitForChild("HumanoidRootPart")
-    end)
-
-    while task.wait() do
-        if getgenv().MoveToNearestEnabled and Options.HitboxExpander.Value and HumanoidRootPart and Humanoid.Health > 0 then
-            local playingAttack = false
-
-            for _, track in ipairs(Humanoid:GetPlayingAnimationTracks()) do
-                local animId = tostring(track.Animation.AnimationId):match("%d+")
-                if animId and table.find(AttackAnimations, animId) and (track.TimePosition / track.Length < 0.75) then
-                    playingAttack = true
-                    break
-                end
-            end
-
-            if playingAttack then
-                local Target = nil
-                local NearestDist = getgenv().HitReach or 50
-
-                local playersFolder = workspace:FindFirstChild("Players")
-                if playersFolder then
-                    for _, obj in ipairs(playersFolder:GetDescendants()) do
-                        if obj ~= Character and obj:FindFirstChild("HumanoidRootPart") and obj:FindFirstChild("Humanoid") and obj.Humanoid.Health > 0 then
-                            local dist = (obj.HumanoidRootPart.Position - HumanoidRootPart.Position).Magnitude
-                            if dist < NearestDist then
-                                NearestDist = dist
-                                Target = obj
-                            end
-                        end
-                    end
-                end
-
-                if Target then
-                    local ping = lp:GetNetworkPing() or 0.1
-                    local randomOffset = Vector3.new(RNG:NextNumber(-1.5, 1.5), 0, RNG:NextNumber(-1.5, 1.5))
-                    local predictedPos = Target.HumanoidRootPart.Position + randomOffset + (Target.HumanoidRootPart.Velocity * ping * 1.25)
-                    local neededVelocity = (predictedPos - HumanoidRootPart.Position) / (ping * 2)
-
-                    local oldVel = HumanoidRootPart.Velocity
-                    HumanoidRootPart.Velocity = neededVelocity
-                    RunService.RenderStepped:Wait()
-                    HumanoidRootPart.Velocity = oldVel
-                end
-            end
-        end
-    end
-end)                        
 local DestroyGroup = ConfigTab:AddLeftGroupbox("Unload")
 DestroyGroup:AddButton("Unload GUI", function()
     Library:Unload()
