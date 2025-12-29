@@ -238,6 +238,7 @@ local autoBlockTriggerSounds = {
 ["119089145505438"]=true,["121954639447247"]=true,["125213046326879"]=true,["131406927389838"]=true
 }
 
+
 local AttackAnimations = {
     "rbxassetid://131430497821198", "rbxassetid://83829782357897", "rbxassetid://126830014841198",
     "rbxassetid://126355327951215", "rbxassetid://121086746534252", "rbxassetid://105458270463374",
@@ -264,6 +265,7 @@ local AttackAnimations = {
     "rbxassetid://136323728355613", "rbxassetid://109230267448394", "rbxassetid://122709416391891",
     "rbxassetid://121808371053483", "rbxassetid://106538427162796", "rbxassetid://88451353906104"
 }
+
 
 local autoBlockOn = false
 local autoBlockAudioOn = false
