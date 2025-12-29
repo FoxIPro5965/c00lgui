@@ -1413,13 +1413,12 @@ local RightRole = RoleTab:AddRightGroupbox("Killer")
 RightRole:AddToggle("HitboxExpander", { 
     Text = "Reach Expander",
     Default = false,
-    Tooltip = "Voidsaken style - hit far with velocity prediction"
 })
 
 RightRole:AddSlider("HitboxExpanderRange", {
     Text = "Reach Distance",
-    Default = 20,
-    Min = 10,
+    Default = 37,
+    Min = 20,
     Max = 200,
     Rounding = 0
 })
@@ -1440,7 +1439,7 @@ end
 
 task.spawn(function()
     while task.wait() do
-        if Options.KillerAimAssist and Options.KillerAimAssist.Value then
+        if Options.KillerAimAssist.Value then
             pcall(function()
                 local myChar = lp.Character
                 if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return end
@@ -1491,8 +1490,7 @@ task.spawn(function()
             local playingAttack = false
 
             for _, track in ipairs(Humanoid:GetPlayingAnimationTracks()) do
-                local animId = tostring(track.Animation.AnimationId):match("%d+")
-                if animId and table.find(AttackAnimations, animId) and (track.TimePosition / track.Length < 0.75) then
+                if table.find(AttackAnimations, track.Animation.AnimationId) and (track.TimePosition / track.Length < 0.75) then
                     playingAttack = true
                     break
                 end
