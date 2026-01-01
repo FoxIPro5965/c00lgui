@@ -1420,6 +1420,93 @@ RightRole:AddToggle("Hitbox", {Text = "Hitbox", Default = false, Callback = func
         HitboxModule:StopExtendingHitbox()
     end
 end})
+local antiTwoTimeEnabled = false
+local twoTimeRange = 30
+
+local function getNearestTwoTime()
+    local char = lp.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
+    local hrp = char.HumanoidRootPart
+    
+    local nearestChar = nil
+    local nearestDist = math.huge
+    
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= lp and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local pChar = player.Character
+            local pHrp = pChar.HumanoidRootPart
+            local pHum = pChar:FindFirstChild("Humanoid")
+            if pHum and pHum.Health > 0 then
+                local nameMatch = (player.DisplayName:lower() == "twotime" or player.Name:lower() == "twotime")
+                local modelMatch = false
+                if pChar:FindFirstChild("SurvivorModel") then
+                    modelMatch = true
+                end
+                if nameMatch or modelMatch then
+                    local dist = (hrp.Position - pHrp.Position).Magnitude
+                    if dist <= twoTimeRange and dist < nearestDist then
+                        nearestDist = dist
+                        nearestChar = pChar
+                    end
+                end
+            end
+        end
+    end
+    return nearestChar
+end
+
+local function updateTwoTimeAim()
+    if not antiTwoTimeEnabled then return end
+    
+    local character = lp.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+    
+    local hrp = character.HumanoidRootPart
+    local camera = workspace.CurrentCamera
+    
+    local targetChar = getNearestTwoTime()
+    
+    if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
+        local targetHRP = targetChar.HumanoidRootPart
+        local headPos = targetChar:FindFirstChild("Head") and targetChar.Head.Position or targetHRP.Position + Vector3.new(0, 2, 0)
+        
+        local shiftLockActive = (lp.CameraMode == Enum.CameraMode.LockFirstPerson) or (UserInputService.MouseBehavior == Enum.MouseBehavior.LockCenter)
+        
+        if shiftLockActive then
+            hrp.CFrame = CFrame.new(hrp.Position, headPos)
+        else
+            camera.CFrame = CFrame.new(camera.CFrame.Position, headPos)
+        end
+    end
+end
+
+RunService.RenderStepped:Connect(function()
+    if antiTwoTimeEnabled then
+        updateTwoTimeAim()
+    end
+end)
+
+local AntiKillerGroup = AntiTab:AddLeftGroupbox("Anti Killer")
+
+AntiKillerGroup:AddToggle("HateTwoTime", {
+    Text = "I Hate 2Time",
+    Default = false,
+    Callback = function(v)
+        antiTwoTimeEnabled = v
+        Library:Notify("I Hate 2Time: " .. (v and "On" or "Off"))
+    end
+})
+
+AntiKillerGroup:AddSlider("TwoTimeRange", {
+    Text = "TwoTime Range (studs)",
+    Default = 30,
+    Min = 5,
+    Max = 60,
+    Rounding = 1,
+    Callback = function(v)
+        twoTimeRange = v
+    end
+})
 
 local DestroyGroup = ConfigTab:AddLeftGroupbox("Unload")
 DestroyGroup:AddButton("Unload GUI", function()
