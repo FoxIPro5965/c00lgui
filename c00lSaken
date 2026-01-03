@@ -850,9 +850,9 @@ RunService.RenderStepped:Connect(function()
             if animator then
                 for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
                     local animId = tostring(track.Animation.AnimationId):match("%d+")
-                    if animId and table.find(AttackAnimations, animId) then
+                    if animId and autoBlockTriggerAnims[animId] then
                         if not facingCheckEnabled or isFacing(myRoot, hrp) then
-                            task.wait(blockdelay)
+                            task.wait()
                             click("Block")
                             return
                         end
