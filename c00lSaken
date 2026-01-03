@@ -852,7 +852,7 @@ RunService.RenderStepped:Connect(function()
                     local animId = tostring(track.Animation.AnimationId):match("%d+")
                     if animId and autoBlockTriggerAnims[animId] then
                         if not facingCheckEnabled or isFacing(myRoot, hrp) then
-                            task.wait()
+                            task.wait(blockdelay)
                             click("Block")
                             return
                         end
