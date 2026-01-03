@@ -1421,83 +1421,33 @@ RightRole:AddToggle("Hitbox", {Text = "Hitbox", Default = false, Callback = func
         HitboxModule:StopExtendingHitbox()
     end
 end})
-local antiTwoTimeWarnEnabled = false
-local twoTimeWarnRange = 20
-local warningShown = false
+local AntiFakeNoliGroup = AntiTab:AddLeftGroupbox("Anti Fake Noli")
 
-local function getNearestTwoTime()
-    local char = lp.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
-    local hrp = char.HumanoidRootPart
-    
-    local nearestChar = nil
-    local nearestDist = math.huge
-    
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= lp and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local pChar = player.Character
-            local pHrp = pChar.HumanoidRootPart
-            local pHum = pChar:FindFirstChild("Humanoid")
-            if pHum and pHum.Health > 0 then
-                local nameMatch = (player.DisplayName:lower() == "twotime" or player.Name:lower() == "twotime")
-                local modelMatch = pChar:FindFirstChild("SurvivorModel") ~= nil
-                if nameMatch or modelMatch then
-                    local dist = (hrp.Position - pHrp.Position).Magnitude
-                    if dist <= twoTimeWarnRange and dist < nearestDist then
-                        nearestDist = dist
-                        nearestChar = pChar
-                    end
-                end
-            end
-        end
-    end
-    return nearestChar, nearestDist
-end
+_G.AntiFakeNoliEnabled = false
 
-RunService.RenderStepped:Connect(function()
-    if not antiTwoTimeWarnEnabled then
-        if warningShown then
-            Library:Notify("TwoTime đã đi xa hoặc chết", 3)
-            warningShown = false
-        end
-        return
-    end
-    
-    local targetChar, dist = getNearestTwoTime()
-    
-    if targetChar and dist then
-        if not warningShown then
-            Library:Notify(string.format("⚠️ WARNING: TwoTime ở gần bạn! (%.1f studs)", dist), 5)
-            warningShown = true
-        end
-    else
-        if warningShown then
-            Library:Notify("TwoTime đã đi xa hoặc chết", 3)
-            warningShown = false
-        end
-    end
-end)
-
-local AntiKillerGroup = AntiTab:AddLeftGroupbox("Anti Killer")
-
-AntiKillerGroup:AddToggle("WarnTwoTime", {
-    Text = "Warning TwoTime Near",
+AntiFakeNoliGroup:AddToggle("AntiFakeNoli", {
+    Text = "Anti Fake Noli",
     Default = false,
-    Callback = function(v)
-        antiTwoTimeWarnEnabled = v
-        warningShown = false
-        Library:Notify("Warning TwoTime: " .. (v and "On" or "Off"))
-    end
-})
-
-AntiKillerGroup:AddSlider("TwoTimeWarnRange", {
-    Text = "Warn Range (studs)",
-    Default = 20,
-    Min = 5,
-    Max = 50,
-    Rounding = 1,
-    Callback = function(v)
-        twoTimeWarnRange = v
+    Callback = function(state)
+        _G.AntiFakeNoliEnabled = state
+        
+        if state then
+            spawn(function()
+                while _G.AntiFakeNoliEnabled do
+                    pcall(function()
+                        local Killers = workspace:FindFirstChild("Players") and workspace.Players:FindFirstChild("Killers")
+                        if Killers then
+                            for _, model in pairs(Killers:GetChildren()) do
+                                if model:IsA("Model") and model:GetAttribute("IsFakeNoli") == true then
+                                    model:Destroy()
+                                end
+                            end
+                        end
+                    end)
+                    task.wait(0.2)
+                end
+            end)
+        end
     end
 })
 
