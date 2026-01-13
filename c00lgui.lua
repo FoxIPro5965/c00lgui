@@ -246,7 +246,7 @@ local function ExpandHitbox(char)
     if char and char:FindFirstChild("HumanoidRootPart") then
         local hrp = char.HumanoidRootPart
         hrp.Size = Vector3.new(Size,Size,Size)
-        hrp.Transparency = 1
+        hrp.Transparency = 0.85
         hrp.Material = Enum.Material.Neon
         hrp.BrickColor = BrickColor.new("Really red")
     end
