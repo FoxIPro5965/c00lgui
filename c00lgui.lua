@@ -1,4 +1,3 @@
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
@@ -247,7 +246,7 @@ local function ExpandHitbox(char)
     if char and char:FindFirstChild("HumanoidRootPart") then
         local hrp = char.HumanoidRootPart
         hrp.Size = Vector3.new(Size,Size,Size)
-        hrp.Transparency = 0.7
+        hrp.Transparency = 1
         hrp.Material = Enum.Material.Neon
         hrp.BrickColor = BrickColor.new("Really red")
     end
@@ -323,7 +322,7 @@ FBButton.MouseButton1Click:Connect(function()
     if fbOn then
         FBButton.Text="FullBright: ON"
         FBButton.BackgroundColor3=Color3.fromRGB(0,180,0)
-        Lighting.Brightness=3.5
+        Lighting.Brightness=3
         Lighting.Ambient=Color3.new(1,1,1)
         Lighting.OutdoorAmbient=Color3.new(1,1,1)
         Lighting.ClockTime=12
@@ -350,23 +349,53 @@ KillButton.Font=Enum.Font.GothamBold
 KillButton.TextSize=16
 Instance.new("UICorner",KillButton).CornerRadius=UDim.new(0,8)
 
-local kill=false
+--=====================
+-- KILLBRICK BUTTON
+--=====================
+local KillButton = Instance.new("TextButton")
+KillButton.Parent = MainFrame
+KillButton.Size = UDim2.new(0,220,0,35)
+KillButton.Position = UDim2.new(0,20,0,285)
+KillButton.BackgroundColor3 = Color3.fromRGB(150,0,0)
+KillButton.Text = "Godmode: OFF"
+KillButton.TextColor3 = Color3.fromRGB(255,255,255)
+KillButton.Font = Enum.Font.GothamBold
+KillButton.TextSize = 16
+Instance.new("UICorner", KillButton).CornerRadius = UDim.new(0,8)
+
+local kill = false
+local touchedParts = {}
+
 KillButton.MouseButton1Click:Connect(function()
-    kill=not kill
-    KillButton.Text=kill and "KillBrick: ON" or "KillBrick: OFF"
-    KillButton.BackgroundColor3=kill and Color3.fromRGB(0,180,0) or Color3.fromRGB(150,0,0)
+    kill = not kill
+    KillButton.Text = kill and "Godmode: ON" or "Godmode: OFF"
+    KillButton.BackgroundColor3 = kill and Color3.fromRGB(0,180,0)
+        or Color3.fromRGB(150,0,0)
 end)
 
 RunService.RenderStepped:Connect(function()
+    local char = LocalPlayer.Character
+    if not char then return end
+
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    local parts = workspace:GetPartBoundsInRadius(hrp.Position, 10)
+
     if kill then
-        local char=LocalPlayer.Character
-        if char and char:FindFirstChild("HumanoidRootPart") then
-            for _,p in ipairs(workspace:GetPartBoundsInRadius(char.HumanoidRootPart.Position,10)) do
-                if p:IsA("BasePart") then
-                    p.CanTouch=false
-                end
+        for _, p in ipairs(parts) do
+            if p:IsA("BasePart") then
+                p.CanTouch = false
+                touchedParts[p] = true
             end
         end
+    else
+        for p,_ in pairs(touchedParts) do
+            if p and p.Parent then
+                p.CanTouch = true
+            end
+        end
+        table.clear(touchedParts)
     end
 end)
 
