@@ -4,24 +4,21 @@ local UIS = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local Lighting = game:GetService("Lighting")
 
---// ScreenGui
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "c00lgui"
 ScreenGui.Parent = game.CoreGui
 ScreenGui.ResetOnSpawn = false
 
---// Main Frame
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 260, 0, 340) 
+MainFrame.Size = UDim2.new(0, 260, 0, 420)
 MainFrame.Position = UDim2.new(0.35, 0, 0.35, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(0,0,0) -- nền đen
+MainFrame.BackgroundColor3 = Color3.fromRGB(0,0,0)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.Parent = ScreenGui
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
 
--- Title
 local Title = Instance.new("TextLabel")
 Title.Parent = MainFrame
 Title.Size = UDim2.new(1, 0, 0, 30)
@@ -29,9 +26,8 @@ Title.BackgroundTransparency = 1
 Title.Text = "c00lgui v0.5"
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 18
-Title.TextColor3 = Color3.fromRGB(255,255,255) -- chữ trắng
+Title.TextColor3 = Color3.fromRGB(255,255,255)
 
--- Hitbox Label & Input
 local BoxLabel = Instance.new("TextLabel")
 BoxLabel.Parent = MainFrame
 BoxLabel.Position = UDim2.new(0,10,0,45)
@@ -40,15 +36,15 @@ BoxLabel.BackgroundTransparency = 1
 BoxLabel.Text = "Hack Hitbox :"
 BoxLabel.Font = Enum.Font.Gotham
 BoxLabel.TextSize = 14
-BoxLabel.TextColor3 = Color3.fromRGB(255,255,255) -- chữ trắng
+BoxLabel.TextColor3 = Color3.fromRGB(255,255,255)
 
 local Box = Instance.new("TextBox")
 Box.Parent = MainFrame
 Box.Size = UDim2.new(0,60,0,25)
 Box.Position = UDim2.new(0,120,0,45)
-Box.BackgroundColor3 = Color3.fromRGB(30,0,0) -- nền đỏ tối
+Box.BackgroundColor3 = Color3.fromRGB(30,0,0)
 Box.Text = "20"
-Box.TextColor3 = Color3.fromRGB(255,255,255) -- chữ trắng
+Box.TextColor3 = Color3.fromRGB(255,255,255)
 Box.Font = Enum.Font.Gotham
 Box.TextSize = 14
 Instance.new("UICorner",Box).CornerRadius = UDim.new(0,6)
@@ -57,14 +53,13 @@ local Toggle = Instance.new("TextButton")
 Toggle.Parent = MainFrame
 Toggle.Size = UDim2.new(0,220,0,35)
 Toggle.Position = UDim2.new(0,20,0,85)
-Toggle.BackgroundColor3 = Color3.fromRGB(150,0,0) -- nút đỏ
+Toggle.BackgroundColor3 = Color3.fromRGB(150,0,0)
 Toggle.Text = "OFF"
-Toggle.TextColor3 = Color3.fromRGB(255,255,255) -- chữ trắng
+Toggle.TextColor3 = Color3.fromRGB(255,255,255)
 Toggle.Font = Enum.Font.GothamBold
 Toggle.TextSize = 16
 Instance.new("UICorner",Toggle).CornerRadius = UDim.new(0,8)
 
--- Speed / Jump
 local SpeedLabel = Instance.new("TextLabel")
 SpeedLabel.Parent = MainFrame
 SpeedLabel.Position = UDim2.new(0,10,0,130)
@@ -138,7 +133,6 @@ local bv, bg, flyConn, infConn = nil, nil, nil, nil
 local flySpeed = 80
 local ctrl = {f=0, b=0, l=0, r=0, upd=0, down=0}
 
-
 local function enableInfJump()
     if infjump then return end
     infjump = true
@@ -159,7 +153,6 @@ local function setShiftLock(state)
         LocalPlayer.DevMouseLockMode = state and Enum.DevMouseLockMode.LockCenter or Enum.DevMouseLockMode.None
     end)
 end
-
 
 local function startFly()
     if flying then return end
@@ -240,8 +233,10 @@ LocalPlayer.CharacterAdded:Connect(function()
     if mode==2 then enableInfJump() end
     if mode==3 then startFly() end
 end)
+
 local Enabled=false
 local Size = tonumber(Box.Text) or 20
+
 local function ExpandHitbox(char)
     if char and char:FindFirstChild("HumanoidRootPart") then
         local hrp = char.HumanoidRootPart
@@ -251,6 +246,7 @@ local function ExpandHitbox(char)
         hrp.BrickColor = BrickColor.new("Really red")
     end
 end
+
 local function ResetHitbox(char)
     if char and char:FindFirstChild("HumanoidRootPart") then
         local hrp = char.HumanoidRootPart
@@ -259,6 +255,7 @@ local function ResetHitbox(char)
         hrp.Material = Enum.Material.Plastic
     end
 end
+
 Toggle.MouseButton1Click:Connect(function()
     Enabled = not Enabled
     if Enabled then
@@ -268,25 +265,24 @@ Toggle.MouseButton1Click:Connect(function()
         Toggle.Text="OFF"
         Toggle.BackgroundColor3=Color3.fromRGB(150,0,0)
         for _,plr in ipairs(Players:GetPlayers()) do
-            if plr~=LocalPlayer and plr.Character then ResetHitbox(plr.Character) end
-        end
-    end
-end)
-Box.FocusLost:Connect(function()
-    local val = tonumber(Box.Text)
-    if val and val>0 then Size=val else Box.Text=tostring(Size) end
-end)
-RunService.RenderStepped:Connect(function()
-    if Enabled then
-        for _,plr in ipairs(Players:GetPlayers()) do
-            if plr~=LocalPlayer and plr.Character then ExpandHitbox(plr.Character) end
+            if plr\~=LocalPlayer and plr.Character then ResetHitbox(plr.Character) end
         end
     end
 end)
 
---=====================
--- FULLBRIGHT
---=====================
+Box.FocusLost:Connect(function()
+    local val = tonumber(Box.Text)
+    if val and val>0 then Size=val else Box.Text=tostring(Size) end
+end)
+
+RunService.RenderStepped:Connect(function()
+    if Enabled then
+        for _,plr in ipairs(Players:GetPlayers()) do
+            if plr\~=LocalPlayer and plr.Character then ExpandHitbox(plr.Character) end
+        end
+    end
+end)
+
 local FBButton = Instance.new("TextButton")
 FBButton.Parent=MainFrame
 FBButton.Size=UDim2.new(0,220,0,35)
@@ -338,51 +334,33 @@ FBButton.MouseButton1Click:Connect(function()
     end
 end)
 
-local KillButton = Instance.new("TextButton")
-KillButton.Parent=MainFrame
-KillButton.Size=UDim2.new(0,220,0,35)
-KillButton.Position=UDim2.new(0,20,0,285)
-KillButton.BackgroundColor3=Color3.fromRGB(150,0,0)
-KillButton.Text="KillBrick: OFF"
-KillButton.TextColor3=Color3.fromRGB(255,255,255)
-KillButton.Font=Enum.Font.GothamBold
-KillButton.TextSize=16
-Instance.new("UICorner",KillButton).CornerRadius=UDim.new(0,8)
+local GodButton = Instance.new("TextButton")
+GodButton.Parent = MainFrame
+GodButton.Size = UDim2.new(0,220,0,35)
+GodButton.Position = UDim2.new(0,20,0,285)
+GodButton.BackgroundColor3 = Color3.fromRGB(150,0,0)
+GodButton.Text = "Godmode: OFF"
+GodButton.TextColor3 = Color3.fromRGB(255,255,255)
+GodButton.Font = Enum.Font.GothamBold
+GodButton.TextSize = 16
+Instance.new("UICorner", GodButton).CornerRadius = UDim.new(0,8)
 
---=====================
--- KILLBRICK BUTTON
---=====================
-local KillButton = Instance.new("TextButton")
-KillButton.Parent = MainFrame
-KillButton.Size = UDim2.new(0,220,0,35)
-KillButton.Position = UDim2.new(0,20,0,285)
-KillButton.BackgroundColor3 = Color3.fromRGB(150,0,0)
-KillButton.Text = "Godmode: OFF"
-KillButton.TextColor3 = Color3.fromRGB(255,255,255)
-KillButton.Font = Enum.Font.GothamBold
-KillButton.TextSize = 16
-Instance.new("UICorner", KillButton).CornerRadius = UDim.new(0,8)
-
-local kill = false
+local god = false
 local touchedParts = {}
 
-KillButton.MouseButton1Click:Connect(function()
-    kill = not kill
-    KillButton.Text = kill and "Godmode: ON" or "Godmode: OFF"
-    KillButton.BackgroundColor3 = kill and Color3.fromRGB(0,180,0)
-        or Color3.fromRGB(150,0,0)
+GodButton.MouseButton1Click:Connect(function()
+    god = not god
+    GodButton.Text = god and "Godmode: ON" or "Godmode: OFF"
+    GodButton.BackgroundColor3 = god and Color3.fromRGB(0,180,0) or Color3.fromRGB(150,0,0)
 end)
 
 RunService.RenderStepped:Connect(function()
     local char = LocalPlayer.Character
     if not char then return end
-
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
-
     local parts = workspace:GetPartBoundsInRadius(hrp.Position, 10)
-
-    if kill then
+    if god then
         for _, p in ipairs(parts) do
             if p:IsA("BasePart") then
                 p.CanTouch = false
@@ -396,6 +374,68 @@ RunService.RenderStepped:Connect(function()
             end
         end
         table.clear(touchedParts)
+    end
+end)
+
+local NoclipButton = Instance.new("TextButton")
+NoclipButton.Parent = MainFrame
+NoclipButton.Size = UDim2.new(0,220,0,35)
+NoclipButton.Position = UDim2.new(0,20,0,325)
+NoclipButton.BackgroundColor3 = Color3.fromRGB(150,0,0)
+NoclipButton.Text = "Noclip: OFF"
+NoclipButton.TextColor3 = Color3.fromRGB(255,255,255)
+NoclipButton.Font = Enum.Font.GothamBold
+NoclipButton.TextSize = 16
+Instance.new("UICorner", NoclipButton).CornerRadius = UDim.new(0,8)
+
+local noclip = false
+local noclipConnection = nil
+
+local function toggleNoclip()
+    noclip = not noclip
+    if noclip then
+        NoclipButton.Text = "Noclip: ON"
+        NoclipButton.BackgroundColor3 = Color3.fromRGB(0,180,0)
+        if noclipConnection then noclipConnection:Disconnect() end
+        noclipConnection = RunService.Stepped:Connect(function()
+            if not noclip then return end
+            local character = LocalPlayer.Character
+            if not character then return end
+            for _, part in ipairs(character:GetDescendants()) do
+                if part:IsA("BasePart") or part:IsA("MeshPart") then
+                    part.CanCollide = false
+                end
+            end
+        end)
+    else
+        NoclipButton.Text = "Noclip: OFF"
+        NoclipButton.BackgroundColor3 = Color3.fromRGB(150,0,0)
+        if noclipConnection then
+            noclipConnection:Disconnect()
+            noclipConnection = nil
+        end
+        local character = LocalPlayer.Character
+        if character then
+            for _, part in ipairs(character:GetDescendants()) do
+                if part:IsA("BasePart") or part:IsA("MeshPart") then
+                    if part.Name \~= "HumanoidRootPart" and not part.Name:match("Handle") and not part:IsDescendantOf(character:FindFirstChild("Accessory")) then
+                        part.CanCollide = true
+                    end
+                end
+            end
+        end
+    end
+end
+
+NoclipButton.MouseButton1Click:Connect(toggleNoclip)
+
+LocalPlayer.CharacterAdded:Connect(function()
+    if noclip then
+        toggleNoclip()
+        task.wait(0.6)
+        if noclip then
+            toggleNoclip()
+        end
     end
 end)
 
