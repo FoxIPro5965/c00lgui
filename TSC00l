@@ -219,9 +219,6 @@ mainTab:CreateToggle({
    end,
 })
 
-----------------------------------------------------------------------------------
--- tp tab
-
 teleportTab:CreateSection("Teleports")
 
 teleportTab:CreateButton({
@@ -273,53 +270,130 @@ teleportTab:CreateButton({
     end
 })
 local aimTab = Window:CreateTab("Aim", "target")
-
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local LocalPlayer = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
-
-local AimEnabled = false
-local MIN_DISTANCE = 6
-
-local function GetNearestPlayer()
-	local closest = nil
-	local shortest = math.huge
-
-	if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-		return nil, shortest
-	end
-
-	for _,plr in pairs(Players:GetPlayers()) do
-		if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-			local dist = (plr.Character.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
-			if dist < shortest then
-				shortest = dist
-				closest = plr
-			end
-		end
-	end
-
-	return closest, shortest
-end
+local silentAimScript
 
 aimTab:CreateToggle({
-	Name = "Silent Aim Assist",
-	CurrentValue = false,
-	Flag = "FoxSilentAim",
-	Callback = function(Value)
-		AimEnabled = Value
-	end
+    Name = "Silent Aim GUI",
+    CurrentValue = false,
+    Flag = "SilentAimLoadToggle",
+    Callback = function(Value)
+
+        if Value then
+
+            silentAimScript = loadstring([[
+                local Players = game:GetService("Players")
+                local RunService = game:GetService("RunService")
+                local LocalPlayer = Players.LocalPlayer
+
+                local silentAim = true
+                local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+                local hrp = character:WaitForChild("HumanoidRootPart")
+
+                LocalPlayer.CharacterAdded:Connect(function(char)
+                    character = char
+                    hrp = character:WaitForChild("HumanoidRootPart")
+                end)
+
+                -- GUI
+                local gui = Instance.new("ScreenGui")
+                gui.Name = "SilentAimGuiV3"
+                gui.ResetOnSpawn = false
+                gui.DisplayOrder = 999999
+                gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+                gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+                local frame = Instance.new("Frame")
+                frame.Size = UDim2.new(0,170,0,60)
+                frame.Position = UDim2.new(0.5,-90,0.2,0)
+                frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
+                frame.BorderSizePixel = 0
+                frame.Active = true
+                frame.Draggable = true
+                frame.Parent = gui
+
+                local corner = Instance.new("UICorner", frame)
+                corner.CornerRadius = UDim.new(0,12)
+
+                local stroke = Instance.new("UIStroke", frame)
+                stroke.Thickness = 2
+                stroke.Color = Color3.fromRGB(0,255,0)
+
+                local title = Instance.new("TextLabel", frame)
+                title.Size = UDim2.new(1,0,0.4,0)
+                title.BackgroundTransparency = 1
+                title.Text = "Silent Aim"
+                title.TextScaled = true
+                title.Font = Enum.Font.GothamBold
+                title.TextColor3 = Color3.fromRGB(200,200,200)
+
+                local button = Instance.new("TextButton", frame)
+                button.Size = UDim2.new(0.85,0,0.4,0)
+                button.Position = UDim2.new(0.1,0,0.5,0)
+                button.BackgroundColor3 = Color3.fromRGB(35,35,35)
+                button.BorderSizePixel = 0
+                button.Text = "ON"
+                button.TextScaled = true
+                button.Font = Enum.Font.GothamBold
+                button.TextColor3 = Color3.fromRGB(0,255,0)
+
+                local bcorner = Instance.new("UICorner", button)
+                bcorner.CornerRadius = UDim.new(0,8)
+
+                local function getClosestLiving()
+                    local closest
+                    local dist = math.huge
+
+                    for _,v in pairs(workspace:GetDescendants()) do
+                        if v:IsA("Humanoid") and v.Health > 0 and v.Parent:FindFirstChild("HumanoidRootPart") then
+                            if Players:GetPlayerFromCharacter(v.Parent) ~= LocalPlayer then
+                                local d = (v.Parent.HumanoidRootPart.Position - hrp.Position).Magnitude
+                                if d < dist then
+                                    dist = d
+                                    closest = v.Parent
+                                end
+                            end
+                        end
+                    end
+
+                    return closest
+                end
+
+                local aimConn
+                aimConn = RunService.Heartbeat:Connect(function()
+                    if silentAim and hrp then
+                        local target = getClosestLiving()
+                        if target and target:FindFirstChild("HumanoidRootPart") then
+                            local pos = target.HumanoidRootPart.Position
+                            hrp.CFrame = CFrame.new(hrp.Position, Vector3.new(pos.X, hrp.Position.Y, pos.Z))
+                        end
+                    end
+                end)
+
+                button.MouseButton1Click:Connect(function()
+                    silentAim = not silentAim
+
+                    if silentAim then
+                        button.Text = "ON"
+                        button.TextColor3 = Color3.fromRGB(0,255,0)
+                        stroke.Color = Color3.fromRGB(0,255,0)
+                        frame.BackgroundColor3 = Color3.fromRGB(25,30,25)
+                    else
+                        button.Text = "OFF"
+                        button.TextColor3 = Color3.fromRGB(120,120,120)
+                        stroke.Color = Color3.fromRGB(120,120,120)
+                        frame.BackgroundColor3 = Color3.fromRGB(30,25,25)
+                    end
+                end)
+                getgenv().RemoveSilentAim = function()
+                    if aimConn then aimConn:Disconnect() end
+                    gui:Destroy()
+                end
+            ]])()
+
+        else
+            if getgenv().RemoveSilentAim then
+                getgenv().RemoveSilentAim()
+            end
+        end
+    end
 })
-
-RunService.RenderStepped:Connect(function()
-	if not AimEnabled then return end
-	if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then return end
-
-	local target, dist = GetNearestPlayer()
-	if target and target.Character and target.Character:FindFirstChild("Head") then
-		if dist < MIN_DISTANCE then return end
-		local head = target.Character.Head
-		Camera.CFrame = CFrame.new(Camera.CFrame.Position, head.Position)
-	end
-end)
