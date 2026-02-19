@@ -274,7 +274,6 @@ teleportTab:CreateButton({
 })
 local aimTab = Window:CreateTab("Aim", "target")
 
-local silentAimEnabled = false
 local silentAimScript
 
 aimTab:CreateToggle({
@@ -282,7 +281,6 @@ aimTab:CreateToggle({
     CurrentValue = false,
     Flag = "SilentAimLoadToggle",
     Callback = function(Value)
-        silentAimEnabled = Value
         if Value then
             silentAimScript = loadstring([[
                 local Players = game:GetService("Players")
@@ -299,7 +297,7 @@ aimTab:CreateToggle({
                 end)
 
                 local gui = Instance.new("ScreenGui")
-                gui.Name = "SilentAimGuiV2"
+                gui.Name = "SilentAimGuiV3"
                 gui.ResetOnSpawn = false
                 gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
@@ -318,7 +316,7 @@ aimTab:CreateToggle({
 
                 local stroke = Instance.new("UIStroke")
                 stroke.Thickness = 2
-                stroke.Color = Color3.fromRGB(80,80,80)
+                stroke.Color = Color3.fromRGB(0,255,0)
                 stroke.Parent = frame
 
                 local text = Instance.new("TextLabel")
@@ -357,10 +355,8 @@ aimTab:CreateToggle({
                     end
                 end)
 
-                local UserInputService = game:GetService("UserInputService")
-                UserInputService.InputBegan:Connect(function(input,gp)
-                    if gp then return end
-                    if input.KeyCode == Enum.KeyCode.RightAlt then
+                frame.InputBegan:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 then
                         silentAim = not silentAim
                         if silentAim then
                             text.Text = "Silent Aim : ON"
@@ -384,4 +380,4 @@ aimTab:CreateToggle({
             end
         end
     end
-}) 
+})
