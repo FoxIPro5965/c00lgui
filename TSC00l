@@ -272,94 +272,116 @@ teleportTab:CreateButton({
         humanoidRootPart.CFrame = CFrame.new(-107, 642, -328)
     end
 })
-
 local aimTab = Window:CreateTab("Aim", "target")
 
-local silentAim = false
-local aimGui
-local dragging = false
-local dragInput, dragStart, startPos
+local silentAimEnabled = false
+local silentAimScript
 
-local function createAimGui()
-    if aimGui then return end
+aimTab:CreateToggle({
+    Name = "Silent Aim GUI",
+    CurrentValue = false,
+    Flag = "SilentAimLoadToggle",
+    Callback = function(Value)
+        silentAimEnabled = Value
+        if Value then
+            silentAimScript = loadstring([[
+                local Players = game:GetService("Players")
+                local RunService = game:GetService("RunService")
+                local LocalPlayer = Players.LocalPlayer
 
-    aimGui = Instance.new("ScreenGui")
-    aimGui.Name = "SilentAimGui"
-    aimGui.ResetOnSpawn = false
-    aimGui.Parent = localPlayer:WaitForChild("PlayerGui")
+                local silentAim = true
+                local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+                local hrp = character:WaitForChild("HumanoidRootPart")
 
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0, 160, 0, 50)
-    frame.Position = UDim2.new(0.5, -80, 0.2, 0)
-    frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    frame.BorderSizePixel = 0
-    frame.Parent = aimGui
-    frame.Active = true
-    frame.Draggable = true
+                LocalPlayer.CharacterAdded:Connect(function(char)
+                    character = char
+                    hrp = character:WaitForChild("HumanoidRootPart")
+                end)
 
-    local text = Instance.new("TextLabel")
-    text.Size = UDim2.new(1, 0, 1, 0)
-    text.BackgroundTransparency = 1
-    text.Text = "Silent Aim : OFF"
-    text.TextColor3 = Color3.fromRGB(255, 0, 0)
-    text.TextScaled = true
-    text.Font = Enum.Font.SourceSansBold
-    text.Parent = frame
+                local gui = Instance.new("ScreenGui")
+                gui.Name = "SilentAimGuiV2"
+                gui.ResetOnSpawn = false
+                gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
-    runService.RenderStepped:Connect(function()
-        if silentAim and text then
-            text.Text = "Silent Aim : ON"
-            text.TextColor3 = Color3.fromRGB(0, 255, 0)
-        elseif text then
-            text.Text = "Silent Aim : OFF"
-            text.TextColor3 = Color3.fromRGB(255, 0, 0)
-        end
-    end)
-end
+                local frame = Instance.new("Frame")
+                frame.Size = UDim2.new(0,180,0,50)
+                frame.Position = UDim2.new(0.5,-90,0.2,0)
+                frame.BackgroundColor3 = Color3.fromRGB(30,30,30)
+                frame.BorderSizePixel = 0
+                frame.Parent = gui
+                frame.Active = true
+                frame.Draggable = true
 
-local function removeAimGui()
-    if aimGui then
-        aimGui:Destroy()
-        aimGui = nil
-    end
-end
+                local corner = Instance.new("UICorner")
+                corner.CornerRadius = UDim.new(0,12)
+                corner.Parent = frame
 
-local function getClosestPlayer()
-    local closestPlayer = nil
-    local shortestDistance = math.huge
-    for _, plr in pairs(players:GetPlayers()) do
-        if plr ~= localPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Health > 0 then
-            local dist = (plr.Character.HumanoidRootPart.Position - humanoidRootPart.Position).Magnitude
-            if dist < shortestDistance then
-                shortestDistance = dist
-                closestPlayer = plr
+                local stroke = Instance.new("UIStroke")
+                stroke.Thickness = 2
+                stroke.Color = Color3.fromRGB(80,80,80)
+                stroke.Parent = frame
+
+                local text = Instance.new("TextLabel")
+                text.Size = UDim2.new(1,0,1,0)
+                text.BackgroundTransparency = 1
+                text.TextScaled = true
+                text.Font = Enum.Font.SourceSansBold
+                text.Text = "Silent Aim : ON"
+                text.TextColor3 = Color3.fromRGB(0,255,0)
+                text.Parent = frame
+
+                local function getClosestLiving()
+                    local closest
+                    local dist = math.huge
+                    for _,v in pairs(workspace:GetDescendants()) do
+                        if v:IsA("Humanoid") and v.Health > 0 and v.Parent:FindFirstChild("HumanoidRootPart") then
+                            if Players:GetPlayerFromCharacter(v.Parent) ~= LocalPlayer then
+                                local d = (v.Parent.HumanoidRootPart.Position - hrp.Position).Magnitude
+                                if d < dist then
+                                    dist = d
+                                    closest = v.Parent
+                                end
+                            end
+                        end
+                    end
+                    return closest
+                end
+
+                RunService.Heartbeat:Connect(function()
+                    if silentAim and hrp then
+                        local target = getClosestLiving()
+                        if target and target:FindFirstChild("HumanoidRootPart") then
+                            local pos = target.HumanoidRootPart.Position
+                            hrp.CFrame = CFrame.new(hrp.Position, Vector3.new(pos.X, hrp.Position.Y, pos.Z))
+                        end
+                    end
+                end)
+
+                local UserInputService = game:GetService("UserInputService")
+                UserInputService.InputBegan:Connect(function(input,gp)
+                    if gp then return end
+                    if input.KeyCode == Enum.KeyCode.RightAlt then
+                        silentAim = not silentAim
+                        if silentAim then
+                            text.Text = "Silent Aim : ON"
+                            text.TextColor3 = Color3.fromRGB(0,255,0)
+                            stroke.Color = Color3.fromRGB(0,255,0)
+                        else
+                            text.Text = "Silent Aim : OFF"
+                            text.TextColor3 = Color3.fromRGB(120,120,120)
+                            stroke.Color = Color3.fromRGB(120,120,120)
+                        end
+                    end
+                end)
+
+                getgenv().RemoveSilentAim = function()
+                    gui:Destroy()
+                end
+            ]])()
+        else
+            if getgenv().RemoveSilentAim then
+                getgenv().RemoveSilentAim()
             end
         end
     end
-    return closestPlayer
-end
-
-runService.Heartbeat:Connect(function()
-    if silentAim and humanoidRootPart then
-        local target = getClosestPlayer()
-        if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-            local targetPos = target.Character.HumanoidRootPart.Position
-            local look = CFrame.new(humanoidRootPart.Position, Vector3.new(targetPos.X, humanoidRootPart.Position.Y, targetPos.Z))
-            humanoidRootPart.CFrame = look
-        end
-    end
-end)
-
-aimTab:CreateToggle({
-    Name = "Silent Aim",
-    CurrentValue = false,
-    Flag = "SilentAimToggle",
-    Callback = function(Value)
-        silentAim = Value
-        if Value then
-            createAimGui()
-        else
-            removeAimGui()
-        end
-    end
-})
+}) 
