@@ -1,262 +1,96 @@
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local VirtualInputManager = game:GetService("VirtualInputManager")
-local LocalPlayer = Players.LocalPlayer
-local Workspace = game:GetService("Workspace")
-
-local CONFIG = {
-    ATTACK_RANGE = 50,
-    DANGER_THRESHOLD = 0.75,
-    REACTION_TIME = 0.02,
-    SHIELD_COOLDOWN = 0.18,
-    BLOCK_DURATION = 0.28,
-    VELOCITY_IMPACT_FACTOR = 0.3,
-    DASH_VELOCITY_THRESHOLD = 25,
-    MINIMUM_VELOCITY_FOR_THREAT = 5,
-    TRAJECTORY_PRECISION = 15,
-    M1_ATTACK_WEIGHT = 0.85,
-    ANIMATION_WEIGHT = 0.45,
-    DASH_WEIGHT = 0.35,
-    PROXIMITY_WEIGHT = 0.25,
-    VELOCITY_WEIGHT = 0.25,
-    TRAJECTORY_WEIGHT = 0.35,
-    ANIMATIONS_THREAT_KEYWORDS = {"slash","stab","swing","punch","kick","attack","m1","strike","lunge","dash","combo","ultimate"},
-    MINIMUM_ANIMATION_DURATION = 0.08,
-    ADDITIONAL_BLOCK_DISTANCE = 9,
-    VELOCITY_HISTORY_LIMIT = 12,
-    COMBO_DETECTION_TIME = 0.45,
-    MAX_ATTACKS_IN_COMBO = 4
-}
-
-local State = {
-    autoParryEnabled = false,
-    lastShieldTime = 0,
-    playerVelocities = {},
-    activeAttackers = {},
-    attackHistory = {},
-    lastAttackTimes = {}
-}
-
-local function isAlive(player)
-    local char = player.Character
-    if not char then return false end
-    local hum = char:FindFirstChild("Humanoid")
-    if not hum or hum.Health <= 0 then return false end
-    for _, v in char:GetChildren() do
-        if v:IsA("Accessory") and (v.Name == "Ragdoll" or v.Name == "RagdollSim") then
-            return false
-        end
-    end
-    return true
-end
-
-local ThreatSystem = {}
-
-function ThreatSystem:updateAttackHistory(player)
-    if not State.attackHistory[player] then
-        State.attackHistory[player] = {}
-        State.lastAttackTimes[player] = {}
-    end
-    local t = tick()
-    while #State.lastAttackTimes[player] > 0 and t - State.lastAttackTimes[player][1] > CONFIG.COMBO_DETECTION_TIME do
-        table.remove(State.lastAttackTimes[player], 1)
-        table.remove(State.attackHistory[player], 1)
-    end
-    table.insert(State.lastAttackTimes[player], t)
-    table.insert(State.attackHistory[player], true)
-end
-
-function ThreatSystem:checkM1ing(player)
-    local char = player.Character
-    if not char then return false end
-    local isM1 = false
-    for _, acc in char:GetChildren() do
-        if acc:IsA("Accessory") and acc.Name == "M1ing" then
-            isM1 = true
-            self:updateAttackHistory(player)
-            if not State.activeAttackers[player] then
-                State.activeAttackers[player] = tick()
-            end
-            break
-        end
-    end
-    if not isM1 and State.activeAttackers[player] then
-        State.activeAttackers[player] = nil
-    end
-    return isM1
-end
-
-function ThreatSystem:updatePlayerVelocity(player)
-    if not State.playerVelocities[player] then State.playerVelocities[player] = {} end
-    local hist = State.playerVelocities[player]
-    local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-    if root then
-        table.insert(hist, root.Velocity)
-        if #hist > CONFIG.VELOCITY_HISTORY_LIMIT then table.remove(hist, 1) end
-    end
-end
-
-function ThreatSystem:isPlayerDashing(player)
-    local hist = State.playerVelocities[player]
-    if not hist or #hist < 3 then return false end
-    local cur = hist[#hist]
-    local prev = hist[#hist-1]
-    local old = hist[#hist-2]
-    local acc1 = (cur - prev).Magnitude
-    local acc2 = (cur - old).Magnitude
-    return acc1 > CONFIG.DASH_VELOCITY_THRESHOLD and acc2 > CONFIG.DASH_VELOCITY_THRESHOLD * 0.75
-end
-
-function ThreatSystem:predictPlayerPosition(player)
-    local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-    if not root then return nil end
-    return root.Position + root.Velocity * (CONFIG.REACTION_TIME + CONFIG.BLOCK_DURATION)
-end
-
-function ThreatSystem:checkThreateningAnimations(player)
-    local char = player.Character
-    if not char then return false end
-    local hum = char:FindFirstChild("Humanoid")
-    local anim = hum and hum:FindFirstChild("Animator")
-    if not anim then return false end
-    for _, track in anim:GetPlayingAnimationTracks() do
-        if track.TimePosition > CONFIG.MINIMUM_ANIMATION_DURATION then
-            local name = track.Animation.Name:lower()
-            for _, kw in CONFIG.ANIMATIONS_THREAT_KEYWORDS do
-                if name:find(kw) then return true end
-            end
-        end
-    end
-    return false
-end
-
-function ThreatSystem:evaluateThreat(player)
-    if not player.Character or not isAlive(player) or not LocalPlayer.Character then return 0 end
-    local pRoot = player.Character:FindFirstChild("HumanoidRootPart")
-    local lRoot = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if not pRoot or not lRoot then return 0 end
-
-    local dist = (lRoot.Position - pRoot.Position).Magnitude
-    if dist > CONFIG.ATTACK_RANGE then return 0 end
-
-    local threat = 0
-    local m1 = self:checkM1ing(player)
-    if m1 then threat += CONFIG.M1_ATTACK_WEIGHT end
-
-    local prox = (1 - dist / CONFIG.ATTACK_RANGE)
-    threat += prox * CONFIG.PROXIMITY_WEIGHT * (m1 and 2 or 1)
-
-    if self:checkThreateningAnimations(player) then threat += CONFIG.ANIMATION_WEIGHT end
-
-    if pRoot.Velocity.Magnitude > CONFIG.MINIMUM_VELOCITY_FOR_THREAT then
-        local velImp = math.clamp(pRoot.Velocity.Magnitude / 28, 0, 1)
-        threat += velImp * CONFIG.VELOCITY_WEIGHT
-        if self:isPlayerDashing(player) then threat += CONFIG.DASH_WEIGHT end
-    end
-
-    local futPos = self:predictPlayerPosition(player)
-    if futPos and (futPos - lRoot.Position).Magnitude < CONFIG.ADDITIONAL_BLOCK_DISTANCE then
-        threat += CONFIG.TRAJECTORY_WEIGHT
-    end
-
-    if State.attackHistory[player] and #State.attackHistory[player] >= CONFIG.MAX_ATTACKS_IN_COMBO then
-        threat *= 1.6
-    end
-
-    return math.clamp(threat, 0, 1)
-end
-
-function ThreatSystem:getHighestThreat()
-    local maxThreat = 0
-    local target = nil
-    for _, p in Players:GetPlayers() do
-        if p \~= LocalPlayer and isAlive(p) then
-            local th = self:evaluateThreat(p)
-            if th > maxThreat then
-                maxThreat = th
-                target = p
-            end
-        end
-    end
-    return target, maxThreat
-end
-
-local function activateBlock()
-    if not State.autoParryEnabled then return end
-    local now = tick()
-    if now - State.lastShieldTime < CONFIG.SHIELD_COOLDOWN then return end
-
-    local tgt, threatLvl = ThreatSystem:getHighestThreat()
-    if tgt and threatLvl >= CONFIG.DANGER_THRESHOLD then
-        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.F, false, game)
-        State.lastShieldTime = now
-        task.delay(CONFIG.BLOCK_DURATION, function()
-            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.F, false, game)
-        end)
-    end
-end
-
-local function monitor()
-    for _, p in Players:GetPlayers() do
-        if p \~= LocalPlayer then
-            ThreatSystem:updatePlayerVelocity(p)
-        end
-    end
-    activateBlock()
-end
-
-RunService.RenderStepped:Connect(monitor)
-
-local tspeed = 0.1
-local tpwalking = false
-
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
-
-local Window = Rayfield:CreateWindow({
-   Name = "c00l TSB",
-   LoadingTitle = "c00l TSB",
-   LoadingSubtitle = "The Strongest Battlegrounds",
-   ConfigurationSaving = {Enabled = true, FileName = "c00ltsb"},
-   KeySystem = false
-})
-
-local mainTab = Window:CreateTab("Main")
-local teleportTab = Window:CreateTab("Teleport")
-local blockTab = Window:CreateTab("Block")
-
-local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local hum = char:WaitForChild("Humanoid")
-local hrp = char:WaitForChild("HumanoidRootPart")
-
-LocalPlayer.CharacterAdded:Connect(function(new)
-    char = new
-    hum = new:WaitForChild("Humanoid")
-    hrp = new:WaitForChild("HumanoidRootPart")
-end)
+--[[
+local runService = game:GetService("RunService")
+local players = game:GetService("Players")
+local localPlayer = players.LocalPlayer
+local character = localPlayer.Character
+local humanoid = character and character:WaitForChild("Humanoid")
+local humanoidRootPart = character and character:WaitForChild("HumanoidRootPart")
+local playerUserId = localPlayer.UserId
+local playerName = localPlayer.Name
 
 local function exploits()
-    if Workspace:GetAttribute("VIPServer") \~= tostring(LocalPlayer.UserId) then
-        Workspace:SetAttribute("VIPServer", tostring(LocalPlayer.UserId))
+
+    if workspace:GetAttribute("VIPServer") ~= tostring(playerUserId) then
+        workspace:SetAttribute("VIPServer", tostring(playerUserId))
     end
-    if Workspace:GetAttribute("VIPServerOwner") \~= LocalPlayer.Name then
-        Workspace:SetAttribute("VIPServerOwner", LocalPlayer.Name)
+    if workspace:GetAttribute("VIPServerOwner") ~= playerName then
+        workspace:SetAttribute("VIPServerOwner", playerName)
     end
-    if LocalPlayer:GetAttribute("ExtraSlots") == nil then
-        LocalPlayer:SetAttribute("ExtraSlots", false)
+    --
+
+    if localPlayer:GetAttribute("ExtraSlots") == nil then
+        localPlayer:SetAttribute("ExtraSlots", false)
     end
-    if LocalPlayer:GetAttribute("EmoteSearchBar") == nil then
-        LocalPlayer:SetAttribute("EmoteSearchBar", false)
+    --
+    if localPlayer:GetAttribute("EmoteSearchBar") == nil then
+        localPlayer:SetAttribute("EmoteSearchBar", false)
     end
-    if Workspace:GetAttribute("NoDashCooldown") == nil then
-        Workspace:SetAttribute("NoDashCooldown", false)
+    --
+    if workspace:GetAttribute("NoDashCooldown") == nil then
+        workspace:SetAttribute("NoDashCooldown", false)
     end
-    if Workspace:GetAttribute("NoFatigue") == nil then
-        Workspace:SetAttribute("NoFatigue", false)
+    --
+    if workspace:GetAttribute("NoFatigue") == nil then
+        workspace:SetAttribute("NoFatigue", false)
     end
+
 end
 exploits()
 
-mainTab:CreateSection("Movement")
+local tspeed = 0.1
+local tpwalking = false
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local Window = Rayfield:CreateWindow({
+   Name = "TSC00l",
+   Icon = "user",
+   LoadingTitle = "Rayfield",
+   LoadingSubtitle = "The Strongest Battleground",
+   ShowText = "Interface",
+   Theme = "Default",
+
+   ToggleUIKeybind = "K",
+
+   DisableRayfieldPrompts = false,
+   DisableBuildWarnings = false,
+
+   ConfigurationSaving = {
+      Enabled = true,
+      FolderName = nil,
+      FileName = "TSB-script"
+   },
+
+   Discord = {
+      Enabled = false, 
+      Invite = "noinvitelink", 
+      RememberJoins = true 
+   },
+
+   KeySystem = false, 
+   KeySettings = {
+      Title = "Untitled",
+      Subtitle = "Key System",
+      Note = "No method of obtaining the key is provided",
+      FileName = "Key",
+      SaveKey = true, 
+      GrabKeyFromSite = false, 
+      Key = {"2026"} 
+   }
+})
+--
+
+-- as tabs- 
+local mainTab = Window:CreateTab("Main", "user")
+local teleportTab = Window:CreateTab("Teleport", "map")
+--
+
+localPlayer.CharacterAdded:Connect(function(char)
+    character = char
+    humanoid = character:WaitForChild("Humanoid")
+    humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+end)
+
+mainTab:CreateDivider()
 
 mainTab:CreateToggle({
    Name = "Speed Boost",
@@ -279,10 +113,12 @@ mainTab:CreateSlider({
    end,
 })
 
-RunService.Heartbeat:Connect(function()
-    if tpwalking and char and hum then
-        if hum.MoveDirection.Magnitude > 0 then
-            hrp.CFrame = hrp.CFrame + (hum.MoveDirection * tspeed)
+runService.Heartbeat:Connect(function()
+    if tpwalking and character and humanoid then
+        if humanoid.MoveDirection.Magnitude > 0 then
+            if tspeed then
+                 humanoidRootPart.CFrame = humanoidRootPart.CFrame + (humanoid.MoveDirection * tspeed)
+            end
         end
     end
 end)
@@ -292,7 +128,7 @@ mainTab:CreateToggle({
    CurrentValue = false,
    Flag = "JumpBoostToggle",
    Callback = function(Value)
-       hum.UseJumpPower = not Value
+       humanoid.UseJumpPower = not Value
    end,
 })
 
@@ -304,7 +140,7 @@ mainTab:CreateSlider({
    CurrentValue = 7.2,
    Flag = "JumpBoostSlider",
    Callback = function(Value)
-       hum.JumpHeight = Value
+       humanoid.JumpHeight = Value
    end,
 })
 
@@ -312,25 +148,25 @@ mainTab:CreateDivider()
 
 mainTab:CreateSlider({
    Name = "Gravity",
-   Range = {0, 196.2},
+   Range = {0, 192.6},
    Increment = 0.1,
    Suffix = "%",
-   CurrentValue = 196.2,
+   CurrentValue = 192.6,
    Flag = "GravitySlider",
    Callback = function(Value)
-       Workspace.Gravity = Value
+       workspace.Gravity = Value
    end,
 })
 
 mainTab:CreateSlider({
    Name = "FOV",
-   Range = {30, 120},
-   Increment = 1,
+   Range = {0, 120},
+   Increment = 0.1,
    Suffix = "%",
    CurrentValue = 70,
    Flag = "FOVSlider",
    Callback = function(Value)
-       Workspace.CurrentCamera.FieldOfView = Value
+       workspace.CurrentCamera.FieldOfView = Value
    end,
 })
 
@@ -343,7 +179,7 @@ mainTab:CreateToggle({
    CurrentValue = false,
    Flag = "noDashCooldownToggle",
    Callback = function(Value)
-       Workspace:SetAttribute("NoDashCooldown", Value)
+       workspace:SetAttribute("NoDashCooldown", Value)
    end,
 })
 
@@ -352,7 +188,7 @@ mainTab:CreateToggle({
    CurrentValue = false,
    Flag = "noFatigueToggle",
    Callback = function(Value)
-       Workspace:SetAttribute("NoFatigue", Value)
+       workspace:SetAttribute("NoFatigue", Value)
    end,
 })
 
@@ -363,7 +199,7 @@ mainTab:CreateToggle({
    CurrentValue = false,
    Flag = "emotesExtraSlotsToggle",
    Callback = function(Value)
-       LocalPlayer:SetAttribute("ExtraSlots", Value)
+         localPlayer:SetAttribute("ExtraSlots", Value)
    end,
 })
 
@@ -372,114 +208,60 @@ mainTab:CreateToggle({
    CurrentValue = false,
    Flag = "emotesSearchBarToggle",
    Callback = function(Value)
-       LocalPlayer:SetAttribute("EmoteSearchBar", Value)
+       localPlayer:SetAttribute("EmoteSearchBar", Value)
    end,
 })
+
+----------------------------------------------------------------------------------
+-- tp tab
 
 teleportTab:CreateSection("Teleports")
 
 teleportTab:CreateButton({
-    Name = "Middle",
+    Name = "middle",
     Callback = function()
-        hrp.CFrame = CFrame.new(148, 441, 27)
+        humanoidRootPart.CFrame = CFrame.new(148, 441, 27)
     end
 })
 
 teleportTab:CreateButton({
     Name = "Atomic Room",
     Callback = function()
-        hrp.CFrame = CFrame.new(1079, 155, 23003)
+        humanoidRootPart.CFrame = CFrame.new(1079, 155, 23003)
     end
 })
 
 teleportTab:CreateButton({
     Name = "Death Counter Room",
     Callback = function()
-        hrp.CFrame = CFrame.new(-92, 29, 20347)
+        humanoidRootPart.CFrame = CFrame.new(-92, 29, 20347)
     end
 })
 
 teleportTab:CreateButton({
     Name = "Baseplate",
     Callback = function()
-        hrp.CFrame = CFrame.new(968, 20, 23088)
+        humanoidRootPart.CFrame = CFrame.new(968, 20, 23088)
     end
 })
 
 teleportTab:CreateButton({
     Name = "Mountain 1",
     Callback = function()
-        hrp.CFrame = CFrame.new(266, 699, 458)
+        humanoidRootPart.CFrame = CFrame.new(266, 699, 458)
     end
 })
 
 teleportTab:CreateButton({
     Name = "Mountain 2",
     Callback = function()
-        hrp.CFrame = CFrame.new(551, 630, -265)
+        humanoidRootPart.CFrame = CFrame.new(551, 630, -265)
     end
 })
 
 teleportTab:CreateButton({
     Name = "Mountain 3",
     Callback = function()
-        hrp.CFrame = CFrame.new(-107, 642, -328)
+        humanoidRootPart.CFrame = CFrame.new(-107, 642, -328)
     end
-})
-
-blockTab:CreateSection("Auto Parry")
-
-blockTab:CreateToggle({
-   Name = "Auto Parry",
-   CurrentValue = false,
-   Flag = "AutoParryToggle",
-   Callback = function(Value)
-       State.autoParryEnabled = Value
-   end,
-})
-
-blockTab:CreateSlider({
-   Name = "Danger Threshold",
-   Range = {0.5, 0.95},
-   Increment = 0.01,
-   CurrentValue = 0.75,
-   Flag = "DangerThreshold",
-   Callback = function(Value)
-       CONFIG.DANGER_THRESHOLD = Value
-   end,
-})
-
-blockTab:CreateSlider({
-   Name = "Block Duration",
-   Range = {0.15, 0.45},
-   Increment = 0.01,
-   Suffix = "s",
-   CurrentValue = 0.28,
-   Flag = "BlockDuration",
-   Callback = function(Value)
-       CONFIG.BLOCK_DURATION = Value
-   end,
-})
-
-blockTab:CreateSlider({
-   Name = "Shield Cooldown",
-   Range = {0.1, 0.4},
-   Increment = 0.01,
-   Suffix = "s",
-   CurrentValue = 0.18,
-   Flag = "ShieldCooldown",
-   Callback = function(Value)
-       CONFIG.SHIELD_COOLDOWN = Value
-   end,
-})
-
-blockTab:CreateSlider({
-   Name = "Attack Range",
-   Range = {35, 70},
-   Increment = 1,
-   CurrentValue = 50,
-   Flag = "AttackRange",
-   Callback = function(Value)
-       CONFIG.ATTACK_RANGE = Value
-   end,
 })
