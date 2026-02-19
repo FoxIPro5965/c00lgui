@@ -53,7 +53,7 @@ local Window = Rayfield:CreateWindow({
    Icon = "user",
    LoadingTitle = "c00lgui",
    LoadingSubtitle = "The Strongest Battleground",
-   ShowText = "enter",
+   ShowText = "c00lgui",
    Theme = "Default",
 
    ToggleUIKeybind = "K",
