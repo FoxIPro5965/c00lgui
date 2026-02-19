@@ -273,18 +273,23 @@ teleportTab:CreateButton({
     end
 })
 local aimTab = Window:CreateTab("Aim", "target")
+local silentAimScript
 
 aimTab:CreateToggle({
     Name = "Silent Aim GUI",
     CurrentValue = false,
     Flag = "SilentAimLoadToggle",
     Callback = function(Value)
+
+        -- BẬT
         if Value then
-            loadstring([[
+
+            silentAimScript = loadstring([[
                 local Players = game:GetService("Players")
                 local RunService = game:GetService("RunService")
                 local LocalPlayer = Players.LocalPlayer
 
+                local silentAim = true
                 local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
                 local hrp = character:WaitForChild("HumanoidRootPart")
 
@@ -293,67 +298,57 @@ aimTab:CreateToggle({
                     hrp = character:WaitForChild("HumanoidRootPart")
                 end)
 
-                if game:GetService("ReplicatedStorage"):FindFirstChild("SilentAimState") then
-                    game:GetService("ReplicatedStorage").SilentAimState:Destroy()
-                end
-
-                local state = Instance.new("BoolValue")
-                state.Name = "SilentAimState"
-                state.Value = true
-                state.Parent = game:GetService("ReplicatedStorage")
-
+                -- GUI
                 local gui = Instance.new("ScreenGui")
-                gui.Name = "SilentAimGuiFINAL"
+                gui.Name = "SilentAimGuiV3"
                 gui.ResetOnSpawn = false
-                gui.Parent = LocalPlayer.PlayerGui
+                gui.DisplayOrder = 999999
+                gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+                gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
                 local frame = Instance.new("Frame")
-                frame.Size = UDim2.new(0,180,0,50)
+                frame.Size = UDim2.new(0,180,0,70)
                 frame.Position = UDim2.new(0.5,-90,0.2,0)
-                frame.BackgroundColor3 = Color3.fromRGB(30,30,30)
+                frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
                 frame.BorderSizePixel = 0
-                frame.Parent = gui
                 frame.Active = true
                 frame.Draggable = true
+                frame.Parent = gui
 
-                local corner = Instance.new("UICorner")
+                local corner = Instance.new("UICorner", frame)
                 corner.CornerRadius = UDim.new(0,12)
-                corner.Parent = frame
 
-                local stroke = Instance.new("UIStroke")
+                local stroke = Instance.new("UIStroke", frame)
                 stroke.Thickness = 2
-                stroke.Parent = frame
+                stroke.Color = Color3.fromRGB(0,255,0)
 
-                local text = Instance.new("TextLabel")
-                text.Size = UDim2.new(1,0,1,0)
-                text.BackgroundTransparency = 1
-                text.TextScaled = true
-                text.Font = Enum.Font.SourceSansBold
-                text.Parent = frame
+                local title = Instance.new("TextLabel", frame)
+                title.Size = UDim2.new(1,0,0.4,0)
+                title.BackgroundTransparency = 1
+                title.Text = "Silent Aim"
+                title.TextScaled = true
+                title.Font = Enum.Font.GothamBold
+                title.TextColor3 = Color3.fromRGB(200,200,200)
 
-                local function updateUI()
-                    if state.Value then
-                        text.Text = "Silent Aim : ON"
-                        text.TextColor3 = Color3.fromRGB(0,255,0)
-                        stroke.Color = Color3.fromRGB(0,255,0)
-                    else
-                        text.Text = "Silent Aim : OFF"
-                        text.TextColor3 = Color3.fromRGB(120,120,120)
-                        stroke.Color = Color3.fromRGB(120,120,120)
-                    end
-                end
-                updateUI()
+                -- BUTTON
+                local button = Instance.new("TextButton", frame)
+                button.Size = UDim2.new(0.8,0,0.35,0)
+                button.Position = UDim2.new(0.1,0,0.5,0)
+                button.BackgroundColor3 = Color3.fromRGB(35,35,35)
+                button.BorderSizePixel = 0
+                button.Text = "ON"
+                button.TextScaled = true
+                button.Font = Enum.Font.GothamBold
+                button.TextColor3 = Color3.fromRGB(0,255,0)
 
-                frame.InputBegan:Connect(function(input)
-                    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                        state.Value = not state.Value
-                        updateUI()
-                    end
-                end)
+                local bcorner = Instance.new("UICorner", button)
+                bcorner.CornerRadius = UDim.new(0,8)
 
+                -- FIND TARGET
                 local function getClosestLiving()
                     local closest
                     local dist = math.huge
+
                     for _,v in pairs(workspace:GetDescendants()) do
                         if v:IsA("Humanoid") and v.Health > 0 and v.Parent:FindFirstChild("HumanoidRootPart") then
                             if Players:GetPlayerFromCharacter(v.Parent) ~= LocalPlayer then
@@ -365,11 +360,14 @@ aimTab:CreateToggle({
                             end
                         end
                     end
+
                     return closest
                 end
 
-                RunService.Heartbeat:Connect(function()
-                    if state.Value and hrp then
+                -- AIM LOOP
+                local aimConn
+                aimConn = RunService.Heartbeat:Connect(function()
+                    if silentAim and hrp then
                         local target = getClosestLiving()
                         if target and target:FindFirstChild("HumanoidRootPart") then
                             local pos = target.HumanoidRootPart.Position
@@ -378,11 +376,31 @@ aimTab:CreateToggle({
                     end
                 end)
 
+                -- TOGGLE BUTTON (FIX)
+                button.MouseButton1Click:Connect(function()
+                    silentAim = not silentAim
+
+                    if silentAim then
+                        button.Text = "ON"
+                        button.TextColor3 = Color3.fromRGB(0,255,0)
+                        stroke.Color = Color3.fromRGB(0,255,0)
+                        frame.BackgroundColor3 = Color3.fromRGB(25,30,25)
+                    else
+                        button.Text = "OFF"
+                        button.TextColor3 = Color3.fromRGB(120,120,120)
+                        stroke.Color = Color3.fromRGB(120,120,120)
+                        frame.BackgroundColor3 = Color3.fromRGB(30,25,25)
+                    end
+                end)
+
+                -- REMOVE FUNCTION
                 getgenv().RemoveSilentAim = function()
+                    if aimConn then aimConn:Disconnect() end
                     gui:Destroy()
-                    state:Destroy()
                 end
             ]])()
+
+        -- TẮT GUI
         else
             if getgenv().RemoveSilentAim then
                 getgenv().RemoveSilentAim()
