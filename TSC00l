@@ -1,4 +1,3 @@
---[[
 local runService = game:GetService("RunService")
 local players = game:GetService("Players")
 local localPlayer = players.LocalPlayer
@@ -34,6 +33,63 @@ local function exploits()
         workspace:SetAttribute("NoFatigue", false)
     end
 
+end
+exploits()
+
+local tspeed = 0.1
+local tpwalking = false
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local Window = Rayfield:CreateWindow({
+   Name = "TSC00l",
+   Icon = "user",
+   LoadingTitle = "Rayfield",
+   LoadingSubtitle = "The Strongest Battleground",
+   ShowText = "Interface",
+   Theme = "Default",
+
+   ToggleUIKeybind = "K",
+
+   DisableRayfieldPrompts = false,
+   DisableBuildWarnings = false,
+
+   ConfigurationSaving = {
+      Enabled = true,
+      FolderName = nil,
+      FileName = "TSB-script"
+   },
+
+   Discord = {
+      Enabled = false, 
+      Invite = "noinvitelink", 
+      RememberJoins = true 
+   },
+
+   KeySystem = false, 
+   KeySettings = {
+      Title = "Untitled",
+      Subtitle = "Key System",
+      Note = "No method of obtaining the key is provided",
+      FileName = "Key",
+      SaveKey = true, 
+      GrabKeyFromSite = false, 
+      Key = {"2026"} 
+   }
+})
+local mainTab = Window:CreateTab("Main", "user")
+local teleportTab = Window:CreateTab("Teleport", "map")
+
+localPlayer.CharacterAdded:Connect(function(char)
+    character = char
+    humanoid = character:WaitForChild("Humanoid")
+    humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+end)
+
+mainTab:CreateDivider()
+
+mainTab:CreateToggle({
+   Name = "Speed Boost",
+   CurrentValue = false,
 end
 exploits()
 
