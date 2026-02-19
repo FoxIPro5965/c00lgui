@@ -312,11 +312,6 @@ aimTab:CreateToggle({
 	end
 })
 
-aimTab:CreateParagraph({
-	Title = "Info",
-	Content = "Aim sẽ tự ngừng khi player đứng quá gần để tránh quay vòng."
-})
-
 RunService.RenderStepped:Connect(function()
 	if not AimEnabled then return end
 	if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then return end
