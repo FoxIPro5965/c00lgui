@@ -286,7 +286,7 @@ aimTab:CreateToggle({
                 local LocalPlayer = Players.LocalPlayer
 
                 local silentAim = true
-                local MIN_DISTANCE = 5
+                local MIN_DISTANCE = 3
 
                 local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
                 local hrp = character:WaitForChild("HumanoidRootPart")
