@@ -90,57 +90,6 @@ local Window = Rayfield:CreateWindow({
 local mainTab = Window:CreateTab("Main", "user")
 local teleportTab = Window:CreateTab("Teleport", "map")
 --
-local autoPunch = false
-local PUNCH_DISTANCE = 16
-local punchDelay = 0.15
-
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local LocalPlayer = Players.LocalPlayer
-local function getPunchRemote()
-    for _,v in pairs(game.ReplicatedStorage:GetDescendants()) do
-        if v:IsA("RemoteEvent") and (v.Name:lower():find("punch") or v.Name:lower():find("m1")) then
-            return v
-        end
-    end
-end
-
-local PunchRemote = getPunchRemote()
-
-local function getClosestPlayer()
-    local char = LocalPlayer.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-
-    local closest, dist = nil, math.huge
-    for _,plr in pairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-            local d = (plr.Character.HumanoidRootPart.Position - hrp.Position).Magnitude
-            if d < dist then
-                dist = d
-                closest = plr
-            end
-        end
-    end
-    return closest, dist
-end
-
--- Auto Punch Loop
-task.spawn(function()
-    while task.wait(punchDelay) do
-        if autoPunch and PunchRemote then
-            local target, dist = getClosestPlayer()
-            if target and dist <= PUNCH_DISTANCE then
-                PunchRemote:FireServer()
-            end
-        end
-    end
-end)
-localPlayer.CharacterAdded:Connect(function(char)
-    character = char
-    humanoid = character:WaitForChild("Humanoid")
-    humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-end)
 local autoTP = false
 
 local LOW_HP = 5
@@ -153,6 +102,10 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
+local escaped = false
+local lastTP = 0
+local TP_COOLDOWN = 2
+
 local function getHumanoid()
     local char = LocalPlayer.Character
     if char then
@@ -164,14 +117,20 @@ RunService.Heartbeat:Connect(function()
     if not autoTP then return end
 
     local humanoid, hrp = getHumanoid()
-    if humanoid and hrp then
-        local hp = humanoid.Health
+    if not humanoid or not hrp then return end
 
-        if hp <= LOW_HP then
-            hrp.CFrame = BASEPLATE_CF
-        elseif hp >= SAFE_HP then
-            hrp.CFrame = MIDDLE_CF
-        end
+    local hp = humanoid.Health
+    local t = tick()
+
+    if not escaped and hp <= LOW_HP and t - lastTP > TP_COOLDOWN then
+        escaped = true
+        lastTP = t
+        hrp.CFrame = BASEPLATE_CF
+    end
+    if escaped and hp >= SAFE_HP and t - lastTP > TP_COOLDOWN then
+        escaped = false
+        lastTP = t
+        hrp.CFrame = MIDDLE_CF
     end
 end)
 mainTab:CreateDivider()
@@ -275,14 +234,6 @@ mainTab:CreateToggle({
        workspace:SetAttribute("NoFatigue", Value)
    end,
 })
-mainTab:CreateToggle({
-    Name = "Auto Punch",
-    CurrentValue = false,
-    Flag = "AutoPunchToggle",
-    Callback = function(Value)
-        autoPunch = Value
-    end,
-})
 
 mainTab:CreateDivider()
 
@@ -294,7 +245,6 @@ mainTab:CreateToggle({
          localPlayer:SetAttribute("ExtraSlots", Value)
    end,
 })
-
 mainTab:CreateToggle({
    Name = "Emotes Search Bar",
    CurrentValue = false,
@@ -306,7 +256,7 @@ mainTab:CreateToggle({
 mainTab:CreateToggle({
     Name = "Auto TP When Low HP",
     CurrentValue = false,
-    Flag = "AutoTPLowHP",
+    Flag = "AutoTPCycle",
     Callback = function(Value)
         autoTP = Value
     end,
