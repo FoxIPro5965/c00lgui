@@ -6,7 +6,8 @@ local humanoid = character and character:WaitForChild("Humanoid")
 local humanoidRootPart = character and character:WaitForChild("HumanoidRootPart")
 local playerUserId = localPlayer.UserId
 local playerName = localPlayer.Name
-
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local AutoCounter = false 
 --
 
 -- exploits
@@ -158,6 +159,121 @@ RunService.Heartbeat:Connect(function()
         hrp.CFrame = getRandomSpawn()
     end
 end)
+local targetids = {
+    [14046756619] = true,[13309500827] = true,[13376962659] = true,
+    [15290930205] = true,[13630786846] = true,[16597912086] = true,[10468665991] = true
+}
+
+local sixmeterids = {
+    [10466974800] = true,[17799224866] = true,[12534735382] = true,[10470104242] = true
+}
+
+local sevenpointfivemeterids = {
+    [15295895753] = true
+}
+
+local fifteenmeterids = {
+    [16597912086] = true,[16431491215] = true
+}
+
+local specialid = 16139108718
+
+local timecheckids = {
+    [12272894215] = true,[12296882427] = true
+}
+
+local delayids = {
+    [12509505723] = true,[17857788598] = true,[14299135500] = true,[14351441234] = true
+}
+
+local delayidranges = {
+    [12509505723] = 36,[17857788598] = 36,[14299135500] = 9,[14351441234] = 10
+}
+
+local function ActivateCounterTool()
+    local backpack = LocalPlayer:FindFirstChild("Backpack")
+    if not backpack then return end
+    local tool = backpack:FindFirstChild("Prey's Peril") or backpack:FindFirstChild("Split Second Counter")
+    if tool then
+        tool.Parent = LocalPlayer.Character
+        tool.Parent = backpack
+    end
+end
+
+local function PressF()
+    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.F, false, nil)
+    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.F, false, nil)
+end
+
+local function GetAnimations(player)
+    local char = player.Character
+    if not char then return {} end
+    local hum = char:FindFirstChild("Humanoid")
+    if not hum then return {} end
+    local animator = hum:FindFirstChild("Animator")
+    if not animator then return {} end
+
+    local anims = {}
+    for _, track in pairs(animator:GetPlayingAnimationTracks()) do
+        local id = tonumber(track.Animation.AnimationId:match("%d+$"))
+        if id then
+            anims[id] = track.TimePosition
+        end
+    end
+    return anims
+end
+RunService.RenderStepped:Connect(function()
+    if not AutoCounter then return end
+
+    local char = LocalPlayer.Character
+    if not char or not char.PrimaryPart then return end
+    local myPos = char.PrimaryPart.Position
+
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer and plr.Character and plr.Character.PrimaryPart then
+            local dist = (plr.Character.PrimaryPart.Position - myPos).Magnitude
+            if dist <= 36 then
+                local anims = GetAnimations(plr)
+
+                for id, timePos in pairs(anims) do
+                    if id == 15295895753 then
+                        task.delay(0.5, ActivateCounterTool)
+
+                    elseif id == 14351441234 then
+                        if timePos < 0.45 and dist <= delayidranges[id] then
+                            ActivateCounterTool()
+                        end
+
+                    elseif timecheckids[id] then
+                        if timePos < 0.15 and dist <= 10 then
+                            ActivateCounterTool()
+                        end
+
+                    elseif delayids[id] then
+                        if dist <= delayidranges[id] then
+                            task.delay(0.15, ActivateCounterTool)
+                        end
+
+                    else
+                        if fifteenmeterids[id] and dist <= 15 then
+                            ActivateCounterTool()
+                        elseif sevenpointfivemeterids[id] and dist <= 10 then
+                            ActivateCounterTool()
+                        elseif sixmeterids[id] and dist <= 9 then
+                            ActivateCounterTool()
+                        elseif dist <= 36 then
+                            if id == specialid then
+                                PressF()
+                            elseif targetids[id] then
+                                ActivateCounterTool()
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
 mainTab:CreateDivider()
 
 mainTab:CreateToggle({
@@ -258,6 +374,14 @@ mainTab:CreateToggle({
    Callback = function(Value)
        workspace:SetAttribute("NoFatigue", Value)
    end,
+})
+
+MainTab:CreateToggle({
+   Name = "Auto Counter(only Garou)",
+   CurrentValue = false,
+   Callback = function(Value)
+       AutoCounter = Value
+   end
 })
 
 mainTab:CreateDivider()
