@@ -92,8 +92,8 @@ local teleportTab = Window:CreateTab("Teleport", "map")
 --
 local autoTP = false
 
-local LOW_HP = 5
-local SAFE_HP = 30
+local LOW_HP = 10
+local SAFE_HP = 40
 
 local BASEPLATE_CF = CFrame.new(968, 20, 23088)
 local MIDDLE_CF = CFrame.new(148, 441, 27)
@@ -104,7 +104,7 @@ local LocalPlayer = Players.LocalPlayer
 
 local escaped = false
 local lastTP = 0
-local TP_COOLDOWN = 2
+local TP_COOLDOWN = 30
 
 local function getHumanoid()
     local char = LocalPlayer.Character
