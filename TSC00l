@@ -286,6 +286,8 @@ aimTab:CreateToggle({
                 local LocalPlayer = Players.LocalPlayer
 
                 local silentAim = true
+                local MIN_DISTANCE = 5
+
                 local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
                 local hrp = character:WaitForChild("HumanoidRootPart")
 
@@ -296,7 +298,7 @@ aimTab:CreateToggle({
 
                 -- GUI
                 local gui = Instance.new("ScreenGui")
-                gui.Name = "SilentAimGuiV3"
+                gui.Name = "SilentAimGuiV4"
                 gui.ResetOnSpawn = false
                 gui.DisplayOrder = 999999
                 gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
@@ -355,14 +357,14 @@ aimTab:CreateToggle({
                         end
                     end
 
-                    return closest
+                    return closest, dist
                 end
 
                 local aimConn
                 aimConn = RunService.Heartbeat:Connect(function()
                     if silentAim and hrp then
-                        local target = getClosestLiving()
-                        if target and target:FindFirstChild("HumanoidRootPart") then
+                        local target, dist = getClosestLiving()
+                        if target and target:FindFirstChild("HumanoidRootPart") and dist > MIN_DISTANCE then
                             local pos = target.HumanoidRootPart.Position
                             hrp.CFrame = CFrame.new(hrp.Position, Vector3.new(pos.X, hrp.Position.Y, pos.Z))
                         end
@@ -384,6 +386,7 @@ aimTab:CreateToggle({
                         frame.BackgroundColor3 = Color3.fromRGB(30,25,25)
                     end
                 end)
+
                 getgenv().RemoveSilentAim = function()
                     if aimConn then aimConn:Disconnect() end
                     gui:Destroy()
