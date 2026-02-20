@@ -246,7 +246,7 @@ mainTab:CreateToggle({
    end,
 })
 mainTab:CreateToggle({
-    Name = "Auto Punch (16 Studs)",
+    Name = "Auto Punch",
     CurrentValue = false,
     Flag = "AutoPunchToggle",
     Callback = function(Value)
@@ -341,7 +341,7 @@ aimTab:CreateToggle({
                 local LocalPlayer = Players.LocalPlayer
 
                 local silentAim = true
-                local MIN_DISTANCE = 3
+                local MIN_DISTANCE = 4.2
 
                 local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
                 local hrp = character:WaitForChild("HumanoidRootPart")
