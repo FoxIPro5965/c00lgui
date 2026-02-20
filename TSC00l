@@ -92,8 +92,8 @@ local teleportTab = Window:CreateTab("Teleport", "map")
 --
 local autoTP = false
 
-local LOW_HP = 10
-local SAFE_HP = 40
+local LOW_HP = 20
+local SAFE_HP = 50
 
 local BASEPLATE_CF = CFrame.new(968, 20, 23088)
 local MIDDLE_CF = CFrame.new(148, 441, 27)
@@ -104,7 +104,7 @@ local LocalPlayer = Players.LocalPlayer
 
 local escaped = false
 local lastTP = 0
-local TP_COOLDOWN = 30
+local TP_COOLDOWN = 5
 
 local function getHumanoid()
     local char = LocalPlayer.Character
@@ -112,6 +112,24 @@ local function getHumanoid()
         return char:FindFirstChildOfClass("Humanoid"), char:FindFirstChild("HumanoidRootPart")
     end
 end
+
+LocalPlayer.CharacterAdded:Connect(function(char)
+    escaped = false
+    lastTP = 0
+end)
+
+local function setupHumanoid(char)
+    local hum = char:WaitForChild("Humanoid")
+    hum.Died:Connect(function()
+        escaped = false
+        lastTP = 0
+    end)
+end
+
+if LocalPlayer.Character then
+    setupHumanoid(LocalPlayer.Character)
+end
+LocalPlayer.CharacterAdded:Connect(setupHumanoid)
 
 RunService.Heartbeat:Connect(function()
     if not autoTP then return end
