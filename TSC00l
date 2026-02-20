@@ -90,7 +90,54 @@ local Window = Rayfield:CreateWindow({
 local mainTab = Window:CreateTab("Main", "user")
 local teleportTab = Window:CreateTab("Teleport", "map")
 --
+local autoPunch = false
+local PUNCH_DISTANCE = 16
+local punchDelay = 0.15
 
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+-- tìm remote punch (TSB thường đổi tên)
+local function getPunchRemote()
+    for _,v in pairs(game.ReplicatedStorage:GetDescendants()) do
+        if v:IsA("RemoteEvent") and (v.Name:lower():find("punch") or v.Name:lower():find("hit")) then
+            return v
+        end
+    end
+end
+
+local PunchRemote = getPunchRemote()
+
+local function getClosestPlayer()
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    local closest, dist = nil, math.huge
+    for _,plr in pairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+            local d = (plr.Character.HumanoidRootPart.Position - hrp.Position).Magnitude
+            if d < dist then
+                dist = d
+                closest = plr
+            end
+        end
+    end
+    return closest, dist
+end
+
+-- Auto Punch Loop
+task.spawn(function()
+    while task.wait(punchDelay) do
+        if autoPunch and PunchRemote then
+            local target, dist = getClosestPlayer()
+            if target and dist <= PUNCH_DISTANCE then
+                PunchRemote:FireServer()
+            end
+        end
+    end
+end)
 localPlayer.CharacterAdded:Connect(function(char)
     character = char
     humanoid = character:WaitForChild("Humanoid")
@@ -197,6 +244,14 @@ mainTab:CreateToggle({
    Callback = function(Value)
        workspace:SetAttribute("NoFatigue", Value)
    end,
+})
+mainTab:CreateToggle({
+    Name = "Auto Punch (16 Studs)",
+    CurrentValue = false,
+    Flag = "AutoPunchToggle",
+    Callback = function(Value)
+        autoPunch = Value
+    end,
 })
 
 mainTab:CreateDivider()
