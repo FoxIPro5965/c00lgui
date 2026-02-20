@@ -97,7 +97,8 @@ local SPAWN_POSITIONS = {
     CFrame.new(64.84335, 440.75439, 60.43266),
     CFrame.new(186.90005, 441.11267, -208.81953)
 }
-
+local SPAWN1_CF = SPAWN_POSITIONS[1]
+local SPAWN2_CF = SPAWN_POSITIONS[2]
 local function getRandomSpawn()
     return SPAWN_POSITIONS[math.random(#SPAWN_POSITIONS)]
 end
@@ -376,7 +377,7 @@ mainTab:CreateToggle({
    end,
 })
 
-MainTab:CreateToggle({
+mainTab:CreateToggle({
    Name = "Auto Counter(only Garou)",
    CurrentValue = false,
    Callback = function(Value)
