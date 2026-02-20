@@ -97,11 +97,9 @@ local punchDelay = 0.15
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
-
--- tìm remote punch (TSB thường đổi tên)
 local function getPunchRemote()
     for _,v in pairs(game.ReplicatedStorage:GetDescendants()) do
-        if v:IsA("RemoteEvent") and (v.Name:lower():find("punch") or v.Name:lower():find("hit")) then
+        if v:IsA("RemoteEvent") and (v.Name:lower():find("punch") or v.Name:lower():find("m1")) then
             return v
         end
     end
@@ -143,7 +141,39 @@ localPlayer.CharacterAdded:Connect(function(char)
     humanoid = character:WaitForChild("Humanoid")
     humanoidRootPart = character:WaitForChild("HumanoidRootPart")
 end)
+local autoTP = false
 
+local LOW_HP = 5
+local SAFE_HP = 30
+
+local BASEPLATE_CF = CFrame.new(968, 20, 23088)
+local MIDDLE_CF = CFrame.new(148, 441, 27)
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+local function getHumanoid()
+    local char = LocalPlayer.Character
+    if char then
+        return char:FindFirstChildOfClass("Humanoid"), char:FindFirstChild("HumanoidRootPart")
+    end
+end
+
+RunService.Heartbeat:Connect(function()
+    if not autoTP then return end
+
+    local humanoid, hrp = getHumanoid()
+    if humanoid and hrp then
+        local hp = humanoid.Health
+
+        if hp <= LOW_HP then
+            hrp.CFrame = BASEPLATE_CF
+        elseif hp >= SAFE_HP then
+            hrp.CFrame = MIDDLE_CF
+        end
+    end
+end)
 mainTab:CreateDivider()
 
 mainTab:CreateToggle({
@@ -272,6 +302,14 @@ mainTab:CreateToggle({
    Callback = function(Value)
        localPlayer:SetAttribute("EmoteSearchBar", Value)
    end,
+})
+mainTab:CreateToggle({
+    Name = "Auto TP When Low HP",
+    CurrentValue = false,
+    Flag = "AutoTPLowHP",
+    Callback = function(Value)
+        autoTP = Value
+    end,
 })
 
 teleportTab:CreateSection("Teleports")
