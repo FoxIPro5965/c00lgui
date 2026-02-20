@@ -89,14 +89,23 @@ local Window = Rayfield:CreateWindow({
 -- as tabs- 
 local mainTab = Window:CreateTab("Main", "user")
 local teleportTab = Window:CreateTab("Teleport", "map")
---
-local autoTP = false
-
-local LOW_HP = 20
-local SAFE_HP = 50
 
 local BASEPLATE_CF = CFrame.new(968, 20, 23088)
-local MIDDLE_CF = CFrame.new(148, 441, 27)
+
+local SPAWN_POSITIONS = {
+    CFrame.new(64.84335, 440.75439, 60.43266),
+    CFrame.new(186.90005, 441.11267, -208.81953)
+}
+
+local function getRandomSpawn()
+    return SPAWN_POSITIONS[math.random(#SPAWN_POSITIONS)]
+end
+
+local autoTP = false
+
+local LOW_HP = 18
+local SAFE_HP = 50
+local TP_COOLDOWN = 5
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -104,7 +113,6 @@ local LocalPlayer = Players.LocalPlayer
 
 local escaped = false
 local lastTP = 0
-local TP_COOLDOWN = 5
 
 local function getHumanoid()
     local char = LocalPlayer.Character
@@ -113,11 +121,10 @@ local function getHumanoid()
     end
 end
 
-LocalPlayer.CharacterAdded:Connect(function(char)
+LocalPlayer.CharacterAdded:Connect(function()
     escaped = false
     lastTP = 0
 end)
-
 local function setupHumanoid(char)
     local hum = char:WaitForChild("Humanoid")
     hum.Died:Connect(function()
@@ -148,7 +155,7 @@ RunService.Heartbeat:Connect(function()
     if escaped and hp >= SAFE_HP and t - lastTP > TP_COOLDOWN then
         escaped = false
         lastTP = t
-        hrp.CFrame = MIDDLE_CF
+        hrp.CFrame = getRandomSpawn()
     end
 end)
 mainTab:CreateDivider()
@@ -328,6 +335,19 @@ teleportTab:CreateButton({
     Name = "Mountain 3",
     Callback = function()
         humanoidRootPart.CFrame = CFrame.new(-107, 642, -328)
+    end
+})
+teleportTab:CreateButton({
+    Name = "Spawn 1",
+    Callback = function()
+        humanoidRootPart.CFrame = SPAWN1_CF
+    end
+})
+
+teleportTab:CreateButton({
+    Name = "Spawn 2",
+    Callback = function()
+        humanoidRootPart.CFrame = SPAWN2_CF
     end
 })
 local aimTab = Window:CreateTab("Aim", "target")
