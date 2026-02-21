@@ -286,26 +286,30 @@ RunService.RenderStepped:Connect(function()
         end
     end
 end)
-local UIS = game:GetService("UserInputService")
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
+local BLOCK_KEYWORDS = {"block", "parry", "counter", "shield"}
 
-local blocking = false
+local function isBlocking()
+    local char = LocalPlayer.Character
+    if not char then return false end
+    local hum = char:FindFirstChild("Humanoid")
+    if not hum then return false end
+    local animator = hum:FindFirstChild("Animator")
+    if not animator then return false end
 
--- detect F hold
-UIS.InputBegan:Connect(function(input, gpe)
-    if gpe then return end
-    if input.KeyCode == Enum.KeyCode.F then
-        blocking = true
+    for _,track in pairs(animator:GetPlayingAnimationTracks()) do
+        local name = track.Animation.Name:lower()
+        for _,k in pairs(BLOCK_KEYWORDS) do
+            if name:find(k) then
+                return true
+            end
+        end
     end
-end)
-
-UIS.InputEnded:Connect(function(input)
-    if input.KeyCode == Enum.KeyCode.F then
-        blocking = false
-    end
-end)
+    return false
+end
 
 local function getClosestPlayer()
     local char = LocalPlayer.Character
@@ -313,7 +317,6 @@ local function getClosestPlayer()
     local hrp = char.HumanoidRootPart
 
     local closest, dist = nil, math.huge
-
     for _,plr in pairs(Players:GetPlayers()) do
         if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
             local d = (plr.Character.HumanoidRootPart.Position - hrp.Position).Magnitude
@@ -323,19 +326,20 @@ local function getClosestPlayer()
             end
         end
     end
-
     return closest, dist
 end
 
 RunService.RenderStepped:Connect(function()
-    if not AimBlock or not blocking then return end
+    if not AimBlock then return end
 
     local char = LocalPlayer.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     local hrp = char.HumanoidRootPart
 
+    if not isBlocking() then return end
+
     local target, dist = getClosestPlayer()
-    if target and target:FindFirstChild("HumanoidRootPart") and dist < 30 then
+    if target and target:FindFirstChild("HumanoidRootPart") and dist < 30 and dist > 3 then
         local pos = target.HumanoidRootPart.Position
         hrp.CFrame = CFrame.new(hrp.Position, Vector3.new(pos.X, hrp.Position.Y, pos.Z))
     end
@@ -404,12 +408,11 @@ mainTab:CreateToggle({
    end
 })
 mainTab:CreateToggle({
-    Name = "AimBlock",
+    Name = "AimBlock ",
     CurrentValue = false,
-    Flag = "AimBlockToggle",
-    Callback = function(Value)
-        AimBlock = Value
-    end,
+    Callback = function(v)
+        AimBlock = v
+    end
 })
 mainTab:CreateToggle({
     Name = "Auto TP When Low HP",
