@@ -97,7 +97,6 @@ local SPAWN_POSITIONS = {
     CFrame.new(64.84335, 440.75439, 60.43266),
     CFrame.new(186.90005, 441.11267, -208.81953)
 }
-local SPAWN2_CF = SPAWN_POSITIONS[2]
 local function getRandomSpawn()
     return SPAWN_POSITIONS[math.random(#SPAWN_POSITIONS)]
 end
@@ -438,12 +437,6 @@ teleportTab:CreateButton({
     end
 })
 
-teleportTab:CreateButton({
-    Name = "Spawn 2",
-    Callback = function()
-        humanoidRootPart.CFrame = SPAWN2_CF
-    end
-})
 local aimTab = Window:CreateTab("load", "target")
 local silentAimScript
 
@@ -577,9 +570,9 @@ aimTab:CreateToggle({
 })
 aimTab:CreateSection("loadstring")
 aimTab:CreateButton({
-    Name = "Extra Hitbox [DANGER]",
+    Name = "m1 reset",
     Callback = function()
-        loadstring(game:HttpGet("https://rawscripts.net/raw/The-Strongest-Battlegrounds-SION-ELTNAM-ATLASIA-61168"))()
+        loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-M1-RESET-57657"))()
     end,
 })
 aimTab:CreateButton({
