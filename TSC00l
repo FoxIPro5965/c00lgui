@@ -9,6 +9,18 @@ local playerName = localPlayer.Name
 local VirtualInputManager = game:GetService("VirtualInputManager")
 local AutoCounter = false 
 --
+local function updateCharacter()
+    character = localPlayer.Character or localPlayer.CharacterAdded:Wait()
+    humanoid = character:WaitForChild("Humanoid")
+    humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+end
+
+updateCharacter()
+
+localPlayer.CharacterAdded:Connect(function()
+    task.wait(0.3)
+    updateCharacter()
+end)
 
 -- exploits
 local function exploits()
@@ -377,14 +389,6 @@ mainTab:CreateToggle({
          localPlayer:SetAttribute("ExtraSlots", Value)
    end,
 })
-mainTab:CreateToggle({
-   Name = "Emotes Search Bar",
-   CurrentValue = false,
-   Flag = "emotesSearchBarToggle",
-   Callback = function(Value)
-       localPlayer:SetAttribute("EmoteSearchBar", Value)
-   end,
-})
 
 teleportTab:CreateSection("Teleports")
 
@@ -437,7 +441,7 @@ teleportTab:CreateButton({
     end
 })
 
-local aimTab = Window:CreateTab("load", "target")
+local aimTab = Window:CreateTab("Load", "target")
 local silentAimScript
 
 aimTab:CreateToggle({
