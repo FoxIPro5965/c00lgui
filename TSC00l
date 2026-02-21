@@ -8,7 +8,7 @@ local playerUserId = localPlayer.UserId
 local playerName = localPlayer.Name
 local VirtualInputManager = game:GetService("VirtualInputManager")
 local AutoCounter = false 
-local AimBlock = false
+local AutoM1 = false
 --
 local function updateCharacter()
     character = localPlayer.Character or localPlayer.CharacterAdded:Wait()
@@ -289,57 +289,38 @@ end)
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local LocalPlayer = Players.LocalPlayer
+local VIM = game:GetService("VirtualInputManager")
+local LP = Players.LocalPlayer
 
-local shieldPressed = false
-
-pcall(function()
-    local gui = LocalPlayer.PlayerGui
-    local function hookButton(btn)
-        btn.InputBegan:Connect(function()
-            shieldPressed = true
-        end)
-        btn.InputEnded:Connect(function()
-            shieldPressed = false
-        end)
-    end
-
-    for _,v in pairs(gui:GetDescendants()) do
-        if v:IsA("ImageButton") and (v.Name:lower():find("block") or v.Name:lower():find("shield")) then
-            hookButton(v)
-        end
-    end
-end)
-
-local function getClosest()
-    local char = LocalPlayer.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-    local hrp = char.HumanoidRootPart
-
-    local closest, dist = nil, math.huge
-    for _,plr in pairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-            local d = (plr.Character.HumanoidRootPart.Position - hrp.Position).Magnitude
-            if d < dist then
-                dist = d
-                closest = plr.Character
+local function getClosestEnemy(range)
+    local hrp = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    local closest,dist=nil,range
+    for _,p in pairs(Players:GetPlayers()) do
+        if p~=LP and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+            local d=(p.Character.HumanoidRootPart.Position-hrp.Position).Magnitude
+            if d<dist then
+                dist=d
+                closest=p.Character
             end
         end
     end
-    return closest, dist
+    return closest,dist
 end
 
+local function M1()
+    VIM:SendMouseButtonEvent(0,0,0,true,game,0)
+    VIM:SendMouseButtonEvent(0,0,0,false,game,0)
+end
+
+local lastM1 = 0
+
 RunService.RenderStepped:Connect(function()
-    if not AimBlock or not shieldPressed then return end
-
-    local char = LocalPlayer.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-    local hrp = char.HumanoidRootPart
-
-    local target, dist = getClosest()
-    if target and target:FindFirstChild("HumanoidRootPart") and dist < 30 and dist > 3 then
-        local pos = target.HumanoidRootPart.Position
-        hrp.CFrame = CFrame.new(hrp.Position, Vector3.new(pos.X, hrp.Position.Y, pos.Z))
+    if not AutoM1 then return end
+    local target,dist = getClosestEnemy(10)
+    if target and dist<=14 and tick()-lastM1>0.3 then
+        lastM1 = tick()
+        M1()
     end
 end)
 mainTab:CreateDivider()
