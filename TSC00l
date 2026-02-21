@@ -421,42 +421,6 @@ local function StopAutoBlock()
         AutoBlockConn = nil
     end
 end
-local LP = Players.LocalPlayer
-local AutoAttack = false
-local AttackRange = 14
-local AttackDelay = 0.12 
-local lastHit = 0
-local function getNearestTarget()
-    local char = LP.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-
-    local closest, dist = nil, math.huge
-
-    for _, plr in pairs(Players:GetPlayers()) do
-        if plr ~= LP and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-            local d = (plr.Character.HumanoidRootPart.Position - hrp.Position).Magnitude
-            if d < dist then
-                dist = d
-                closest = plr
-            end
-        end
-    end
-
-    return closest, dist
-end
-RunService.RenderStepped:Connect(function()
-    if not AutoAttack then return end
-
-    local target, dist = getNearestTarget()
-    if target and dist <= AttackRange then
-        if tick() - lastHit >= AttackDelay then
-            lastHit = tick()
-            VirtualUser:Button1Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-            VirtualUser:Button1Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-        end
-    end
-end)
 mainTab:CreateDivider()
 
 mainTab:CreateToggle({
@@ -513,28 +477,25 @@ mainTab:CreateSlider({
 
 mainTab:CreateDivider()
 
-mainTab:CreateSlider({
-   Name = "Gravity",
-   Range = {0, 192.6},
-   Increment = 0.1,
-   Suffix = "%",
-   CurrentValue = 192.6,
-   Flag = "GravitySlider",
+mainTab:CreateToggle({
+   Name = "Auto Counter",
+   CurrentValue = false,
    Callback = function(Value)
-       workspace.Gravity = Value
-   end,
+       AutoCounter = Value
+   end
 })
-
-mainTab:CreateSlider({
-   Name = "FOV",
-   Range = {0, 120},
-   Increment = 0.1,
-   Suffix = "%",
-   CurrentValue = 70,
-   Flag = "FOVSlider",
-   Callback = function(Value)
-       workspace.CurrentCamera.FieldOfView = Value
-   end,
+mainTab:CreateToggle({
+    Name = "Auto Block",
+    CurrentValue = false,
+    Flag = "AutoBlockToggle",
+    Callback = function(Value)
+        AutoBlock = Value
+        if Value then
+            StartAutoBlock()
+        else
+            StopAutoBlock()
+        end
+    end
 })
 
 mainTab:CreateDivider()
@@ -557,35 +518,6 @@ mainTab:CreateToggle({
    Callback = function(Value)
        workspace:SetAttribute("NoFatigue", Value)
    end,
-})
-
-mainTab:CreateToggle({
-   Name = "Auto Counter",
-   CurrentValue = false,
-   Callback = function(Value)
-       AutoCounter = Value
-   end
-})
-mainTab:CreateToggle({
-    Name = "Auto Block",
-    CurrentValue = false,
-    Flag = "AutoBlockToggle",
-    Callback = function(Value)
-        AutoBlock = Value
-        if Value then
-            StartAutoBlock()
-        else
-            StopAutoBlock()
-        end
-    end
-})
-MainTab:CreateToggle({
-    Name = "Auto m1",
-    CurrentValue = false,
-    Flag = "AutoPunchToggle",
-    Callback = function(Value)
-        AutoAttack = Value
-    end,
 })
 
 mainTab:CreateDivider()
