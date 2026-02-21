@@ -82,7 +82,7 @@ local Window = Rayfield:CreateWindow({
       FileName = "Key",
       SaveKey = true, 
       GrabKeyFromSite = false, 
-      Key = {"Hello"} 
+      Key = {"2026"} 
    }
 })
 --
@@ -97,7 +97,6 @@ local SPAWN_POSITIONS = {
     CFrame.new(64.84335, 440.75439, 60.43266),
     CFrame.new(186.90005, 441.11267, -208.81953)
 }
-local SPAWN1_CF = SPAWN_POSITIONS[1]
 local SPAWN2_CF = SPAWN_POSITIONS[2]
 local function getRandomSpawn()
     return SPAWN_POSITIONS[math.random(#SPAWN_POSITIONS)]
@@ -105,7 +104,7 @@ end
 
 local autoTP = false
 
-local LOW_HP = 18
+local LOW_HP = 10
 local SAFE_HP = 50
 local TP_COOLDOWN = 5
 
@@ -275,152 +274,6 @@ RunService.RenderStepped:Connect(function()
         end
     end
 end)
-local AutoBlock = false
-local AutoBlockConn
-
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local VirtualInputManager = game:GetService("VirtualInputManager")
-local LocalPlayer = Players.LocalPlayer
-
-local CONFIG = {
-    ATTACK_RANGE = 50,
-    DANGER_THRESHOLD = 0.75,
-    REACTION_TIME = 0.02,
-    SHIELD_COOLDOWN = 0.2,
-    BLOCK_DURATION = 0.3,
-    VELOCITY_IMPACT_FACTOR = 0.3,
-    DASH_VELOCITY_THRESHOLD = 25,
-    MINIMUM_VELOCITY_FOR_THREAT = 5,
-    TRAJECTORY_PRECISION = 15,
-    M1_ATTACK_WEIGHT = 0.8,
-    ANIMATION_WEIGHT = 0.4,
-    DASH_WEIGHT = 0.3,
-    PROXIMITY_WEIGHT = 0.2,
-    VELOCITY_WEIGHT = 0.2,
-    TRAJECTORY_WEIGHT = 0.3,
-    ANIMATIONS_THREAT_KEYWORDS = {"slash","stab","swing","punch","kick","attack","m1","strike","lunge","dash"},
-    MINIMUM_ANIMATION_DURATION = 0.1,
-    DEBUG_MODE = false,
-    ADDITIONAL_BLOCK_DISTANCE = 8,
-    VELOCITY_HISTORY_LIMIT = 15,
-    COMBO_DETECTION_TIME = 0.5,
-    MAX_ATTACKS_IN_COMBO = 3
-}
-
-local State = {
-    lastShieldTime = 0,
-    playerVelocities = {},
-    attackHistory = {},
-    lastAttackTimes = {},
-}
-
-local function isAlive(player)
-    local char = player.Character
-    local hum = char and char:FindFirstChild("Humanoid")
-    return hum and hum.Health > 0
-end
-
-local ThreatSystem = {}
-
-function ThreatSystem:updatePlayerVelocity(player)
-    if not State.playerVelocities[player] then
-        State.playerVelocities[player] = {}
-    end
-    local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-    if root then
-        local history = State.playerVelocities[player]
-        table.insert(history, root.Velocity)
-        if #history > CONFIG.VELOCITY_HISTORY_LIMIT then
-            table.remove(history,1)
-        end
-    end
-end
-
-function ThreatSystem:checkM1ing(player)
-    local char = player.Character
-    if not char then return false end
-    for _,v in pairs(char:GetChildren()) do
-        if v:IsA("Accessory") and v.Name == "M1ing" then
-            return true
-        end
-    end
-    return false
-end
-
-function ThreatSystem:evaluateThreat(player)
-    if not player.Character or not LocalPlayer.Character then return 0 end
-    local pr = player.Character:FindFirstChild("HumanoidRootPart")
-    local lr = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if not pr or not lr then return 0 end
-
-    local dist = (lr.Position - pr.Position).Magnitude
-    if dist > CONFIG.ATTACK_RANGE then return 0 end
-
-    local threat = 0
-    if self:checkM1ing(player) then
-        threat += CONFIG.M1_ATTACK_WEIGHT
-    end
-
-    threat += (1 - dist/CONFIG.ATTACK_RANGE) * CONFIG.PROXIMITY_WEIGHT
-    if pr.Velocity.Magnitude > CONFIG.MINIMUM_VELOCITY_FOR_THREAT then
-        threat += CONFIG.VELOCITY_WEIGHT
-    end
-
-    return math.clamp(threat,0,1)
-end
-
-function ThreatSystem:getHighestThreatPlayer()
-    local best, lvl = nil, 0
-    for _,p in pairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer and isAlive(p) then
-            local t = self:evaluateThreat(p)
-            if t > lvl then
-                lvl = t
-                best = p
-            end
-        end
-    end
-    return best, lvl
-end
-
-local function activateShield()
-    if not AutoBlock then return end
-
-    local now = tick()
-    if now - State.lastShieldTime < CONFIG.SHIELD_COOLDOWN then return end
-
-    local target, threat = ThreatSystem:getHighestThreatPlayer()
-    if target and threat >= CONFIG.DANGER_THRESHOLD then
-        State.lastShieldTime = now
-
-        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.F, false, game)
-        task.delay(CONFIG.BLOCK_DURATION, function()
-            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.F, false, game)
-        end)
-    end
-end
-
-local function monitorThreats()
-    for _,p in pairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer then
-            ThreatSystem:updatePlayerVelocity(p)
-        end
-    end
-    activateShield()
-end
-
-local function StartAutoBlock()
-    if AutoBlockConn then return end
-    AutoBlockConn = RunService.RenderStepped:Connect(monitorThreats)
-end
-
-local function StopAutoBlock()
-    if AutoBlockConn then
-        AutoBlockConn:Disconnect()
-        AutoBlockConn = nil
-    end
-end
 mainTab:CreateDivider()
 
 mainTab:CreateToggle({
@@ -485,17 +338,12 @@ mainTab:CreateToggle({
    end
 })
 mainTab:CreateToggle({
-    Name = "Auto Block",
+    Name = "Auto TP When Low HP",
     CurrentValue = false,
-    Flag = "AutoBlockToggle",
+    Flag = "AutoTPCycle",
     Callback = function(Value)
-        AutoBlock = Value
-        if Value then
-            StartAutoBlock()
-        else
-            StopAutoBlock()
-        end
-    end
+        autoTP = Value
+    end,
 })
 
 mainTab:CreateDivider()
@@ -537,14 +385,6 @@ mainTab:CreateToggle({
    Callback = function(Value)
        localPlayer:SetAttribute("EmoteSearchBar", Value)
    end,
-})
-mainTab:CreateToggle({
-    Name = "Auto TP When Low HP",
-    CurrentValue = false,
-    Flag = "AutoTPCycle",
-    Callback = function(Value)
-        autoTP = Value
-    end,
 })
 
 teleportTab:CreateSection("Teleports")
@@ -597,12 +437,6 @@ teleportTab:CreateButton({
         humanoidRootPart.CFrame = CFrame.new(-107, 642, -328)
     end
 })
-teleportTab:CreateButton({
-    Name = "Spawn 1",
-    Callback = function()
-        humanoidRootPart.CFrame = SPAWN1_CF
-    end
-})
 
 teleportTab:CreateButton({
     Name = "Spawn 2",
@@ -610,7 +444,7 @@ teleportTab:CreateButton({
         humanoidRootPart.CFrame = SPAWN2_CF
     end
 })
-local aimTab = Window:CreateTab("Aim", "target")
+local aimTab = Window:CreateTab("load", "target")
 local silentAimScript
 
 aimTab:CreateToggle({
@@ -740,4 +574,17 @@ aimTab:CreateToggle({
             end
         end
     end
+})
+aimTab:CreateSection("loadstring")
+aimTab:CreateButton({
+    Name = "Extra Hitbox [DANGER]",
+    Callback = function()
+        loadstring(game:HttpGet("https://rawscripts.net/raw/The-Strongest-Battlegrounds-SION-ELTNAM-ATLASIA-61168"))()
+    end,
+})
+aimTab:CreateButton({
+    Name = "Trashcan Man",
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/yes1nt/yes/refs/heads/main/Trashcan%20Man"))()
+    end,
 })
