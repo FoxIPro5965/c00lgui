@@ -387,10 +387,10 @@ mainTab:CreateToggle({
    end
 })
 mainTab:CreateToggle({
-    Name = "AimBlock ",
+    Name = "Auto M1",
     CurrentValue = false,
     Callback = function(v)
-        AimBlock = v
+        AutoM1 = v
     end
 })
 mainTab:CreateToggle({
