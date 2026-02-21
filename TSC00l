@@ -263,7 +263,7 @@ RunService.RenderStepped:Connect(function()
 
                     elseif delayids[id] then
                         if dist <= delayidranges[id] then
-                            task.delay(0.15, ActivateCounterTool)
+                            task.delay(0.1, ActivateCounterTool)
                         end
 
                     else
@@ -290,28 +290,28 @@ end)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
-local BLOCK_KEYWORDS = {"block", "parry", "counter", "shield"}
 
-local function isBlocking()
-    local char = LocalPlayer.Character
-    if not char then return false end
-    local hum = char:FindFirstChild("Humanoid")
-    if not hum then return false end
-    local animator = hum:FindFirstChild("Animator")
-    if not animator then return false end
+local shieldPressed = false
 
-    for _,track in pairs(animator:GetPlayingAnimationTracks()) do
-        local name = track.Animation.Name:lower()
-        for _,k in pairs(BLOCK_KEYWORDS) do
-            if name:find(k) then
-                return true
-            end
+pcall(function()
+    local gui = LocalPlayer.PlayerGui
+    local function hookButton(btn)
+        btn.InputBegan:Connect(function()
+            shieldPressed = true
+        end)
+        btn.InputEnded:Connect(function()
+            shieldPressed = false
+        end)
+    end
+
+    for _,v in pairs(gui:GetDescendants()) do
+        if v:IsA("ImageButton") and (v.Name:lower():find("block") or v.Name:lower():find("shield")) then
+            hookButton(v)
         end
     end
-    return false
-end
+end)
 
-local function getClosestPlayer()
+local function getClosest()
     local char = LocalPlayer.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     local hrp = char.HumanoidRootPart
@@ -330,15 +330,13 @@ local function getClosestPlayer()
 end
 
 RunService.RenderStepped:Connect(function()
-    if not AimBlock then return end
+    if not AimBlock or not shieldPressed then return end
 
     local char = LocalPlayer.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     local hrp = char.HumanoidRootPart
 
-    if not isBlocking() then return end
-
-    local target, dist = getClosestPlayer()
+    local target, dist = getClosest()
     if target and target:FindFirstChild("HumanoidRootPart") and dist < 30 and dist > 3 then
         local pos = target.HumanoidRootPart.Position
         hrp.CFrame = CFrame.new(hrp.Position, Vector3.new(pos.X, hrp.Position.Y, pos.Z))
