@@ -364,7 +364,7 @@ RunService.Heartbeat:Connect(function()
     local t = tick()
 
     if not AutoDownslam then
-        if dist and dist <= 5 then
+        if dist and dist <= 7 then
             if t - lastM1 >= 0.7 then
                 lastM1 = t
                 FireM1()
@@ -399,15 +399,14 @@ RunService.Heartbeat:Connect(function()
 
     elseif ComboStep == 4 then
         Jump()
-        NextActionTime = t + 0.35
+        NextActionTime = t + 0.38
 
     elseif ComboStep == 5 then
-        if humanoidRootPart and humanoidRootPart.Velocity.Y > 1 then
-            FireM1()
-            NextActionTime = t + 0.35
+        FireM1()
+        NextActionTime = t + 0.32
 
             ComboStep = 0
-            GlobalCooldown = t + 4
+            GlobalCooldown = t + 5.25
             InDownslamMode = false
         else
             NextActionTime = t + 0.05
