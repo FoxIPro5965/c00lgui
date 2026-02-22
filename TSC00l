@@ -300,9 +300,11 @@ RunService.RenderStepped:Connect(function()
         end
     end
 end)
+
 local AutoM1 = false
 local M1_COOLDOWN = 0.7
 local lastM1 = 0
+
 local function getClosestLiving8()
     local char = LocalPlayer.Character
     if not char or not char.PrimaryPart then return end
@@ -324,6 +326,7 @@ local function getClosestLiving8()
 
     return closestDist
 end
+
 local function FireM1()
     local char = LocalPlayer.Character
     if not char then return end
@@ -343,51 +346,17 @@ local function FireM1()
         })
     end)
 end
-local ComboStep = 0
-local NextActionTime = 0
-local GlobalCooldown = 0
-
-local function Jump()
-    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, nil)
-    task.wait()
-    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, nil)
-end
 
 RunService.Heartbeat:Connect(function()
     if not AutoM1 then return end
 
     local dist = getClosestLiving8()
-    if not dist or dist > 8 then
-        ComboStep = 0
-        return
-    end
+    if not dist or dist > 8 then return end
 
     local t = tick()
-
-    if t < GlobalCooldown then return end
-
-    if t < NextActionTime then return end
-
-    ComboStep += 1
-
-    if ComboStep <= 3 then
+    if t - lastM1 >= M1_COOLDOWN then
+        lastM1 = t
         FireM1()
-        NextActionTime = t + 0.65
-
-    elseif ComboStep == 4 then
-        Jump()
-        NextActionTime = t + 0.35
-
-    elseif ComboStep == 5 then
-        if humanoidRootPart and humanoidRootPart.Velocity.Y > 1 then
-            FireM1()
-            NextActionTime = t + 0.3
-
-            ComboStep = 0
-            GlobalCooldown = t + 5
-        else
-            NextActionTime = t + 0.05
-        end
     end
 end)
 mainTab:CreateDivider()
