@@ -302,7 +302,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 local AutoM1 = false
-local M1_COOLDOWN = 0.7
+local M1_COOLDOWN = 0.825
 local lastM1 = 0
 
 local function getClosestLiving8()
