@@ -304,37 +304,34 @@ local AutoM1 = false
 local M1_COOLDOWN = 0.3
 local lastM1 = 0
 
-local function getClosestLiving14()
+local function FireM1()
     local char = LocalPlayer.Character
-    if not char or not char.PrimaryPart then return end
-    local myPos = char.PrimaryPart.Position
+    if not char then return end
 
-    local closestDist = math.huge
+    local comm = char:FindFirstChild("Communicate")
+    if not comm then return end
 
-    for _, v in pairs(workspace:GetDescendants()) do
-        if v:IsA("Humanoid") and v.Health > 0 and v.Parent:FindFirstChild("HumanoidRootPart") then
-            local plr = Players:GetPlayerFromCharacter(v.Parent)
-            if plr ~= LocalPlayer then
-                local d = (v.Parent.HumanoidRootPart.Position - myPos).Magnitude
-                if d < closestDist then
-                    closestDist = d
-                end
-            end
-        end
-    end
+    comm:FireServer({
+        Goal = "LeftClick",
+        Mobile = true
+    })
 
-    return closestDist
+    task.delay(0.05, function()
+        comm:FireServer({
+            Goal = "LeftClickRelease",
+            Mobile = true
+        })
+    end)
 end
 RunService.Heartbeat:Connect(function()
     if not AutoM1 then return end
+
     local dist = getClosestLiving14()
-    if dist and dist <= 14 then
+    if dist and dist <= 14 and dist >= 2.5 then
         local t = tick()
-        if t - lastM1 >= M1_COOLDOWN then
+        if t - lastM1 >= 0.3 then
             lastM1 = t
-            VirtualInputManager:SendMouseButtonEvent(0,0,0,true,game,0)
-            task.wait(0.05)
-            VirtualInputManager:SendMouseButtonEvent(0,0,0,false,game,0)
+            FireM1()
         end
     end
 end)
