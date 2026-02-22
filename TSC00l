@@ -302,51 +302,10 @@ RunService.RenderStepped:Connect(function()
 end)
 local AutoM1 = false
 local AutoDownslam = false
-local InDownslamMode = false
-local DownslamStartTime = 0
-local DOWN_SLAM_START_DELAY = 0.5
-local M1_COOLDOWN = 0.7
+
 local lastM1 = 0
-local function getClosestLiving7()
-    local char = LocalPlayer.Character
-    if not char or not char.PrimaryPart then return end
-    local myPos = char.PrimaryPart.Position
+local M1_COOLDOWN = 0.7
 
-    local closestDist = math.huge
-
-    for _, v in pairs(workspace:GetDescendants()) do
-        if v:IsA("Humanoid") and v.Health > 0 and v.Parent:FindFirstChild("HumanoidRootPart") then
-            local plr = Players:GetPlayerFromCharacter(v.Parent)
-            if plr ~= LocalPlayer then
-                local d = (v.Parent.HumanoidRootPart.Position - myPos).Magnitude
-                if d < closestDist then
-                    closestDist = d
-                end
-            end
-        end
-    end
-
-    return closestDist
-end
-local function FireM1()
-    local char = LocalPlayer.Character
-    if not char then return end
-
-    local comm = char:FindFirstChild("Communicate")
-    if not comm then return end
-
-    comm:FireServer({
-        Goal = "LeftClick",
-        Mobile = true
-    })
-
-    task.delay(0.05, function()
-        comm:FireServer({
-            Goal = "LeftClickRelease",
-            Mobile = true
-        })
-    end)
-end
 local ComboStep = 0
 local NextActionTime = 0
 local GlobalCooldown = 0
@@ -358,58 +317,53 @@ local function Jump()
 end
 
 RunService.Heartbeat:Connect(function()
-    if not AutoM1 then return end
+    if not AutoM1 or AutoDownslam then return end
 
     local dist = getClosestLiving7()
+    if not dist or dist > 7 then return end
+
     local t = tick()
-
-    if not AutoDownslam then
-        if dist and dist <= 7 then
-            if t - lastM1 >= 0.7 then
-                lastM1 = t
-                FireM1()
-            end
-        end
-        return
+    if t - lastM1 >= M1_COOLDOWN then
+        lastM1 = t
+        FireM1()
     end
+end)
 
+RunService.Heartbeat:Connect(function()
+    if not AutoDownslam then return end
+
+    local dist = getClosestLiving7()
     if not dist or dist > 7 then
         ComboStep = 0
-        InDownslamMode = false
         return
     end
 
-    if not InDownslamMode then
-        InDownslamMode = true
-        DownslamStartTime = t
-        return
-    end
-
-    if t - DownslamStartTime < DOWN_SLAM_START_DELAY then
-        return
-    end
-
+    local t = tick()
     if t < GlobalCooldown or t < NextActionTime then return end
 
     ComboStep += 1
 
+    -- 3 hit combo
     if ComboStep <= 3 then
         FireM1()
         NextActionTime = t + 0.7
 
     elseif ComboStep == 4 then
         Jump()
-        NextActionTime = t + 0.38
-
-    elseif ComboStep == 5 then
-        FireM1()
         NextActionTime = t + 0.35
 
-        ComboStep = 0
-        GlobalCooldown = t + 4
-        InDownslamMode = false
+    elseif ComboStep == 5 then
+        if humanoidRootPart and humanoidRootPart.Velocity.Y > 1 then
+            FireM1()
+            NextActionTime = t + 0.35
+
+            ComboStep = 0
+            GlobalCooldown = t + 4
+        else
+            NextActionTime = t + 0.05 
+        end
     end
-    end)
+end)
 mainTab:CreateDivider()
 mainTab:CreateSection("University")
 
@@ -486,15 +440,17 @@ mainTab:CreateToggle({
    CurrentValue = false,
    Callback = function(Value)
        AutoM1 = Value
+       if Value then AutoDownslam = false end
    end
 })
+
 mainTab:CreateToggle({
-   Name = "Auto Downslam (buggy)",
+   Name = "Auto Downslam",
    CurrentValue = false,
    Callback = function(Value)
        AutoDownslam = Value
        ComboStep = 0
-       InDownslamMode = false
+       if Value then AutoM1 = false end
    end
 })
 
