@@ -8,7 +8,6 @@ local playerUserId = localPlayer.UserId
 local playerName = localPlayer.Name
 local VirtualInputManager = game:GetService("VirtualInputManager")
 local AutoCounter = false 
-local AutoM1 = false
 --
 local function updateCharacter()
     character = localPlayer.Character or localPlayer.CharacterAdded:Wait()
@@ -286,41 +285,47 @@ RunService.RenderStepped:Connect(function()
         end
     end
 end)
+--M1
+local M1_RADIUS = 14
+local M1_DELAY = 0.3
+local autoM1Enabled = false
+local lastM1Time = 0
 
-local lastM1 = 0
-
-RunService.Heartbeat:Connect(function()
-    if not AutoM1 then return end
-    local char = LocalPlayer.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-    local hrp = char.HumanoidRootPart
-
-    for _,plr in pairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-            local dist = (plr.Character.HumanoidRootPart.Position - hrp.Position).Magnitude
-            if dist <= 14 and tick() - lastM1 > 0.2 then
-                lastM1 = tick()
-                FireM1()
-                break
+local function hasPlayerInRange()
+    if not LocalPlayer.Character then return false end
+    local myRoot = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not myRoot then return false end
+    
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr \~= LocalPlayer and plr.Character then
+            local theirRoot = plr.Character:FindFirstChild("HumanoidRootPart")
+            if theirRoot and (theirRoot.Position - myRoot.Position).Magnitude <= M1_RADIUS then
+                return true
             end
         end
     end
-end)
-local function FireM1()
-    local char = game.Players.LocalPlayer.Character
-    if char and char:FindFirstChild("Communicate") then
-        char.Communicate:FireServer({
-            Goal = "LeftClick",
-            Mobile = true
-        })
-        task.delay(0.3,function()
-            char.Communicate:FireServer({
-                Goal = "LeftClickRelease",
-                Mobile = true
-            })
+    return false
+end
+
+local function spamM1()
+    if tick() - lastM1Time < M1_DELAY then return end
+    local char = LocalPlayer.Character
+    if not char then return end
+    
+    local comm = char:FindFirstChild("Communicate")
+    if comm and comm:IsA("RemoteEvent") then
+        comm:FireServer({Goal = "LeftClick", Mobile = true})
+        task.delay(0.07, function()
+            comm:FireServer({Goal = "LeftClickRelease", Mobile = true})
         end)
+        lastM1Time = tick()
     end
 end
+RunService.Heartbeat:Connect(function()
+    if autoM1Enabled and hasPlayerInRange() then
+        spamM1()
+    end
+end)
 mainTab:CreateDivider()
 
 mainTab:CreateToggle({
@@ -387,10 +392,21 @@ mainTab:CreateToggle({
 mainTab:CreateToggle({
     Name = "Auto M1",
     CurrentValue = false,
-    Callback = function(v)
-        AutoM1 = v
-    end
+    Flag = "AutoM1",
+    Callback = function(Value)
+        autoM1Enabled = Value
+    end,
 })
+
+mainTab:CreateSlider({
+    Name = "stud",
+    Range = {8, 20},
+    Increment = 1,
+    Suffix = "stud",
+    CurrentValue = M1_RADIUS,
+    Callback = function(Value) M1_RADIUS = Value end,
+})
+
 mainTab:CreateToggle({
     Name = "Auto TP When Low HP",
     CurrentValue = false,
