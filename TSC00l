@@ -307,7 +307,7 @@ local DownslamStartTime = 0
 local DOWN_SLAM_START_DELAY = 0.5
 local M1_COOLDOWN = 0.7
 local lastM1 = 0
-local function getClosestLiving5()
+local function getClosestLiving7()
     local char = LocalPlayer.Character
     if not char or not char.PrimaryPart then return end
     local myPos = char.PrimaryPart.Position
@@ -373,7 +373,7 @@ RunService.Heartbeat:Connect(function()
         return
     end
 
-    if not dist or dist > 5 then
+    if not dist or dist > 7 then
         ComboStep = 0
         InDownslamMode = false
         return
