@@ -170,6 +170,21 @@ RunService.Heartbeat:Connect(function()
         hrp.CFrame = getRandomSpawn()
     end
 end)
+--Counter
+local function IsFacingMe(attackerChar)
+    local myChar = LocalPlayer.Character
+    if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return false end
+    if not attackerChar or not attackerChar:FindFirstChild("HumanoidRootPart") then return false end
+
+    local myHRP = myChar.HumanoidRootPart
+    local enemyHRP = attackerChar.HumanoidRootPart
+
+    local dirToMe = (myHRP.Position - enemyHRP.Position).Unit
+    local enemyLook = enemyHRP.CFrame.LookVector
+
+    local dot = enemyLook:Dot(dirToMe)
+    return dot > 0.6
+end
 local targetids = {
     [14046756619] = true,[13309500827] = true,[13376962659] = true,
     [15290930205] = true,[13630786846] = true,[16597912086] = true,[10468665991] = true
@@ -243,7 +258,7 @@ RunService.RenderStepped:Connect(function()
     for _, plr in pairs(Players:GetPlayers()) do
         if plr ~= LocalPlayer and plr.Character and plr.Character.PrimaryPart then
             local dist = (plr.Character.PrimaryPart.Position - myPos).Magnitude
-            if dist <= 36 then
+            if dist <= 36 and IsFacingMe(plr.Character) then
                 local anims = GetAnimations(plr)
 
                 for id, timePos in pairs(anims) do
