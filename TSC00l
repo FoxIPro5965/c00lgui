@@ -303,7 +303,7 @@ end)
 local AutoM1 = false
 local M1_COOLDOWN = 0.7
 local lastM1 = 0
-local function getClosestLiving7()
+local function getClosestLiving8()
     local char = LocalPlayer.Character
     if not char or not char.PrimaryPart then return end
     local myPos = char.PrimaryPart.Position
@@ -356,8 +356,8 @@ end
 RunService.Heartbeat:Connect(function()
     if not AutoM1 then return end
 
-    local dist = getClosestLiving7()
-    if not dist or dist > 7 then
+    local dist = getClosestLiving8()
+    if not dist or dist > 8 then
         ComboStep = 0
         return
     end
