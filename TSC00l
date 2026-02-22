@@ -204,7 +204,7 @@ local delayidranges = {
 local function ActivateCounterTool()
     local backpack = LocalPlayer:FindFirstChild("Backpack")
     if not backpack then return end
-    local tool = backpack:FindFirstChild("Prey's Peril") or backpack:FindFirstChild("Split Second Counter")
+    local tool = backpack:FindFirstChild("Prey's Peril") or backpack:FindFirstChild("Split Second Counter") or backpack:FindFirstChild("Death Counter") 
     if tool then
         tool.Parent = LocalPlayer.Character
         tool.Parent = backpack
@@ -248,15 +248,15 @@ RunService.RenderStepped:Connect(function()
 
                 for id, timePos in pairs(anims) do
                     if id == 15295895753 then
-                        task.delay(0.45, ActivateCounterTool)
+                        task.delay(0.2, ActivateCounterTool)
 
                     elseif id == 14351441234 then
-                        if timePos < 0.45 and dist <= delayidranges[id] then
+                        if timePos < 0.4 and dist <= delayidranges[id] then
                             ActivateCounterTool()
                         end
 
                     elseif timecheckids[id] then
-                        if timePos < 0.12 and dist <= 10 then
+                        if timePos < 0.1 and dist <= 10 then
                             ActivateCounterTool()
                         end
 
@@ -285,65 +285,9 @@ RunService.RenderStepped:Connect(function()
         end
     end
 end)
---M1
 
-local M1_RADIUS = 14
-local M1_DELAY = 0.3
-local autoM1Enabled = false
-local lastM1Time = 0
-local m1Connection
-
-local function hasPlayerInRange()
-    local char = LocalPlayer.Character
-    if not char then return false end
-    local myRoot = char:FindFirstChild("HumanoidRootPart")
-    if not myRoot then return false end
-    
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr \~= LocalPlayer and plr.Character then
-            local theirRoot = plr.Character:FindFirstChild("HumanoidRootPart")
-            if theirRoot and (theirRoot.Position - myRoot.Position).Magnitude <= M1_RADIUS then
-                return true
-            end
-        end
-    end
-    return false
-end
-
-local function spamM1()
-    if tick() - lastM1Time < M1_DELAY then return end
-    local char = LocalPlayer.Character
-    if not char then return end
-    
-    local comm = char:FindFirstChild("Communicate")
-    if comm and comm:IsA("RemoteEvent") then
-        comm:FireServer({Goal = "LeftClick", Mobile = true})
-        task.delay(0.07, function()
-            if char.Parent then
-                comm:FireServer({Goal = "LeftClickRelease", Mobile = true})
-            end
-        end)
-        lastM1Time = tick()
-    end
-end
-
-local function startM1Loop()
-    if m1Connection then m1Connection:Disconnect() end
-    m1Connection = RunService.Heartbeat:Connect(function()
-        if autoM1Enabled and hasPlayerInRange() then
-            spamM1()
-        end
-    end)
-end
-
-
-LocalPlayer.CharacterAdded:Connect(function()
-    if autoM1Enabled then
-        task.wait(1) 
-        startM1Loop()
-    end
-end)
 mainTab:CreateDivider()
+mainTab:CreateSection("University")
 
 mainTab:CreateToggle({
    Name = "Speed Boost",
@@ -406,48 +350,6 @@ mainTab:CreateToggle({
        AutoCounter = Value
    end
 })
-mainTab:CreateToggle({
-    Name = "Auto M1",
-    CurrentValue = false,
-    Flag = "AutoM1Toggle",
-    Callback = function(Value)
-        autoM1Enabled = Value
-        if Value then
-            startM1Loop()
-        else
-            if m1Connection then
-                m1Connection:Disconnect()
-                m1Connection = nil
-            end
-        end
-    end,
-})
-
-mainTab:CreateSlider({
-    Name = "stud",
-    Range = {8, 25},
-    Increment = 1,
-    Suffix = "stud",
-    CurrentValue = 14,
-    Flag = "M1RadiusSlider",
-    Callback = function(Value)
-        M1_RADIUS = Value
-    end,
-})
-
-mainTab:CreateSlider({
-    Name = "Delay",
-    Range = {0.15, 0.8},
-    Increment = 0.05,
-    Suffix = "s",
-    CurrentValue = 0.3,
-    Flag = "M1DelaySlider",
-    Callback = function(Value)
-        M1_DELAY = Value
-    end,
-})
-
-
 mainTab:CreateToggle({
     Name = "Auto TP When Low HP",
     CurrentValue = false,
