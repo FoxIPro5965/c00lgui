@@ -301,7 +301,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 local AutoM1 = false
-local M1_COOLDOWN = 0.425
+local M1_COOLDOWN = 0.5
 local lastM1 = 0
 local function getClosestLiving8()
     local char = LocalPlayer.Character
@@ -347,9 +347,9 @@ RunService.Heartbeat:Connect(function()
     if not AutoM1 then return end
 
     local dist = getClosestLiving14()
-    if dist and dist <= 8 and dist >= 2.5 then
+    if dist and dist <= 5 and dist >= 2.5 then
         local t = tick()
-        if t - lastM1 >= 0.425 then
+        if t - lastM1 >= 0.5 then
             lastM1 = t
             FireM1()
         end
