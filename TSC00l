@@ -286,14 +286,17 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 --M1
+
 local M1_RADIUS = 14
 local M1_DELAY = 0.3
 local autoM1Enabled = false
 local lastM1Time = 0
+local m1Connection
 
 local function hasPlayerInRange()
-    if not LocalPlayer.Character then return false end
-    local myRoot = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    local char = LocalPlayer.Character
+    if not char then return false end
+    local myRoot = char:FindFirstChild("HumanoidRootPart")
     if not myRoot then return false end
     
     for _, plr in ipairs(Players:GetPlayers()) do
@@ -316,14 +319,28 @@ local function spamM1()
     if comm and comm:IsA("RemoteEvent") then
         comm:FireServer({Goal = "LeftClick", Mobile = true})
         task.delay(0.07, function()
-            comm:FireServer({Goal = "LeftClickRelease", Mobile = true})
+            if char.Parent then
+                comm:FireServer({Goal = "LeftClickRelease", Mobile = true})
+            end
         end)
         lastM1Time = tick()
     end
 end
-RunService.Heartbeat:Connect(function()
-    if autoM1Enabled and hasPlayerInRange() then
-        spamM1()
+
+local function startM1Loop()
+    if m1Connection then m1Connection:Disconnect() end
+    m1Connection = RunService.Heartbeat:Connect(function()
+        if autoM1Enabled and hasPlayerInRange() then
+            spamM1()
+        end
+    end)
+end
+
+
+LocalPlayer.CharacterAdded:Connect(function()
+    if autoM1Enabled then
+        task.wait(1) 
+        startM1Loop()
     end
 end)
 mainTab:CreateDivider()
@@ -392,20 +409,44 @@ mainTab:CreateToggle({
 mainTab:CreateToggle({
     Name = "Auto M1",
     CurrentValue = false,
-    Flag = "AutoM1",
+    Flag = "AutoM1Toggle",
     Callback = function(Value)
         autoM1Enabled = Value
+        if Value then
+            startM1Loop()
+        else
+            if m1Connection then
+                m1Connection:Disconnect()
+                m1Connection = nil
+            end
+        end
     end,
 })
 
 mainTab:CreateSlider({
     Name = "stud",
-    Range = {8, 20},
+    Range = {8, 25},
     Increment = 1,
     Suffix = "stud",
-    CurrentValue = M1_RADIUS,
-    Callback = function(Value) M1_RADIUS = Value end,
+    CurrentValue = 14,
+    Flag = "M1RadiusSlider",
+    Callback = function(Value)
+        M1_RADIUS = Value
+    end,
 })
+
+mainTab:CreateSlider({
+    Name = "Delay",
+    Range = {0.15, 0.8},
+    Increment = 0.05,
+    Suffix = "s",
+    CurrentValue = 0.3,
+    Flag = "M1DelaySlider",
+    Callback = function(Value)
+        M1_DELAY = Value
+    end,
+})
+
 
 mainTab:CreateToggle({
     Name = "Auto TP When Low HP",
