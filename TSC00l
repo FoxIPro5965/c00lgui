@@ -409,9 +409,7 @@ RunService.Heartbeat:Connect(function()
         GlobalCooldown = t + 4
         InDownslamMode = false
     end
-        end
-    end
-end)
+    end)
 mainTab:CreateDivider()
 mainTab:CreateSection("University")
 
