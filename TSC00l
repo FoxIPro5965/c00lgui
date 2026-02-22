@@ -303,7 +303,27 @@ end)
 local AutoM1 = false
 local M1_COOLDOWN = 0.3
 local lastM1 = 0
+local function getClosestLiving14()
+    local char = LocalPlayer.Character
+    if not char or not char.PrimaryPart then return end
+    local myPos = char.PrimaryPart.Position
 
+    local closestDist = math.huge
+
+    for _, v in pairs(workspace:GetDescendants()) do
+        if v:IsA("Humanoid") and v.Health > 0 and v.Parent:FindFirstChild("HumanoidRootPart") then
+            local plr = Players:GetPlayerFromCharacter(v.Parent)
+            if plr ~= LocalPlayer then
+                local d = (v.Parent.HumanoidRootPart.Position - myPos).Magnitude
+                if d < closestDist then
+                    closestDist = d
+                end
+            end
+        end
+    end
+
+    return closestDist
+end
 local function FireM1()
     local char = LocalPlayer.Character
     if not char then return end
