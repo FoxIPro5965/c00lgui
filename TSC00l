@@ -301,9 +301,13 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 local AutoM1 = false
+local AutoDownslam = false
+local InDownslamMode = false
+local DownslamStartTime = 0
+local DOWN_SLAM_START_DELAY = 0.5
 local M1_COOLDOWN = 0.7
 local lastM1 = 0
-local function getClosestLiving7()
+local function getClosestLiving5()
     local char = LocalPlayer.Character
     if not char or not char.PrimaryPart then return end
     local myPos = char.PrimaryPart.Position
@@ -357,16 +361,35 @@ RunService.Heartbeat:Connect(function()
     if not AutoM1 then return end
 
     local dist = getClosestLiving7()
-    if not dist or dist > 7 then
-        ComboStep = 0
+    local t = tick()
+
+    if not AutoDownslam then
+        if dist and dist <= 5 then
+            if t - lastM1 >= 0.7 then
+                lastM1 = t
+                FireM1()
+            end
+        end
         return
     end
 
-    local t = tick()
+    if not dist or dist > 5 then
+        ComboStep = 0
+        InDownslamMode = false
+        return
+    end
 
-    if t < GlobalCooldown then return end
+    if not InDownslamMode then
+        InDownslamMode = true
+        DownslamStartTime = t
+        return
+    end
 
-    if t < NextActionTime then return end
+    if t - DownslamStartTime < DOWN_SLAM_START_DELAY then
+        return
+    end
+
+    if t < GlobalCooldown or t < NextActionTime then return end
 
     ComboStep += 1
 
@@ -385,6 +408,7 @@ RunService.Heartbeat:Connect(function()
 
             ComboStep = 0
             GlobalCooldown = t + 4
+            InDownslamMode = false
         else
             NextActionTime = t + 0.05
         end
@@ -446,7 +470,14 @@ mainTab:CreateSlider({
 })
 
 mainTab:CreateDivider()
-
+mainTab:CreateToggle({
+    Name = "Auto TP When Low HP",
+    CurrentValue = false,
+    Flag = "AutoTPCycle",
+    Callback = function(Value)
+        autoTP = Value
+    end,
+})
 mainTab:CreateToggle({
    Name = "Auto Counter",
    CurrentValue = false,
@@ -462,12 +493,13 @@ mainTab:CreateToggle({
    end
 })
 mainTab:CreateToggle({
-    Name = "Auto TP When Low HP",
-    CurrentValue = false,
-    Flag = "AutoTPCycle",
-    Callback = function(Value)
-        autoTP = Value
-    end,
+   Name = "Auto Downslam (buggy)",
+   CurrentValue = false,
+   Callback = function(Value)
+       AutoDownslam = Value
+       ComboStep = 0
+       InDownslamMode = false
+   end
 })
 
 mainTab:CreateDivider()
