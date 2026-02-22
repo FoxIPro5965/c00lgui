@@ -403,13 +403,12 @@ RunService.Heartbeat:Connect(function()
 
     elseif ComboStep == 5 then
         FireM1()
-        NextActionTime = t + 0.32
+        NextActionTime = t + 0.35
 
-            ComboStep = 0
-            GlobalCooldown = t + 5.25
-            InDownslamMode = false
-        else
-            NextActionTime = t + 0.05
+        ComboStep = 0
+        GlobalCooldown = t + 4
+        InDownslamMode = false
+    end
         end
     end
 end)
