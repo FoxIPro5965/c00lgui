@@ -301,9 +301,9 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 local AutoM1 = false
-local M1_COOLDOWN = 0.75
+local M1_COOLDOWN = 0.7
 local lastM1 = 0
-local function getClosestLiving5()
+local function getClosestLiving7()
     local char = LocalPlayer.Character
     if not char or not char.PrimaryPart then return end
     local myPos = char.PrimaryPart.Position
@@ -356,8 +356,8 @@ end
 RunService.Heartbeat:Connect(function()
     if not AutoM1 then return end
 
-    local dist = getClosestLiving5()
-    if not dist or dist > 5 then
+    local dist = getClosestLiving7()
+    if not dist or dist > 7 then
         ComboStep = 0
         return
     end
@@ -372,16 +372,16 @@ RunService.Heartbeat:Connect(function()
 
     if ComboStep <= 3 then
         FireM1()
-        NextActionTime = t + 0.75
+        NextActionTime = t + 0.7
 
     elseif ComboStep == 4 then
         Jump()
-        NextActionTime = t + 0.5
+        NextActionTime = t + 0.35
 
     elseif ComboStep == 5 then
         if humanoidRootPart and humanoidRootPart.Velocity.Y > 1 then
             FireM1()
-            NextActionTime = t + 0.25
+            NextActionTime = t + 0.35
 
             ComboStep = 0
             GlobalCooldown = t + 4
