@@ -300,7 +300,44 @@ RunService.RenderStepped:Connect(function()
         end
     end
 end)
+local AutoM1 = false
+local M1_COOLDOWN = 0.3
+local lastM1 = 0
 
+local function getClosestLiving14()
+    local char = LocalPlayer.Character
+    if not char or not char.PrimaryPart then return end
+    local myPos = char.PrimaryPart.Position
+
+    local closestDist = math.huge
+
+    for _, v in pairs(workspace:GetDescendants()) do
+        if v:IsA("Humanoid") and v.Health > 0 and v.Parent:FindFirstChild("HumanoidRootPart") then
+            local plr = Players:GetPlayerFromCharacter(v.Parent)
+            if plr ~= LocalPlayer then
+                local d = (v.Parent.HumanoidRootPart.Position - myPos).Magnitude
+                if d < closestDist then
+                    closestDist = d
+                end
+            end
+        end
+    end
+
+    return closestDist
+end
+RunService.Heartbeat:Connect(function()
+    if not AutoM1 then return end
+    local dist = getClosestLiving14()
+    if dist and dist <= 14 then
+        local t = tick()
+        if t - lastM1 >= M1_COOLDOWN then
+            lastM1 = t
+            VirtualInputManager:SendMouseButtonEvent(0,0,0,true,game,0)
+            task.wait(0.05)
+            VirtualInputManager:SendMouseButtonEvent(0,0,0,false,game,0)
+        end
+    end
+end)
 mainTab:CreateDivider()
 mainTab:CreateSection("University")
 
@@ -363,6 +400,13 @@ mainTab:CreateToggle({
    CurrentValue = false,
    Callback = function(Value)
        AutoCounter = Value
+   end
+})
+mainTab:CreateToggle({
+   Name = "Auto M1",
+   CurrentValue = false,
+   Callback = function(Value)
+       AutoM1 = Value
    end
 })
 mainTab:CreateToggle({
