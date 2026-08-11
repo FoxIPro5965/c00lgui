@@ -7,11 +7,25 @@ local Workspace = game:GetService("Workspace")
 local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
 local Debris = game:GetService("Debris")
+local StarterGui = game:GetService("StarterGui")
 local LP = Players.LocalPlayer
 
--- ===== STAMINA MODIFICATIONS =====
 local Sprinting = ReplicatedStorage:WaitForChild("Systems"):WaitForChild("Character"):WaitForChild("Game"):WaitForChild("Sprinting")
 local stamina = require(Sprinting)
+
+local CONFIG_FILE = "c00lgui_v24_config.json"
+
+local infStamina = true
+local enableMaxStamina = false
+local enableStaminaGain = false
+local enableStaminaLoss = false
+local enableSprintSpeed = false
+
+local customMaxStamina = 100
+local customStaminaGain = 20
+local customStaminaLoss = 5
+local customSprintSpeed = 28
+
 stamina.MaxStamina = 100
 stamina.MinStamina = -20
 stamina.StaminaGain = 100
@@ -19,9 +33,6 @@ stamina.StaminaLoss = 5
 stamina.SprintSpeed = 28.6
 stamina.StaminaLossDisabled = true
 
-local CONFIG_FILE = "c00lgui_v24_config.json"
-
--- ===== ADVANCED ESP SETTINGS & DATA =====
 local MapFolder = nil
 local mapObj = Workspace:FindFirstChild("Map")
 if mapObj then MapFolder = mapObj:FindFirstChild("Ingame") end
@@ -67,7 +78,14 @@ local ESPSettings = {
 	survivorOutlineTransparency = 0.3,
 }
 
--- ===== BACKSTAB SETTINGS =====
+local antiStun = false
+local antiSlow = false
+local antiBlindness = true
+local antiSubspace = false
+local antiHiddenStats = false
+local toggleState = false
+local originalValues = {}
+
 local stabEnabled = false
 local stabRange = 8
 local stabMode = "Behind"
@@ -75,36 +93,24 @@ local BACKSTAB_DISTANCE = 1.8
 local BACKSTAB_HOLD_TIME = 0.35
 local BACKSTAB_COOLDOWN = 10
 local lastBackstabTime = 0
+local deleteFakeNoli = false
 
 local killerNames = {
-	"Slasher", "Jason", "c00lkidd", "JohnDoe", "1x1x1x1", "Noli", "Nosferatu", "Sixer", "Azure"
+	"Slasher", "Jason", "c00lkidd", "JohnDoe", "1x1x1x1", "Noli", "Nosferatu", "Sixer", "Azure",
+	"Guest 666", "Jane Doe", "Valkyrie", "Corrupted", "Jeff The Killer"
 }
 
--- ===== VOIDRUSH CONTROLLER LOGIC =====
 local voidrushcontrol = false
 local ORIGINAL_DASH_SPEED = 55
 local isOverrideActive = false
 local voidrushConnection
 
-local function setupCharacter(character)
-	if not character then return end
-	local Humanoid = character:FindFirstChild("Humanoid")
-	local HumanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-	if Humanoid and HumanoidRootPart then
-		_G.Humanoid = Humanoid
-		_G.HumanoidRootPart = HumanoidRootPart
-	end
-end
-
-if LP.Character then setupCharacter(LP.Character) end
-LP.CharacterAdded:Connect(setupCharacter)
-
 local function startOverride()
 	if isOverrideActive then return end
 	isOverrideActive = true
 	voidrushConnection = RunService.RenderStepped:Connect(function()
-		local humanoid = _G.Humanoid
-		local rootPart = _G.HumanoidRootPart
+		local humanoid = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+		local rootPart = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
 		if not humanoid or not rootPart then return end
 		humanoid.WalkSpeed = ORIGINAL_DASH_SPEED
 		humanoid.AutoRotate = false
@@ -119,7 +125,7 @@ end
 local function stopOverride()
 	if not isOverrideActive then return end
 	isOverrideActive = false
-	local humanoid = _G.Humanoid
+	local humanoid = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
 	if humanoid then
 		humanoid.WalkSpeed = 18
 		humanoid.AutoRotate = true
@@ -133,7 +139,7 @@ end
 
 RunService.RenderStepped:Connect(function()
 	if not voidrushcontrol then return end
-	local char = _G.Humanoid and _G.Humanoid.Parent
+	local char = LP.Character
 	local voidRushState = char and char:GetAttribute("VoidRushState")
 	if voidRushState == "Dashing" then
 		startOverride()
@@ -142,7 +148,6 @@ RunService.RenderStepped:Connect(function()
 	end
 end)
 
--- ===== FLOW SOLVE LOGIC =====
 local flow = { nodeDelay = 0.01 }
 local function flowKey(n) return n.row .. "-" .. n.col end
 local function flowNeighbour(r1, c1, r2, c2)
@@ -254,7 +259,135 @@ local function SolveNow()
 	end
 end
 
--- ===== GLOBAL AUTO BLOCK CONFIGS =====
+local aimPunchSettings = { distance = 100 }
+local triggerModules = {}
+
+local function registerTriggerModule(name, enableFunc, disableFunc)
+	triggerModules[name] = { enabled = false, enable = enableFunc, disable = disableFunc }
+end
+
+local function toggleModule(name, state)
+	local mod = triggerModules[name]
+	if not mod then return end
+	if state and not mod.enabled then
+		mod.enable()
+		mod.enabled = true
+	elseif not state and mod.enabled then
+		mod.disable()
+		mod.enabled = false
+	end
+end
+
+local PUNCH_ANIM_IDS = {
+	["108911997126897"] = true,
+	["82137285150006"] = true,
+	["129843313690921"] = true,
+	["140703210927645"] = true,
+	["136007065400978"] = true,
+	["86096387000557"] = true,
+	["87259391926321"] = true,
+	["86709774283672"] = true,
+	["108807732150251"] = true,
+	["138040001965654"] = true
+}
+
+local PREDICT_TIME = 0.18
+local aimPunchConnection = nil
+local isAiming = false
+
+local function getClosestTarget(maxDist)
+	local char = LP.Character
+	local hrp = char and char:FindFirstChild("HumanoidRootPart")
+	if not hrp then return nil end
+
+	local kFolder = Workspace:FindFirstChild("Players") and Workspace.Players:FindFirstChild("Killers")
+	if not kFolder then return nil end
+
+	local closest, closestDist = nil, maxDist
+	for _, model in ipairs(kFolder:GetChildren()) do
+		if model:IsA("Model") and model ~= char then
+			local targetHRP = model:FindFirstChild("HumanoidRootPart")
+			local targetHum = model:FindFirstChildOfClass("Humanoid")
+			if targetHRP and targetHum and targetHum.Health > 0 then
+				local dist = (targetHRP.Position - hrp.Position).Magnitude
+				if dist < closestDist then
+					closestDist = dist
+					closest = targetHRP
+				end
+			end
+		end
+	end
+	return closest
+end
+
+local function aimAtTargetWithPrediction(targetHRP, duration)
+	if isAiming then return end
+	isAiming = true
+
+	local char = LP.Character
+	local hrp = char and char:FindFirstChild("HumanoidRootPart")
+	local hum = char and char:FindFirstChildOfClass("Humanoid")
+	if not hrp or not hum then isAiming = false return end
+
+	local oldAutoRotate = hum.AutoRotate
+	hum.AutoRotate = false
+
+	local startTime = tick()
+	local connection
+	connection = RunService.RenderStepped:Connect(function()
+		local elapsed = tick() - startTime
+		if elapsed >= duration or not targetHRP or not targetHRP.Parent or not hrp.Parent then
+			hum.AutoRotate = oldAutoRotate
+			isAiming = false
+			connection:Disconnect()
+			return
+		end
+
+		local targetVelocity = targetHRP.AssemblyLinearVelocity
+		local horizontalVelocity = Vector3.new(targetVelocity.X, 0, targetVelocity.Z)
+		local predictedPos = targetHRP.Position + (horizontalVelocity * PREDICT_TIME)
+		local aimPosition = Vector3.new(predictedPos.X, hrp.Position.Y, predictedPos.Z)
+		local targetCFrame = CFrame.lookAt(hrp.Position, aimPosition)
+		
+		hrp.CFrame = hrp.CFrame:Lerp(targetCFrame, 0.45)
+	end)
+end
+
+local function setupAimPunchListener(character)
+	if aimPunchConnection then
+		aimPunchConnection:Disconnect()
+		aimPunchConnection = nil
+	end
+
+	local hum = character:WaitForChild("Humanoid", 5)
+	local animator = hum and hum:WaitForChild("Animator", 5)
+	if not animator then return end
+
+	aimPunchConnection = animator.AnimationPlayed:Connect(function(track)
+		if not _G.AimPunchEnabled then return end
+		
+		local animId = track.Animation and track.Animation.AnimationId:match("%d+")
+		if animId and PUNCH_ANIM_IDS[animId] then
+			local targetHRP = getClosestTarget(aimPunchSettings.distance or 15)
+			if targetHRP then
+				aimAtTargetWithPrediction(targetHRP, 0.25)
+			end
+		end
+	end)
+end
+
+registerTriggerModule("Punch", 
+	function()
+		if LP.Character then setupAimPunchListener(LP.Character) end
+	end, 
+	function()
+		if aimPunchConnection then
+			aimPunchConnection:Disconnect()
+			aimPunchConnection = nil
+		end
+	end
+)
+
 _G.BaseHitboxSize = Vector3.new(4.5, 6, 7.5)
 _G.HitboxScale = 1.0
 _G.HitboxOffset = -1.4
@@ -276,37 +409,48 @@ _G.DragHitboxTransparency = 0.5
 _G.BlockHitboxData = {}
 _G.DragHitboxData = {}
 _G.AutoPunchEnabled = false
-_G.AutoPunchAimEnabled = false
+_G.AimPunchEnabled = false
 
--- ===== STATES =====
-local infEnabled, jumpEnabled = false, false
 local hidden = false
-local currentPage, totalPages = 1, 5
-local hakariKey, solveKey = Enum.KeyCode.B, Enum.KeyCode.H
-local waitingForKey, waitingForSolveKey = false, false
+local currentPage, totalPages = 1, 7
+local pageNames = { "Stamina", "ESP", "Anti", "Auto Block", "Auto Stab", "Misc", "Danger Zone" }
+local hakariKey, solveKey, toggleKey = Enum.KeyCode.B, Enum.KeyCode.H, Enum.KeyCode.K
+local waitingForKey, waitingForSolveKey, waitingForToggleKey = false, false, false
 local hakariActive = false
 
 local function SaveConfig()
 	pcall(function()
 		local data = {
-			infEnabled = infEnabled,
+			infStamina = infStamina,
+			enableMaxStamina = enableMaxStamina,
+			enableStaminaGain = enableStaminaGain,
+			enableStaminaLoss = enableStaminaLoss,
+			enableSprintSpeed = enableSprintSpeed,
+			customMaxStamina = customMaxStamina,
+			customStaminaGain = customStaminaGain,
+			customStaminaLoss = customStaminaLoss,
+			customSprintSpeed = customSprintSpeed,
 			espSettings = ESPSettings,
-			jumpEnabled = jumpEnabled,
-			sprintSpeed = stamina.SprintSpeed,
+			antiStun = antiStun,
+			antiSlow = antiSlow,
+			antiBlindness = antiBlindness,
+			antiSubspace = antiSubspace,
+			antiHiddenStats = antiHiddenStats,
 			hakariKey = hakariKey.Name,
 			solveKey = solveKey.Name,
+			toggleKey = toggleKey.Name,
 			autoBlock = _G.AutoBlockEnabled,
-			dragEnabled = _G.DragEnabled,
 			showHitbox = _G.ShowHitboxVisual,
 			hitboxScale = _G.HitboxScale,
 			hitboxOffset = _G.HitboxOffset,
 			hitboxDuration = _G.HitboxDuration,
 			autoPunch = _G.AutoPunchEnabled,
-			autoPunchAim = _G.AutoPunchAimEnabled,
+			aimPunch = _G.AimPunchEnabled,
 			stabEnabled = stabEnabled,
 			stabRange = stabRange,
 			stabMode = stabMode,
 			voidrushcontrol = voidrushcontrol,
+			deleteFakeNoli = deleteFakeNoli,
 		}
 		writefile(CONFIG_FILE, HttpService:JSONEncode(data))
 	end)
@@ -316,32 +460,47 @@ local function LoadConfig()
 	pcall(function()
 		if not isfile(CONFIG_FILE) then return end
 		local data = HttpService:JSONDecode(readfile(CONFIG_FILE))
-		if data.infEnabled ~= nil then infEnabled = data.infEnabled end
+		if data.infStamina ~= nil then infStamina = data.infStamina end
+		if data.enableMaxStamina ~= nil then enableMaxStamina = data.enableMaxStamina end
+		if data.enableStaminaGain ~= nil then enableStaminaGain = data.enableStaminaGain end
+		if data.enableStaminaLoss ~= nil then enableStaminaLoss = data.enableStaminaLoss end
+		if data.enableSprintSpeed ~= nil then enableSprintSpeed = data.enableSprintSpeed end
+		if data.customMaxStamina then customMaxStamina = data.customMaxStamina end
+		if data.customStaminaGain then customStaminaGain = data.customStaminaGain end
+		if data.customStaminaLoss then customStaminaLoss = data.customStaminaLoss end
+		if data.customSprintSpeed then customSprintSpeed = data.customSprintSpeed end
+
 		if data.espSettings then
-			for k, v in pairs(data.espSettings) do
-				ESPSettings[k] = v
-			end
+			for k, v in pairs(data.espSettings) do ESPSettings[k] = v end
 		end
-		if data.jumpEnabled ~= nil then jumpEnabled = data.jumpEnabled end
-		if data.sprintSpeed then stamina.SprintSpeed = data.sprintSpeed end
+
+		if data.antiStun ~= nil then antiStun = data.antiStun end
+		if data.antiSlow ~= nil then antiSlow = data.antiSlow end
+		if data.antiBlindness ~= nil then antiBlindness = data.antiBlindness end
+		if data.antiSubspace ~= nil then antiSubspace = data.antiSubspace end
+		if data.antiHiddenStats ~= nil then antiHiddenStats = data.antiHiddenStats end
+
 		if data.hakariKey then pcall(function() hakariKey = Enum.KeyCode[data.hakariKey] end) end
 		if data.solveKey then pcall(function() solveKey = Enum.KeyCode[data.solveKey] end) end
+		if data.toggleKey then pcall(function() toggleKey = Enum.KeyCode[data.toggleKey] end) end
 		if data.autoBlock ~= nil then _G.AutoBlockEnabled = data.autoBlock end
-		if data.dragEnabled ~= nil then _G.DragEnabled = data.dragEnabled end
 		if data.showHitbox ~= nil then _G.ShowHitboxVisual = data.showHitbox end
 		if data.hitboxScale then _G.HitboxScale = data.hitboxScale end
 		if data.hitboxOffset then _G.HitboxOffset = data.hitboxOffset end
 		if data.hitboxDuration then _G.HitboxDuration = data.hitboxDuration end
 		if data.autoPunch ~= nil then _G.AutoPunchEnabled = data.autoPunch end
-		if data.autoPunchAim ~= nil then _G.AutoPunchAimEnabled = data.autoPunchAim end
+		if data.aimPunch ~= nil then
+			_G.AimPunchEnabled = data.aimPunch
+			toggleModule("Punch", _G.AimPunchEnabled)
+		end
 		if data.stabEnabled ~= nil then stabEnabled = data.stabEnabled end
 		if data.stabRange ~= nil then stabRange = data.stabRange end
 		if data.stabMode ~= nil then stabMode = data.stabMode end
 		if data.voidrushcontrol ~= nil then voidrushcontrol = data.voidrushcontrol end
+		if data.deleteFakeNoli ~= nil then deleteFakeNoli = data.deleteFakeNoli end
 	end)
 end
 
--- ===== AUTO BLOCK & AUTO PUNCH LOGIC =====
 local MainUI, KillersFolder, SurvivorsFolder, Hitboxes
 
 local function GetObjects()
@@ -556,7 +715,6 @@ local function DisableAutoBlock()
 	_G.BlockHitboxData = {}
 end
 
--- ===== DETAILED ADVANCED ESP LOGIC =====
 local function IsRagdoll(model)
 	local ragdolls = Workspace:FindFirstChild("Ragdolls")
 	return ragdolls and (model:IsDescendantOf(ragdolls) or model.Parent == ragdolls)
@@ -571,12 +729,12 @@ local function IsSpectating(player)
 end
 
 local function createPlayerESP(model, color, isKiller)
-	if model:FindFirstChild("Fixsaken_Highlight") then return end
+	if model:FindFirstChild("c00lSaken_Highlight") then return end
 	if IsRagdoll(model) then return end
 	local hrp = model:FindFirstChild("HumanoidRootPart")
 	if not hrp then return end
 	local highlight = Instance.new("Highlight")
-	highlight.Name = "Fixsaken_Highlight"
+	highlight.Name = "c00lSaken_Highlight"
 	highlight.Adornee = model
 	highlight.FillColor = color
 	highlight.OutlineColor = color
@@ -588,9 +746,8 @@ end
 
 local function removePlayerESP(model)
 	pcall(function()
-		if model:FindFirstChild("Fixsaken_Highlight") then
-			model.Fixsaken_Highlight:Destroy()
-		end
+		local h = model:FindFirstChild("c00lSaken_Highlight")
+		if h then h:Destroy() end
 	end)
 end
 
@@ -630,7 +787,7 @@ local function UpdateESP()
 				local player = Players:GetPlayerFromCharacter(killer)
 				if not player or IsSpectating(player) then removePlayerESP(killer) continue end
 				if ESPSettings.killerESP then
-					if not killer:FindFirstChild("Fixsaken_Highlight") then
+					if not killer:FindFirstChild("c00lSaken_Highlight") then
 						createPlayerESP(killer, ESPSettings.killerColor, true)
 					end
 				else
@@ -645,7 +802,7 @@ local function UpdateESP()
 				local player = Players:GetPlayerFromCharacter(survivor)
 				if not player or IsSpectating(player) then removePlayerESP(survivor) continue end
 				if ESPSettings.playerESP then
-					if not survivor:FindFirstChild("Fixsaken_Highlight") then
+					if not survivor:FindFirstChild("c00lSaken_Highlight") then
 						createPlayerESP(survivor, ESPSettings.survivorColor, false)
 					end
 				else
@@ -778,13 +935,111 @@ local function UpdateESP()
 	end
 end
 
+local espLoopRunning = true
 task.spawn(function()
-	while task.wait(0.5) do
+	while espLoopRunning do
+		task.wait(0.5)
 		pcall(UpdateESP)
 	end
 end)
 
--- ===== BACKSTAB & AUTO PUNCH LOOPS =====
+local paths = {"HideKillerWins", "HidePlaytime", "HideSurvivorWins"}
+local function saveOriginals(p)
+	originalValues[p.UserId] = originalValues[p.UserId] or {}
+	for _, k in ipairs(paths) do
+		local v = p:FindFirstChild("PlayerData") and p.PlayerData:FindFirstChild("Settings") and p.PlayerData.Settings:FindFirstChild("Privacy") and p.PlayerData.Settings.Privacy:FindFirstChild(k)
+		if v then originalValues[p.UserId][k] = v.Value end
+	end
+end
+
+local function reveal(p)
+	for _, k in ipairs(paths) do
+		local v = p:FindFirstChild("PlayerData") and p.PlayerData:FindFirstChild("Settings") and p.PlayerData.Settings:FindFirstChild("Privacy") and p.PlayerData.Settings.Privacy:FindFirstChild(k)
+		if v then v.Value = false end
+	end
+end
+
+local function restore(p)
+	if not originalValues[p.UserId] then return end
+	for k, val in pairs(originalValues[p.UserId]) do
+		local v = p:FindFirstChild("PlayerData") and p.PlayerData:FindFirstChild("Settings") and p.PlayerData.Settings:FindFirstChild("Privacy") and p.PlayerData.Settings.Privacy:FindFirstChild(k)
+		if v then v.Value = val end
+	end
+end
+
+local function hiddenStatsFunc(on)
+	for _, p in ipairs(Players:GetPlayers()) do
+		if on then
+			saveOriginals(p)
+			reveal(p)
+		else
+			restore(p)
+		end
+	end
+end
+
+Players.PlayerAdded:Connect(function(p)
+	if toggleState then
+		saveOriginals(p)
+		reveal(p)
+	end
+end)
+
+task.spawn(function()
+	while task.wait(0.1) do
+		if antiStun then
+			pcall(function()
+				local char = LP.Character
+				if char and char:FindFirstChild("SpeedMultipliers") then
+					local s = char.SpeedMultipliers:FindFirstChild("Stunned")
+					if s then s.Value = 1.2 end
+				end
+			end)
+		end
+		if antiSlow then
+			pcall(function()
+				local char = LP.Character
+				if char and char:FindFirstChild("SpeedMultipliers") then
+					for _, m in ipairs(char.SpeedMultipliers:GetChildren()) do
+						if m.Value < 1 then m.Value = 1.2 end
+					end
+				end
+			end)
+		end
+		if antiBlindness then
+			pcall(function()
+				local b = Lighting:FindFirstChild("BlindnessBlur")
+				if b then b:Destroy() end
+			end)
+		end
+		if antiSubspace then
+			pcall(function()
+				local a = Lighting:FindFirstChild("SubspaceVFXBlur")
+				local b = Lighting:FindFirstChild("SubspaceVFXColorCorrection")
+				if a then a:Destroy() end
+				if b then b:Destroy() end
+			end)
+		end
+	end
+end)
+
+local fakeNoliRunning = true
+task.spawn(function()
+	while fakeNoliRunning do
+		task.wait(0.15)
+		if not deleteFakeNoli then continue end
+		pcall(function()
+			local killers = Workspace:FindFirstChild("Players") and Workspace.Players:FindFirstChild("Killers")
+			if not killers then return end
+			for _, model in pairs(killers:GetChildren()) do
+				if model:IsA("Model") and model:GetAttribute("IsFakeNoli") == true then
+					model:Destroy()
+				end
+			end
+		end)
+	end
+end)
+
 local function clickDaggerButton()
 	local gui = LP.PlayerGui:FindFirstChild("MainUI")
 	local btn = gui and gui:FindFirstChild("AbilityContainer") and gui.AbilityContainer:FindFirstChild("Dagger")
@@ -800,7 +1055,53 @@ local function isBehind(hrp, targetHRP)
 	return (hrp.Position - targetHRP.Position):Dot(dir) > 0.5
 end
 
-RunService.Heartbeat:Connect(function()
+local autoPunchRunning = true
+task.spawn(function()
+	while autoPunchRunning do
+		task.wait(0.1)
+		if _G.AutoPunchEnabled then
+			pcall(function()
+				local char = LP.Character
+				local hrp = char and char:FindFirstChild("HumanoidRootPart")
+				local kFolder = Workspace:FindFirstChild("Players") and Workspace.Players:FindFirstChild("Killers")
+				if hrp and kFolder then
+					local targetHRP = nil
+					local minDistance = 10
+
+					for _, killer in ipairs(kFolder:GetChildren()) do
+						if killer:IsA("Model") and killer ~= char then
+							local kHRP = killer:FindFirstChild("HumanoidRootPart")
+							local kHum = killer:FindFirstChildOfClass("Humanoid")
+							
+							if kHRP and kHum and kHum.Health > 0 then
+								local dist = (kHRP.Position - hrp.Position).Magnitude
+								if dist <= minDistance then
+									minDistance = dist
+									targetHRP = kHRP
+								end
+							end
+						end
+					end
+
+					if targetHRP then
+						local aimPosition = Vector3.new(targetHRP.Position.X, hrp.Position.Y, targetHRP.Position.Z)
+						hrp.CFrame = CFrame.lookAt(hrp.Position, aimPosition)
+
+						local tool = char:FindFirstChildOfClass("Tool")
+						if tool then
+							tool:Activate()
+						else
+							pressPunch()
+						end
+					end
+				end
+			end)
+		end
+	end
+end)
+
+local stabConnection
+stabConnection = RunService.Heartbeat:Connect(function()
 	if not stabEnabled then return end
 	if tick() - lastBackstabTime < BACKSTAB_COOLDOWN then return end
 	local char = LP.Character
@@ -830,9 +1131,23 @@ RunService.Heartbeat:Connect(function()
 	end
 end)
 
+local autoBlockMonitor = true
+task.spawn(function()
+	while autoBlockMonitor do
+		task.wait(1)
+		if not _G.AutoBlockEnabled then continue end
+		local pf = Workspace:FindFirstChild("Players")
+		local kf = pf and pf:FindFirstChild("Killers")
+		if kf and kf ~= KillersFolder then
+			KillersFolder = kf
+			DisableAutoBlock()
+			EnableAutoBlock()
+		end
+	end
+end)
+
 LoadConfig()
 
--- ===== GUI BUILD =====
 local gui = Instance.new("ScreenGui")
 gui.Name = "c00lgui"
 gui.ResetOnSpawn = false
@@ -859,7 +1174,7 @@ title.Size = UDim2.new(1, 0, 0, 28)
 title.BackgroundColor3 = BG
 title.BorderColor3 = RED
 title.BorderSizePixel = 2
-title.Text = "c00lgui v2.4"
+title.Text = "c00lgui v2.4 - Stamina"
 title.TextColor3 = TXT
 title.Font = Enum.Font.SourceSansBold
 title.TextSize = 18
@@ -918,10 +1233,35 @@ closeBtn.BackgroundTransparency = 1
 closeBtn.TextTransparency = 1
 closeBtn.Parent = main
 
-local function Btn(parent, text, y)
+local function CreatePageFrame()
+	local page = Instance.new("ScrollingFrame")
+	page.Size = UDim2.new(1, 0, 1, 0)
+	page.CanvasSize = UDim2.new(0, 0, 0, 0)
+	page.ScrollBarThickness = 6
+	page.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	page.BackgroundTransparency = 1
+	page.BorderSizePixel = 0
+	page.Visible = false
+	page.Parent = content
+	
+	local layout = Instance.new("UIListLayout")
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Padding = UDim.new(0, 6)
+	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	layout.Parent = page
+
+	local padding = Instance.new("UIPadding")
+	padding.PaddingTop = UDim.new(0, 6)
+	padding.PaddingBottom = UDim.new(0, 6)
+	padding.Parent = page
+
+	return page
+end
+
+local function Btn(parent, text, layoutOrder)
 	local b = Instance.new("TextButton")
-	b.Size = UDim2.new(1, -16, 0, 24)
-	b.Position = UDim2.new(0, 8, 0, y)
+	b.Size = UDim2.new(1, -16, 0, 26)
+	b.LayoutOrder = layoutOrder or 0
 	b.BackgroundColor3 = BG
 	b.BorderColor3 = RED
 	b.BorderSizePixel = 2
@@ -935,10 +1275,10 @@ local function Btn(parent, text, y)
 	return b
 end
 
-local function Lbl(parent, text, y)
+local function Lbl(parent, text, layoutOrder)
 	local l = Instance.new("TextLabel")
 	l.Size = UDim2.new(1, -16, 0, 16)
-	l.Position = UDim2.new(0, 8, 0, y)
+	l.LayoutOrder = layoutOrder or 0
 	l.BackgroundTransparency = 1
 	l.Text = text
 	l.TextColor3 = TXT
@@ -950,10 +1290,10 @@ local function Lbl(parent, text, y)
 	return l
 end
 
-local function Box(parent, default, y)
+local function Box(parent, default, layoutOrder)
 	local t = Instance.new("TextBox")
 	t.Size = UDim2.new(1, -16, 0, 24)
-	t.Position = UDim2.new(0, 8, 0, y)
+	t.LayoutOrder = layoutOrder or 0
 	t.BackgroundColor3 = BG
 	t.BorderColor3 = RED
 	t.BorderSizePixel = 2
@@ -968,89 +1308,81 @@ local function Box(parent, default, y)
 	return t
 end
 
--- PAGE 1: STAMINA
-local page1 = Instance.new("Frame")
-page1.Size = UDim2.new(1, 0, 1, 0)
-page1.BackgroundTransparency = 1
+local page1 = CreatePageFrame()
 page1.Visible = true
-page1.Parent = content
-Lbl(page1, "STAMINA", 6)
-local speedBox = Box(page1, stamina.SprintSpeed, 28)
-local infButton = Btn(page1, "Inf Stamina " .. (infEnabled and "ON" or "OFF"), 60)
-local jumpButton = Btn(page1, "Jump " .. (jumpEnabled and "ON" or "OFF"), 94)
--- PAGE 2: ESP FIXED
-local page2 = Instance.new("ScrollingFrame")
-page2.Size = UDim2.new(1, 0, 1, 0)
-page2.CanvasSize = UDim2.new(0, 0, 0, 420)
-page2.ScrollBarThickness = 6
-page2.AutomaticCanvasSize = Enum.AutomaticSize.Y
-page2.BackgroundTransparency = 1
-page2.BorderSizePixel = 0
-page2.Parent = content
-page2.Visible = false
 
-Lbl(page2, "ESP ", 2)
-local killerESPBtn = Btn(page2, "Killer ESP " .. (ESPSettings.killerESP and "ON" or "OFF"), 20)
-local survivorESPBtn = Btn(page2, "Survivor ESP " .. (ESPSettings.playerESP and "ON" or "OFF"), 48)
-local genESPBtn = Btn(page2, "Generator ESP " .. (ESPSettings.generatorESP and "ON" or "OFF"), 76)
-local itemESPBtn = Btn(page2, "Item ESP " .. (ESPSettings.itemESP and "ON" or "OFF"), 104)
-local pizzaESPBtn = Btn(page2, "Pizza ESP " .. (ESPSettings.pizzaEsp and "ON" or "OFF"), 132)
-local deliveryESPBtn = Btn(page2, "Pizza Delivery ESP " .. (ESPSettings.pizzaDeliveryEsp and "ON" or "OFF"), 160)
-local zombieESPBtn = Btn(page2, "Zombie ESP " .. (ESPSettings.zombieEsp and "ON" or "OFF"), 188)
-local tripwireESPBtn = Btn(page2, "Tripwire ESP " .. (ESPSettings.taphTripwireEsp and "ON" or "OFF"), 216)
-local mineESPBtn = Btn(page2, "Mine ESP " .. (ESPSettings.tripMineEsp and "ON" or "OFF"), 244)
-local respawnESPBtn = Btn(page2, "Respawn ESP " .. (ESPSettings.twoTimeRespawnEsp and "ON" or "OFF"), 272)
-local graffitiESPBtn = Btn(page2, "Graffiti ESP " .. (ESPSettings.graffitiEsp and "ON" or "OFF"), 300)
-local groundBulbESPBtn = Btn(page2, "GroundBulb ESP " .. (ESPSettings.azureGroundBulbESP and "ON" or "OFF"), 328)
-local vineESPBtn = Btn(page2, "Vine ESP " .. (ESPSettings.azureVineESP and "ON" or "OFF"), 356)
+local infStaminaBtn = Btn(page1, "Infinite Stamina " .. (infStamina and "ON" or "OFF"), 1)
+local enableMaxBtn = Btn(page1, "Custom Max Stamina " .. (enableMaxStamina and "ON" or "OFF"), 2)
+Lbl(page1, "Max Stamina Value:", 3)
+local maxStaminaBox = Box(page1, customMaxStamina, 4)
 
--- PAGE 3: MISC
-local page3 = Instance.new("Frame")
-page3.Size = UDim2.new(1, 0, 1, 0)
-page3.BackgroundTransparency = 1
-page3.Visible = false
-page3.Parent = content
-Lbl(page3, "MISC", 4)
-local keyButton = Btn(page3, "Hakari Key: " .. hakariKey.Name, 22)
-local solveButton = Btn(page3, "SOLVE", 50)
-local solveKeyBtn = Btn(page3, "Solve Key: " .. solveKey.Name, 78)
-local voidrushBtn = Btn(page3, "Voidrush Control " .. (voidrushcontrol and "ON" or "OFF"), 106)
+local enableGainBtn = Btn(page1, "Custom Stamina Gain " .. (enableStaminaGain and "ON" or "OFF"), 5)
+Lbl(page1, "Stamina Gain Value:", 6)
+local staminaGainBox = Box(page1, customStaminaGain, 7)
 
--- PAGE 4: BLOCK
-local page4 = Instance.new("ScrollingFrame")
-page4.Size = UDim2.new(1, 0, 1, 0)
-page4.CanvasSize = UDim2.new(0, 0, 0, 240)
-page4.ScrollBarThickness = 6
-page4.AutomaticCanvasSize = Enum.AutomaticSize.Y
-page4.BackgroundTransparency = 1
-page4.BorderSizePixel = 0
-page4.Parent = content
-page4.Visible = false
-Lbl(page4, "BLOCK", 2)
-local autoBlockBtn = Btn(page4, "Auto Block " .. (_G.AutoBlockEnabled and "ON" or "OFF"), 18)
-local showHitboxBtn = Btn(page4, "Show Hitbox " .. (_G.ShowHitboxVisual and "ON" or "OFF"), 46)
-Lbl(page4, "Scale | Offset Z | Duration", 74)
-local scaleBox = Box(page4, _G.HitboxScale, 90)
-local offsetBox = Box(page4, _G.HitboxOffset, 116)
-local durationBox = Box(page4, _G.HitboxDuration, 142)
-local autoPunchBtn = Btn(page4, "Auto Punch " .. (_G.AutoPunchEnabled and "ON" or "OFF"), 174)
-local autoPunchAimBtn = Btn(page4, "AutoPunch Aim " .. (_G.AutoPunchAimEnabled and "ON" or "OFF"), 202)
+local enableLossBtn = Btn(page1, "Custom Stamina Loss " .. (enableStaminaLoss and "ON" or "OFF"), 8)
+Lbl(page1, "Stamina Loss Value:", 9)
+local staminaLossBox = Box(page1, customStaminaLoss, 10)
 
--- PAGE 5: STAB
-local page5 = Instance.new("Frame")
-page5.Size = UDim2.new(1, 0, 1, 0)
-page5.BackgroundTransparency = 1
-page5.Visible = false
-page5.Parent = content
-Lbl(page5, "STAB", 6)
-local autoStabBtn = Btn(page5, "Auto Stab " .. (stabEnabled and "ON" or "OFF"), 28)
-local stabModeBtn = Btn(page5, "Mode: " .. stabMode, 62)
-Lbl(page5, "Stab Range:", 96)
-local stabRangeBox = Box(page5, stabRange, 116)
+local enableSpeedBtn = Btn(page1, "Custom Sprint Speed " .. (enableSprintSpeed and "ON" or "OFF"), 11)
+Lbl(page1, "Sprint Speed Value:", 12)
+local sprintSpeedBox = Box(page1, customSprintSpeed, 13)
 
-local pages = { page1, page2, page3, page4, page5 }
+local page2 = CreatePageFrame()
+local killerESPBtn = Btn(page2, "Killer ESP " .. (ESPSettings.killerESP and "ON" or "OFF"), 1)
+local survivorESPBtn = Btn(page2, "Survivor ESP " .. (ESPSettings.playerESP and "ON" or "OFF"), 2)
+local genESPBtn = Btn(page2, "Generator ESP " .. (ESPSettings.generatorESP and "ON" or "OFF"), 3)
+local itemESPBtn = Btn(page2, "Item ESP " .. (ESPSettings.itemESP and "ON" or "OFF"), 4)
+local pizzaESPBtn = Btn(page2, "Pizza ESP " .. (ESPSettings.pizzaEsp and "ON" or "OFF"), 5)
+local deliveryESPBtn = Btn(page2, "Pizza Delivery ESP " .. (ESPSettings.pizzaDeliveryEsp and "ON" or "OFF"), 6)
+local zombieESPBtn = Btn(page2, "Zombie ESP " .. (ESPSettings.zombieEsp and "ON" or "OFF"), 7)
+local tripwireESPBtn = Btn(page2, "Tripwire ESP " .. (ESPSettings.taphTripwireEsp and "ON" or "OFF"), 8)
+local mineESPBtn = Btn(page2, "Mine ESP " .. (ESPSettings.tripMineEsp and "ON" or "OFF"), 9)
+local respawnESPBtn = Btn(page2, "Respawn ESP " .. (ESPSettings.twoTimeRespawnEsp and "ON" or "OFF"), 10)
+local graffitiESPBtn = Btn(page2, "Graffiti ESP " .. (ESPSettings.graffitiEsp and "ON" or "OFF"), 11)
+local groundBulbESPBtn = Btn(page2, "GroundBulb ESP " .. (ESPSettings.azureGroundBulbESP and "ON" or "OFF"), 12)
+local vineESPBtn = Btn(page2, "Vine ESP " .. (ESPSettings.azureVineESP and "ON" or "OFF"), 13)
 
--- Fade-in animation
+local page3 = CreatePageFrame()
+local antiStunBtn = Btn(page3, "Anti Stun " .. (antiStun and "ON" or "OFF"), 1)
+local antiSlowBtn = Btn(page3, "Anti Slow " .. (antiSlow and "ON" or "OFF"), 2)
+local antiBlindBtn = Btn(page3, "Anti Blindness " .. (antiBlindness and "ON" or "OFF"), 3)
+local antiSubspaceBtn = Btn(page3, "Anti Subspace " .. (antiSubspace and "ON" or "OFF"), 4)
+local antiHiddenStatsBtn = Btn(page3, "Anti Hidden Stats " .. (antiHiddenStats and "ON" or "OFF"), 5)
+
+local page4 = CreatePageFrame()
+local autoBlockBtn = Btn(page4, "Auto Block " .. (_G.AutoBlockEnabled and "ON" or "OFF"), 1)
+local showHitboxBtn = Btn(page4, "Show Hitbox " .. (_G.ShowHitboxVisual and "ON" or "OFF"), 2)
+Lbl(page4, "Hitbox Scale:", 3)
+local scaleBox = Box(page4, _G.HitboxScale, 4)
+Lbl(page4, "Hitbox Offset Z:", 5)
+local offsetBox = Box(page4, _G.HitboxOffset, 6)
+Lbl(page4, "Hitbox Duration:", 7)
+local durationBox = Box(page4, _G.HitboxDuration, 8)
+local autoPunchBtn = Btn(page4, "Auto Punch " .. (_G.AutoPunchEnabled and "ON" or "OFF"), 9)
+local aimPunchBtn = Btn(page4, "Aim Punch " .. (_G.AimPunchEnabled and "ON" or "OFF"), 10)
+
+local page5 = CreatePageFrame()
+local autoStabBtn = Btn(page5, "Auto Stab " .. (stabEnabled and "ON" or "OFF"), 1)
+local stabModeBtn = Btn(page5, "Mode: " .. stabMode, 2)
+Lbl(page5, "Stab Range:", 3)
+local stabRangeBox = Box(page5, stabRange, 4)
+
+local page6 = CreatePageFrame()
+local keyButton = Btn(page6, "Hakari Key: " .. hakariKey.Name, 1)
+local solveButton = Btn(page6, "SOLVE PUZZLE", 2)
+local solveKeyBtn = Btn(page6, "Solve Key: " .. solveKey.Name, 3)
+local voidrushBtn = Btn(page6, "Voidrush Control " .. (voidrushcontrol and "ON" or "OFF"), 4)
+local deleteNoliBtn = Btn(page6, "Delete Fake Noli " .. (deleteFakeNoli and "ON" or "OFF"), 5)
+
+local page7 = CreatePageFrame()
+local toggleKeyBtn = Btn(page7, "Toggle Key: " .. toggleKey.Name, 1)
+local destroyBtn = Btn(page7, "DESTROY GUI", 2)
+destroyBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
+destroyBtn.BorderColor3 = Color3.fromRGB(255, 50, 50)
+
+local pages = { page1, page2, page3, page4, page5, page6, page7 }
+
 task.delay(1, function()
 	local info = TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 	TweenService:Create(main, info, { BackgroundTransparency = 0 }):Play()
@@ -1074,6 +1406,7 @@ local function UpdatePage()
 	for i, p in ipairs(pages) do
 		p.Visible = (i == currentPage)
 	end
+	title.Text = "c00lgui v2.4 - " .. pageNames[currentPage]
 end
 
 local function PrevPage()
@@ -1091,7 +1424,6 @@ end
 leftBtn.MouseButton1Click:Connect(PrevPage)
 rightBtn.MouseButton1Click:Connect(NextPage)
 
--- Collapsed UI
 local mini = Instance.new("Frame")
 mini.Size = UDim2.new(0, 160, 0, 28)
 mini.Position = main.Position
@@ -1125,55 +1457,242 @@ miniOpen.Font = Enum.Font.SourceSansBold
 miniOpen.TextSize = 16
 miniOpen.Parent = mini
 
-local function ToggleGUI()
+local confirmFrame = Instance.new("Frame")
+confirmFrame.Name = "ConfirmFrame"
+confirmFrame.Size = UDim2.new(0, 220, 0, 130)
+confirmFrame.Position = UDim2.new(0.5, -110, 0.5, -65)
+confirmFrame.BackgroundColor3 = BG
+confirmFrame.BorderColor3 = RED
+confirmFrame.BorderSizePixel = 2
+confirmFrame.Visible = false
+confirmFrame.ZIndex = 10
+confirmFrame.Active = true
+confirmFrame.Parent = gui
+
+local confirmLabel = Instance.new("TextLabel")
+confirmLabel.Size = UDim2.new(1, -16, 0, 50)
+confirmLabel.Position = UDim2.new(0, 8, 0, 8)
+confirmLabel.BackgroundTransparency = 1
+confirmLabel.Text = "Bạn có chắc chắn muốn DESTROY GUI?\nTất cả tính năng sẽ bị hủy hoàn toàn!"
+confirmLabel.TextColor3 = TXT
+confirmLabel.Font = Enum.Font.SourceSansBold
+confirmLabel.TextSize = 13
+confirmLabel.TextWrapped = true
+confirmLabel.ZIndex = 11
+confirmLabel.Parent = confirmFrame
+
+local confirmYes = Instance.new("TextButton")
+confirmYes.Size = UDim2.new(0.45, -6, 0, 28)
+confirmYes.Position = UDim2.new(0, 8, 1, -36)
+confirmYes.BackgroundColor3 = BG
+confirmYes.BorderColor3 = RED
+confirmYes.BorderSizePixel = 2
+confirmYes.Text = "YES"
+confirmYes.TextColor3 = Color3.fromRGB(255, 80, 80)
+confirmYes.Font = Enum.Font.SourceSansBold
+confirmYes.TextSize = 14
+confirmYes.ZIndex = 11
+confirmYes.Parent = confirmFrame
+
+local confirmCancel = Instance.new("TextButton")
+confirmCancel.Size = UDim2.new(0.45, -6, 0, 28)
+confirmCancel.Position = UDim2.new(0.55, 0, 1, -36)
+confirmCancel.BackgroundColor3 = BG
+confirmCancel.BorderColor3 = RED
+confirmCancel.BorderSizePixel = 2
+confirmCancel.Text = "CANCEL"
+confirmCancel.TextColor3 = TXT
+confirmCancel.Font = Enum.Font.SourceSansBold
+confirmCancel.TextSize = 14
+confirmCancel.ZIndex = 11
+confirmCancel.Parent = confirmFrame
+
+local function CleanUpAllFeatures()
+	infStamina = false
+	stamina.StaminaLossDisabled = false
+	
+	for k in pairs(ESPSettings) do
+		if type(ESPSettings[k]) == "boolean" then ESPSettings[k] = false end
+	end
+	pcall(UpdateESP)
+	
+	antiStun = false
+	antiSlow = false
+	antiBlindness = false
+	antiSubspace = false
+	antiHiddenStats = false
+	hiddenStatsFunc(false)
+
+	_G.AutoBlockEnabled = false
+	DisableAutoBlock()
+	
+	_G.AutoPunchEnabled = false
+	_G.AimPunchEnabled = false
+	toggleModule("Punch", false)
+	
+	stabEnabled = false
+	if stabConnection then stabConnection:Disconnect() end
+	
+	voidrushcontrol = false
+	stopOverride()
+	
+	deleteFakeNoli = false
+	espLoopRunning = false
+	fakeNoliRunning = false
+	autoPunchRunning = false
+	autoBlockMonitor = false
+end
+
+confirmYes.MouseButton1Click:Connect(function()
+	CleanUpAllFeatures()
+	gui:Destroy()
+end)
+
+confirmCancel.MouseButton1Click:Connect(function()
+	confirmFrame.Visible = false
+end)
+
+destroyBtn.MouseButton1Click:Connect(function()
+	confirmFrame.Visible = true
+end)
+
+local isMobile = UIS.TouchEnabled and not UIS.KeyboardEnabled
+
+local function ToggleGUI_PC()
+	hidden = not hidden
+	main.Visible = not hidden
+	mini.Visible = false
+	if hidden then
+		pcall(function()
+			StarterGui:SetCore("SendNotification", {
+				Title = "c00lgui v2.4",
+				Text = "Ấn phím [ " .. toggleKey.Name .. " ] để mở lại GUI!",
+				Duration = 4
+			})
+		end)
+	end
+end
+
+local function ToggleGUI_Mobile()
 	hidden = not hidden
 	main.Visible = not hidden
 	mini.Visible = hidden
-	if hidden then mini.Position = main.Position else main.Position = mini.Position end
+	if hidden then 
+		mini.Position = main.Position 
+	else 
+		main.Position = mini.Position 
+	end
 end
 
-closeBtn.MouseButton1Click:Connect(ToggleGUI)
-miniOpen.MouseButton1Click:Connect(ToggleGUI)
+local function OnCloseClicked()
+	if isMobile then
+		ToggleGUI_Mobile()
+	else
+		ToggleGUI_PC()
+	end
+end
 
--- ===== EVENT LISTENERS & CALLBACKS =====
+closeBtn.MouseButton1Click:Connect(OnCloseClicked)
+miniOpen.MouseButton1Click:Connect(ToggleGUI_Mobile)
+
+local function onCharacterAdded(newChar)
+	local hum = newChar:WaitForChild("Humanoid", 10)
+	local hrp = newChar:WaitForChild("HumanoidRootPart", 10)
+	if not hum or not hrp then return end
+
+	if _G.AutoBlockEnabled then
+		task.defer(function()
+			task.wait(0.8)
+			DisableAutoBlock()
+			GetObjects()
+			EnableAutoBlock()
+		end)
+	end
+
+	if _G.AimPunchEnabled then
+		toggleModule("Punch", false)
+		task.wait(0.1)
+		toggleModule("Punch", true)
+	end
+
+	if voidrushcontrol then
+		stopOverride()
+	end
+end
+
+if LP.Character then
+	task.spawn(function() onCharacterAdded(LP.Character) end)
+end
+LP.CharacterAdded:Connect(onCharacterAdded)
+
 task.spawn(function()
 	while task.wait(0.1) do
-		if infEnabled then
-			stamina.Stamina = stamina.MaxStamina
-			stamina.StaminaLossDisabled = true
-		end
-		if jumpEnabled then
-			local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
-			if hum then
-				hum.UseJumpPower = true
-				hum.JumpPower = 50
+		pcall(function()
+			if infStamina then
+				stamina.Stamina = stamina.MaxStamina
+				stamina.StaminaLossDisabled = true
+			else
+				stamina.StaminaLossDisabled = false
 			end
-		end
+
+			if enableMaxStamina then stamina.MaxStamina = customMaxStamina end
+			if enableStaminaGain then stamina.StaminaGain = customStaminaGain end
+			if enableStaminaLoss then stamina.StaminaLoss = customStaminaLoss end
+			if enableSprintSpeed then stamina.SprintSpeed = customSprintSpeed end
+		end)
 	end
 end)
 
-speedBox.FocusLost:Connect(function()
-	local n = tonumber(speedBox.Text)
-	if n then
-		stamina.SprintSpeed = n
-		SaveConfig()
-	else
-		speedBox.Text = tostring(stamina.SprintSpeed)
-	end
+infStaminaBtn.MouseButton1Click:Connect(function()
+	infStamina = not infStamina
+	infStaminaBtn.Text = "Infinite Stamina " .. (infStamina and "ON" or "OFF")
+	SaveConfig()
 end)
 
-LP.CharacterAdded:Connect(function(char)
-	local hum = char:WaitForChild("Humanoid", 5)
-	if not hum then return end
-	if jumpEnabled then hum.UseJumpPower = true hum.JumpPower = 50 end
-	if infEnabled then stamina.StaminaLossDisabled = true stamina.Stamina = stamina.MaxStamina end
-	stamina.SprintSpeed = tonumber(speedBox.Text) or stamina.SprintSpeed
-	if _G.AutoBlockEnabled then
-		task.defer(function() task.wait(0.5) EnableAutoBlock() end)
-	end
+enableMaxBtn.MouseButton1Click:Connect(function()
+	enableMaxStamina = not enableMaxStamina
+	enableMaxBtn.Text = "Custom Max Stamina " .. (enableMaxStamina and "ON" or "OFF")
+	SaveConfig()
 end)
 
--- PAGE 2 ESP CALLBACKS
+maxStaminaBox.FocusLost:Connect(function()
+	local n = tonumber(maxStaminaBox.Text)
+	if n then customMaxStamina = n SaveConfig() else maxStaminaBox.Text = tostring(customMaxStamina) end
+end)
+
+enableGainBtn.MouseButton1Click:Connect(function()
+	enableStaminaGain = not enableStaminaGain
+	enableGainBtn.Text = "Custom Stamina Gain " .. (enableStaminaGain and "ON" or "OFF")
+	SaveConfig()
+end)
+
+staminaGainBox.FocusLost:Connect(function()
+	local n = tonumber(staminaGainBox.Text)
+	if n then customStaminaGain = n SaveConfig() else staminaGainBox.Text = tostring(customStaminaGain) end
+end)
+
+enableLossBtn.MouseButton1Click:Connect(function()
+	enableStaminaLoss = not enableStaminaLoss
+	enableLossBtn.Text = "Custom Stamina Loss " .. (enableStaminaLoss and "ON" or "OFF")
+	SaveConfig()
+end)
+
+staminaLossBox.FocusLost:Connect(function()
+	local n = tonumber(staminaLossBox.Text)
+	if n then customStaminaLoss = n SaveConfig() else staminaLossBox.Text = tostring(customStaminaLoss) end
+end)
+
+enableSpeedBtn.MouseButton1Click:Connect(function()
+	enableSprintSpeed = not enableSprintSpeed
+	enableSpeedBtn.Text = "Custom Sprint Speed " .. (enableSprintSpeed and "ON" or "OFF")
+	SaveConfig()
+end)
+
+sprintSpeedBox.FocusLost:Connect(function()
+	local n = tonumber(sprintSpeedBox.Text)
+	if n then customSprintSpeed = n SaveConfig() else sprintSpeedBox.Text = tostring(customSprintSpeed) end
+end)
+
 killerESPBtn.MouseButton1Click:Connect(function()
 	ESPSettings.killerESP = not ESPSettings.killerESP
 	killerESPBtn.Text = "Killer ESP " .. (ESPSettings.killerESP and "ON" or "OFF")
@@ -1252,7 +1771,38 @@ vineESPBtn.MouseButton1Click:Connect(function()
 	SaveConfig()
 end)
 
--- Hakari Dance
+antiStunBtn.MouseButton1Click:Connect(function()
+	antiStun = not antiStun
+	antiStunBtn.Text = "Anti Stun " .. (antiStun and "ON" or "OFF")
+	SaveConfig()
+end)
+
+antiSlowBtn.MouseButton1Click:Connect(function()
+	antiSlow = not antiSlow
+	antiSlowBtn.Text = "Anti Slow " .. (antiSlow and "ON" or "OFF")
+	SaveConfig()
+end)
+
+antiBlindBtn.MouseButton1Click:Connect(function()
+	antiBlindness = not antiBlindness
+	antiBlindBtn.Text = "Anti Blindness " .. (antiBlindness and "ON" or "OFF")
+	SaveConfig()
+end)
+
+antiSubspaceBtn.MouseButton1Click:Connect(function()
+	antiSubspace = not antiSubspace
+	antiSubspaceBtn.Text = "Anti Subspace " .. (antiSubspace and "ON" or "OFF")
+	SaveConfig()
+end)
+
+antiHiddenStatsBtn.MouseButton1Click:Connect(function()
+	antiHiddenStats = not antiHiddenStats
+	toggleState = antiHiddenStats
+	antiHiddenStatsBtn.Text = "Anti Hidden Stats " .. (antiHiddenStats and "ON" or "OFF")
+	hiddenStatsFunc(antiHiddenStats)
+	SaveConfig()
+end)
+
 local function ToggleHakariDance(state)
 	local char = LP.Character
 	if not char then return end
@@ -1314,7 +1864,11 @@ local function ToggleHakariDance(state)
 	end
 end
 
--- Key Input
+toggleKeyBtn.MouseButton1Click:Connect(function()
+	waitingForToggleKey = true
+	toggleKeyBtn.Text = "Press any key..."
+end)
+
 UIS.InputBegan:Connect(function(input, gp)
 	if gp then return end
 	if waitingForKey then
@@ -1335,14 +1889,27 @@ UIS.InputBegan:Connect(function(input, gp)
 		end
 		return
 	end
-	if input.KeyCode == Enum.KeyCode.K then ToggleGUI()
+	if waitingForToggleKey then
+		if input.UserInputType == Enum.UserInputType.Keyboard then
+			toggleKey = input.KeyCode
+			toggleKeyBtn.Text = "Toggle Key: " .. input.KeyCode.Name
+			waitingForToggleKey = false
+			SaveConfig()
+		end
+		return
+	end
+	if input.KeyCode == toggleKey then 
+		if isMobile then
+			ToggleGUI_Mobile()
+		else
+			ToggleGUI_PC()
+		end
 	elseif input.KeyCode == Enum.KeyCode.KeypadFour then PrevPage()
 	elseif input.KeyCode == Enum.KeyCode.KeypadSix then NextPage()
 	elseif input.KeyCode == hakariKey then ToggleHakariDance(not hakariActive)
 	elseif input.KeyCode == solveKey then SolveNow() end
 end)
 
--- Drag Logic
 local function MakeDrag(frame)
 	local drag, start, pos
 	frame.InputBegan:Connect(function(i)
@@ -1362,22 +1929,7 @@ local function MakeDrag(frame)
 end
 MakeDrag(main)
 MakeDrag(mini)
-
--- Callbacks Khác
-infButton.MouseButton1Click:Connect(function()
-	infEnabled = not infEnabled
-	stamina.StaminaLossDisabled = infEnabled
-	infButton.Text = "Inf Stamina " .. (infEnabled and "ON" or "OFF")
-	SaveConfig()
-end)
-
-jumpButton.MouseButton1Click:Connect(function()
-	jumpEnabled = not jumpEnabled
-	jumpButton.Text = "Jump " .. (jumpEnabled and "ON" or "OFF")
-	local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
-	if hum then hum.UseJumpPower = true hum.JumpPower = jumpEnabled and 50 or 0 end
-	SaveConfig()
-end)
+MakeDrag(confirmFrame)
 
 keyButton.MouseButton1Click:Connect(function() waitingForKey = true keyButton.Text = "Press any key..." end)
 solveButton.MouseButton1Click:Connect(SolveNow)
@@ -1387,6 +1939,12 @@ voidrushBtn.MouseButton1Click:Connect(function()
 	voidrushcontrol = not voidrushcontrol
 	if not voidrushcontrol then stopOverride() end
 	voidrushBtn.Text = "Voidrush Control " .. (voidrushcontrol and "ON" or "OFF")
+	SaveConfig()
+end)
+
+deleteNoliBtn.MouseButton1Click:Connect(function()
+	deleteFakeNoli = not deleteFakeNoli
+	deleteNoliBtn.Text = "Delete Fake Noli " .. (deleteFakeNoli and "ON" or "OFF")
 	SaveConfig()
 end)
 
@@ -1424,9 +1982,10 @@ autoPunchBtn.MouseButton1Click:Connect(function()
 	SaveConfig()
 end)
 
-autoPunchAimBtn.MouseButton1Click:Connect(function()
-	_G.AutoPunchAimEnabled = not _G.AutoPunchAimEnabled
-	autoPunchAimBtn.Text = "AutoPunch Aim " .. (_G.AutoPunchAimEnabled and "ON" or "OFF")
+aimPunchBtn.MouseButton1Click:Connect(function()
+	_G.AimPunchEnabled = not _G.AimPunchEnabled
+	aimPunchBtn.Text = "Aim Punch " .. (_G.AimPunchEnabled and "ON" or "OFF")
+	toggleModule("Punch", _G.AimPunchEnabled)
 	SaveConfig()
 end)
 
