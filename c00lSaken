@@ -136,6 +136,8 @@ RunService.RenderStepped:Connect(function()
 	end
 end)
 
+local autoGen = true
+local autoGenSpeed = 0.08
 local flow = { nodeDelay = 0.01 }
 local function flowKey(n) return n.row .. "-" .. n.col end
 local function flowNeighbour(r1, c1, r2, c2)
@@ -207,7 +209,7 @@ local function flowSolve(puzzle)
 			for _, node in ipairs(ordered) do
 				table.insert(puzzle.paths[ci], { row = node.row, col = node.col })
 				puzzle:updateGui()
-				task.wait(flow.nodeDelay)
+				task.wait(autoGen and autoGenSpeed or flow.nodeDelay)
 			end
 			task.wait(0)
 			puzzle:checkForWin()
@@ -228,6 +230,12 @@ pcall(function()
 			FG.new = function(...)
 				local p = orig(...)
 				currentPuzzle = p
+				if autoGen then
+					task.spawn(function()
+						task.wait(0.05)
+						flowSolve(p)
+					end)
+				end
 				return p
 			end
 		end
@@ -428,6 +436,8 @@ local function SaveConfig()
 			stabMode = stabMode,
 			voidrushcontrol = voidrushcontrol,
 			deleteFakeNoli = deleteFakeNoli,
+			autoGen = autoGen,
+			autoGenSpeed = autoGenSpeed,
 			antiStun = antiStun,
 			antiSlow = antiSlow,
 			antiBlindness = antiBlindness,
@@ -466,6 +476,8 @@ local function LoadConfig()
 		if data.stabMode ~= nil then stabMode = data.stabMode end
 		if data.voidrushcontrol ~= nil then voidrushcontrol = data.voidrushcontrol end
 		if data.deleteFakeNoli ~= nil then deleteFakeNoli = data.deleteFakeNoli end
+		if data.autoGen ~= nil then autoGen = data.autoGen end
+		if data.autoGenSpeed ~= nil then autoGenSpeed = data.autoGenSpeed end
 		if data.antiStun ~= nil then antiStun = data.antiStun end
 		if data.antiSlow ~= nil then antiSlow = data.antiSlow end
 		if data.antiBlindness ~= nil then antiBlindness = data.antiBlindness end
@@ -1136,7 +1148,7 @@ local TXT = Color3.fromRGB(255, 255, 255)
 
 local main = Instance.new("Frame")
 main.Name = "Main"
-main.Size = UDim2.new(0, 260, 0, 280)
+main.Size = UDim2.new(0, 260, 0, 310)
 main.Position = UDim2.new(0.5, -130, 0.5, -140)
 main.BackgroundColor3 = BG
 main.BorderColor3 = RED
@@ -1187,7 +1199,7 @@ rightBtn.TextTransparency = 1
 rightBtn.Parent = main
 
 local content = Instance.new("Frame")
-content.Size = UDim2.new(1, 0, 0, 168)
+content.Size = UDim2.new(1, 0, 0, 198)
 content.Position = UDim2.new(0, 0, 0, 56)
 content.BackgroundColor3 = BG
 content.BorderColor3 = RED
@@ -1293,9 +1305,13 @@ local graffitiESPBtn = Btn(page2, "Graffiti ESP " .. (ESPSettings.graffitiEsp an
 local groundBulbESPBtn = Btn(page2, "GroundBulb ESP " .. (ESPSettings.azureGroundBulbESP and "ON" or "OFF"), 328)
 local vineESPBtn = Btn(page2, "Vine ESP " .. (ESPSettings.azureVineESP and "ON" or "OFF"), 356)
 
-local page3 = Instance.new("Frame")
+local page3 = Instance.new("ScrollingFrame")
 page3.Size = UDim2.new(1, 0, 1, 0)
+page3.CanvasSize = UDim2.new(0, 0, 0, 260)
+page3.ScrollBarThickness = 6
+page3.AutomaticCanvasSize = Enum.AutomaticSize.Y
 page3.BackgroundTransparency = 1
+page3.BorderSizePixel = 0
 page3.Visible = false
 page3.Parent = content
 Lbl(page3, "Misc", 4)
@@ -1303,7 +1319,10 @@ local keyButton = Btn(page3, "Hakari Key: " .. hakariKey.Name, 22)
 local solveButton = Btn(page3, "Solve Puzzle", 50)
 local solveKeyBtn = Btn(page3, "Solve Key: " .. solveKey.Name, 78)
 local voidrushBtn = Btn(page3, "Voidrush Control " .. (voidrushcontrol and "ON" or "OFF"), 106)
-local deleteNoliBtn = Btn(page3, "Delete Fake Noli " .. (deleteFakeNoli and "ON" or "OFF"), 134)
+local autoGenBtn = Btn(page3, "Auto Gen " .. (autoGen and "ON" or "OFF"), 134)
+Lbl(page3, "Gen Speed (lower = faster)", 162)
+local genSpeedBox = Box(page3, autoGenSpeed, 180)
+local deleteNoliBtn = Btn(page3, "Delete Fake Noli " .. (deleteFakeNoli and "ON" or "OFF"), 208)
 
 local page4 = Instance.new("ScrollingFrame")
 page4.Size = UDim2.new(1, 0, 1, 0)
@@ -1506,6 +1525,7 @@ local function CleanUpAllFeatures()
 	stopOverride()
 	
 	deleteFakeNoli = false
+	autoGen = false
 	antiStun = false
 	antiSlow = false
 	antiBlindness = false
@@ -1885,6 +1905,22 @@ voidrushBtn.MouseButton1Click:Connect(function()
 	if not voidrushcontrol then stopOverride() end
 	voidrushBtn.Text = "Voidrush Control " .. (voidrushcontrol and "ON" or "OFF")
 	SaveConfig()
+end)
+
+autoGenBtn.MouseButton1Click:Connect(function()
+	autoGen = not autoGen
+	autoGenBtn.Text = "Auto Gen " .. (autoGen and "ON" or "OFF")
+	SaveConfig()
+end)
+
+genSpeedBox.FocusLost:Connect(function()
+	local n = tonumber(genSpeedBox.Text)
+	if n and n >= 0.01 and n <= 1 then
+		autoGenSpeed = n
+		SaveConfig()
+	else
+		genSpeedBox.Text = tostring(autoGenSpeed)
+	end
 end)
 
 deleteNoliBtn.MouseButton1Click:Connect(function()
