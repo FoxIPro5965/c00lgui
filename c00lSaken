@@ -1179,7 +1179,7 @@ leftBtn.BorderSizePixel = 2
 leftBtn.Text = "<"
 leftBtn.TextColor3 = TXT
 leftBtn.Font = Enum.Font.SourceSansBold
-leftBtn.TextSize = 20
+leftBtn.TextSize = 22
 leftBtn.BackgroundTransparency = 1
 leftBtn.TextTransparency = 1
 leftBtn.Parent = main
@@ -1193,7 +1193,7 @@ rightBtn.BorderSizePixel = 2
 rightBtn.Text = ">"
 rightBtn.TextColor3 = TXT
 rightBtn.Font = Enum.Font.SourceSansBold
-rightBtn.TextSize = 20
+rightBtn.TextSize = 22
 rightBtn.BackgroundTransparency = 1
 rightBtn.TextTransparency = 1
 rightBtn.Parent = main
@@ -1320,7 +1320,7 @@ local solveButton = Btn(page3, "Solve Puzzle", 50)
 local solveKeyBtn = Btn(page3, "Solve Key: " .. solveKey.Name, 78)
 local voidrushBtn = Btn(page3, "Voidrush Control " .. (voidrushcontrol and "ON" or "OFF"), 106)
 local autoGenBtn = Btn(page3, "Auto Gen " .. (autoGen and "ON" or "OFF"), 134)
-Lbl(page3, "Gen Speed (lower = faster)", 162)
+Lbl(page3, "Gen Speed", 162)
 local genSpeedBox = Box(page3, autoGenSpeed, 180)
 local deleteNoliBtn = Btn(page3, "Delete Fake Noli " .. (deleteFakeNoli and "ON" or "OFF"), 208)
 
