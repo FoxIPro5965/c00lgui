@@ -1125,7 +1125,7 @@ if toggleState then
 end
 
 local gui = Instance.new("ScreenGui")
-gui.Name = "c00lgui"
+gui.Name = "c00lsaken"
 gui.ResetOnSpawn = false
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.Parent = LP.PlayerGui
@@ -1314,7 +1314,7 @@ page4.BackgroundTransparency = 1
 page4.BorderSizePixel = 0
 page4.Parent = content
 page4.Visible = false
-Lbl(page4, "BLOCK & PUNCH", 2)
+Lbl(page4, "BLOCK", 2)
 local autoBlockBtn = Btn(page4, "Auto Block " .. (_G.AutoBlockEnabled and "ON" or "OFF"), 18)
 local showHitboxBtn = Btn(page4, "Show Hitbox " .. (_G.ShowHitboxVisual and "ON" or "OFF"), 46)
 Lbl(page4, "Scale | Offset Z | Duration", 74)
@@ -1414,7 +1414,7 @@ local miniTitle = Instance.new("TextLabel")
 miniTitle.Size = UDim2.new(1, -30, 1, 0)
 miniTitle.Position = UDim2.new(0, 6, 0, 0)
 miniTitle.BackgroundTransparency = 1
-miniTitle.Text = "c00lgui v2.4"
+miniTitle.Text = "c00lsaken v2.4"
 miniTitle.TextColor3 = TXT
 miniTitle.Font = Enum.Font.SourceSansBold
 miniTitle.TextSize = 14
@@ -1449,7 +1449,7 @@ local confirmLabel = Instance.new("TextLabel")
 confirmLabel.Size = UDim2.new(1, -16, 0, 50)
 confirmLabel.Position = UDim2.new(0, 8, 0, 8)
 confirmLabel.BackgroundTransparency = 1
-confirmLabel.Text = "Bạn có chắc chắn muốn DESTROY GUI?\nTất cả tính năng sẽ bị hủy hoàn toàn!"
+confirmLabel.Text = "did you want destroys gui!"
 confirmLabel.TextColor3 = TXT
 confirmLabel.Font = Enum.Font.SourceSansBold
 confirmLabel.TextSize = 13
