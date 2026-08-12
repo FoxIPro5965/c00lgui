@@ -10,17 +10,8 @@ local Debris = game:GetService("Debris")
 local StarterGui = game:GetService("StarterGui")
 local LP = Players.LocalPlayer
 
--- Kiểm tra Module Stamina an toàn
-local stamina = {}
-pcall(function()
-	local Sprinting = ReplicatedStorage:WaitForChild("Systems", 3)
-		:WaitForChild("Character", 3)
-		:WaitForChild("Game", 3)
-		:WaitForChild("Sprinting", 3)
-	if Sprinting then
-		stamina = require(Sprinting)
-	end
-end)
+local Sprinting = ReplicatedStorage:WaitForChild("Systems"):WaitForChild("Character"):WaitForChild("Game"):WaitForChild("Sprinting")
+local stamina = require(Sprinting)
 
 local CONFIG_FILE = "c00lgui_v24_config.json"
 
@@ -258,7 +249,7 @@ end)
 local function SolveNow()
 	if currentPuzzle then
 		flowSolve(currentPuzzle)
-	elseif typeof(getgc) == "function" then
+	else
 		for _, v in pairs(getgc(true)) do
 			if typeof(v) == "table" and rawget(v, "Solution") and rawget(v, "paths") and rawget(v, "updateGui") then
 				flowSolve(v)
@@ -429,7 +420,6 @@ local hakariActive = false
 
 local function SaveConfig()
 	pcall(function()
-		if typeof(writefile) ~= "function" then return end
 		local data = {
 			infStamina = infStamina,
 			enableMaxStamina = enableMaxStamina,
@@ -468,7 +458,6 @@ end
 
 local function LoadConfig()
 	pcall(function()
-		if typeof(isfile) ~= "function" or typeof(readfile) ~= "function" then return end
 		if not isfile(CONFIG_FILE) then return end
 		local data = HttpService:JSONDecode(readfile(CONFIG_FILE))
 		if data.infStamina ~= nil then infStamina = data.infStamina end
@@ -538,10 +527,8 @@ local function pressButton(btn)
 	local cd = btn:FindFirstChild("CooldownTime")
 	if cd and cd.Text ~= "" then return false end
 	pcall(function() btn:Activate() end)
-	if typeof(getconnections) == "function" then
-		for _, conn in ipairs(getconnections(btn.MouseButton1Click) or {}) do
-			pcall(function() conn:Fire() end)
-		end
+	for _, conn in ipairs(getconnections(btn.MouseButton1Click) or {}) do
+		pcall(function() conn:Fire() end)
 	end
 	return true
 end
@@ -1057,9 +1044,7 @@ local function clickDaggerButton()
 	local gui = LP.PlayerGui:FindFirstChild("MainUI")
 	local btn = gui and gui:FindFirstChild("AbilityContainer") and gui.AbilityContainer:FindFirstChild("Dagger")
 	if not btn or btn.BackgroundTransparency == 0 then return end
-	if typeof(getconnections) == "function" then
-		for _, c in ipairs(getconnections(btn.MouseButton1Click) or {}) do pcall(function() c:Fire() end) end
-	end
+	for _, c in ipairs(getconnections(btn.MouseButton1Click) or {}) do pcall(function() c:Fire() end) end
 	pcall(function() btn:Activate() end)
 end
 
@@ -1524,7 +1509,7 @@ confirmCancel.Parent = confirmFrame
 
 local function CleanUpAllFeatures()
 	infStamina = false
-	if stamina then stamina.StaminaLossDisabled = false end
+	stamina.StaminaLossDisabled = false
 	
 	for k in pairs(ESPSettings) do
 		if type(ESPSettings[k]) == "boolean" then ESPSettings[k] = false end
@@ -1643,19 +1628,17 @@ LP.CharacterAdded:Connect(onCharacterAdded)
 task.spawn(function()
 	while task.wait(0.1) do
 		pcall(function()
-			if stamina and stamina.MaxStamina then
-				if infStamina then
-					stamina.Stamina = stamina.MaxStamina
-					stamina.StaminaLossDisabled = true
-				else
-					stamina.StaminaLossDisabled = false
-				end
-
-				if enableMaxStamina then stamina.MaxStamina = customMaxStamina end
-				if enableStaminaGain then stamina.StaminaGain = customStaminaGain end
-				if enableStaminaLoss then stamina.StaminaLoss = customStaminaLoss end
-				if enableSprintSpeed then stamina.SprintSpeed = customSprintSpeed end
+			if infStamina then
+				stamina.Stamina = stamina.MaxStamina
+				stamina.StaminaLossDisabled = true
+			else
+				stamina.StaminaLossDisabled = false
 			end
+
+			if enableMaxStamina then stamina.MaxStamina = customMaxStamina end
+			if enableStaminaGain then stamina.StaminaGain = customStaminaGain end
+			if enableStaminaLoss then stamina.StaminaLoss = customStaminaLoss end
+			if enableSprintSpeed then stamina.SprintSpeed = customSprintSpeed end
 		end)
 	end
 end)
