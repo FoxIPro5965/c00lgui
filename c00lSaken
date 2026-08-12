@@ -19,7 +19,7 @@ stamina.StaminaLoss = 5
 stamina.SprintSpeed = 28.6
 stamina.StaminaLossDisabled = true
 
-local CONFIG_FILE = "c00lgui_v24_config.json"
+local CONFIG_FILE = "c00lsaken_config.json"
 
 local MapFolder = nil
 local mapObj = Workspace:FindFirstChild("Map")
@@ -1125,7 +1125,7 @@ if toggleState then
 end
 
 local gui = Instance.new("ScreenGui")
-gui.Name = "c00lsaken"
+gui.Name = "c00lSaken"
 gui.ResetOnSpawn = false
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.Parent = LP.PlayerGui
@@ -1150,7 +1150,7 @@ title.Size = UDim2.new(1, 0, 0, 28)
 title.BackgroundColor3 = BG
 title.BorderColor3 = RED
 title.BorderSizePixel = 2
-title.Text = "c00lgui v2.4"
+title.Text = "c00lSaken"
 title.TextColor3 = TXT
 title.Font = Enum.Font.SourceSansBold
 title.TextSize = 18
@@ -1264,9 +1264,9 @@ page1.Size = UDim2.new(1, 0, 1, 0)
 page1.BackgroundTransparency = 1
 page1.Visible = true
 page1.Parent = content
-Lbl(page1, "STAMINA", 6)
+Lbl(page1, "Stamina", 6)
 local speedBox = Box(page1, stamina.SprintSpeed, 28)
-local infButton = Btn(page1, "Inf Stamina " .. (infEnabled and "ON" or "OFF"), 60)
+local infButton = Btn(page1, "Infinite Stamina " .. (infEnabled and "ON" or "OFF"), 60)
 
 local page2 = Instance.new("ScrollingFrame")
 page2.Size = UDim2.new(1, 0, 1, 0)
@@ -1278,7 +1278,7 @@ page2.BorderSizePixel = 0
 page2.Parent = content
 page2.Visible = false
 
-Lbl(page2, "ESP ", 2)
+Lbl(page2, "ESP", 2)
 local killerESPBtn = Btn(page2, "Killer ESP " .. (ESPSettings.killerESP and "ON" or "OFF"), 20)
 local survivorESPBtn = Btn(page2, "Survivor ESP " .. (ESPSettings.playerESP and "ON" or "OFF"), 48)
 local genESPBtn = Btn(page2, "Generator ESP " .. (ESPSettings.generatorESP and "ON" or "OFF"), 76)
@@ -1298,9 +1298,9 @@ page3.Size = UDim2.new(1, 0, 1, 0)
 page3.BackgroundTransparency = 1
 page3.Visible = false
 page3.Parent = content
-Lbl(page3, "MISC", 4)
+Lbl(page3, "Misc", 4)
 local keyButton = Btn(page3, "Hakari Key: " .. hakariKey.Name, 22)
-local solveButton = Btn(page3, "SOLVE", 50)
+local solveButton = Btn(page3, "Solve Puzzle", 50)
 local solveKeyBtn = Btn(page3, "Solve Key: " .. solveKey.Name, 78)
 local voidrushBtn = Btn(page3, "Voidrush Control " .. (voidrushcontrol and "ON" or "OFF"), 106)
 local deleteNoliBtn = Btn(page3, "Delete Fake Noli " .. (deleteFakeNoli and "ON" or "OFF"), 134)
@@ -1314,7 +1314,7 @@ page4.BackgroundTransparency = 1
 page4.BorderSizePixel = 0
 page4.Parent = content
 page4.Visible = false
-Lbl(page4, "BLOCK", 2)
+Lbl(page4, "Block & Punch", 2)
 local autoBlockBtn = Btn(page4, "Auto Block " .. (_G.AutoBlockEnabled and "ON" or "OFF"), 18)
 local showHitboxBtn = Btn(page4, "Show Hitbox " .. (_G.ShowHitboxVisual and "ON" or "OFF"), 46)
 Lbl(page4, "Scale | Offset Z | Duration", 74)
@@ -1329,7 +1329,7 @@ page5.Size = UDim2.new(1, 0, 1, 0)
 page5.BackgroundTransparency = 1
 page5.Visible = false
 page5.Parent = content
-Lbl(page5, "STAB", 6)
+Lbl(page5, "Stab", 6)
 local autoStabBtn = Btn(page5, "Auto Stab " .. (stabEnabled and "ON" or "OFF"), 28)
 local stabModeBtn = Btn(page5, "Mode: " .. stabMode, 62)
 Lbl(page5, "Stab Range:", 96)
@@ -1340,7 +1340,7 @@ page6.Size = UDim2.new(1, 0, 1, 0)
 page6.BackgroundTransparency = 1
 page6.Visible = false
 page6.Parent = content
-Lbl(page6, "ANTI", 4)
+Lbl(page6, "Anti", 4)
 local antiStunBtn = Btn(page6, "Anti Stun " .. (antiStun and "ON" or "OFF"), 24)
 local antiSlowBtn = Btn(page6, "Anti Slow " .. (antiSlow and "ON" or "OFF"), 52)
 local antiBlindBtn = Btn(page6, "Anti Blindness " .. (antiBlindness and "ON" or "OFF"), 80)
@@ -1352,9 +1352,9 @@ page7.Size = UDim2.new(1, 0, 1, 0)
 page7.BackgroundTransparency = 1
 page7.Visible = false
 page7.Parent = content
-Lbl(page7, "DANGER ZONE", 6)
+Lbl(page7, "Danger Zone", 6)
 local toggleKeyBtn = Btn(page7, "Toggle Key: " .. toggleKey.Name, 32)
-local destroyBtn = Btn(page7, "DESTROY GUI", 76)
+local destroyBtn = Btn(page7, "Destroy GUI", 76)
 destroyBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
 destroyBtn.BorderColor3 = Color3.fromRGB(255, 50, 50)
 
@@ -1414,7 +1414,7 @@ local miniTitle = Instance.new("TextLabel")
 miniTitle.Size = UDim2.new(1, -30, 1, 0)
 miniTitle.Position = UDim2.new(0, 6, 0, 0)
 miniTitle.BackgroundTransparency = 1
-miniTitle.Text = "c00lsaken v2.4"
+miniTitle.Text = "c00lSaken"
 miniTitle.TextColor3 = TXT
 miniTitle.Font = Enum.Font.SourceSansBold
 miniTitle.TextSize = 14
@@ -1449,7 +1449,7 @@ local confirmLabel = Instance.new("TextLabel")
 confirmLabel.Size = UDim2.new(1, -16, 0, 50)
 confirmLabel.Position = UDim2.new(0, 8, 0, 8)
 confirmLabel.BackgroundTransparency = 1
-confirmLabel.Text = "did you want destroys gui!"
+confirmLabel.Text = "Are you sure you want to DESTROY the GUI?\nAll features will be disabled completely!"
 confirmLabel.TextColor3 = TXT
 confirmLabel.Font = Enum.Font.SourceSansBold
 confirmLabel.TextSize = 13
@@ -1541,8 +1541,8 @@ local function ToggleGUI_PC()
 	if hidden then
 		pcall(function()
 			StarterGui:SetCore("SendNotification", {
-				Title = "c00lgui v2.4",
-				Text = "Ấn phím [ " .. toggleKey.Name .. " ] để mở lại GUI!",
+				Title = "c00lSaken",
+				Text = "Press [ " .. toggleKey.Name .. " ] to open the GUI again!",
 				Duration = 4
 			})
 		end)
@@ -1872,7 +1872,7 @@ MakeDrag(confirmFrame)
 infButton.MouseButton1Click:Connect(function()
 	infEnabled = not infEnabled
 	stamina.StaminaLossDisabled = infEnabled
-	infButton.Text = "Inf Stamina " .. (infEnabled and "ON" or "OFF")
+	infButton.Text = "Infinite Stamina " .. (infEnabled and "ON" or "OFF")
 	SaveConfig()
 end)
 
