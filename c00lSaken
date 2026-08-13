@@ -73,7 +73,18 @@ local BACKSTAB_DISTANCE = 1.8
 local BACKSTAB_HOLD_TIME = 0.35
 local BACKSTAB_COOLDOWN = 10
 local lastBackstabTime = 0
-local deleteFakeNoli = false
+
+local Slash = {
+	Enabled = false,
+	Range = 8,
+	Distance = 2.5,
+	HoldTime = 0.4,
+	Cooldown = 10,
+	Delay = 0.15,
+	LastTime = 0,
+	Connection = nil,
+	Busy = false,
+}
 
 local antiStun = false
 local antiSlow = false
@@ -409,7 +420,7 @@ _G.AimPunchEnabled = false
 
 local infEnabled = false
 local hidden = false
-local currentPage, totalPages = 1, 7
+local currentPage, totalPages = 1, 8
 local hakariKey, solveKey, toggleKey = Enum.KeyCode.B, Enum.KeyCode.H, Enum.KeyCode.K
 local waitingForKey, waitingForSolveKey, waitingForToggleKey = false, false, false
 local hakariActive = false
@@ -434,8 +445,10 @@ local function SaveConfig()
 			stabEnabled = stabEnabled,
 			stabRange = stabRange,
 			stabMode = stabMode,
+			slashEnabled = Slash.Enabled,
+			slashRange = Slash.Range,
+			slashDelay = Slash.Delay,
 			voidrushcontrol = voidrushcontrol,
-			deleteFakeNoli = deleteFakeNoli,
 			autoGen = autoGen,
 			autoGenSpeed = autoGenSpeed,
 			antiStun = antiStun,
@@ -474,8 +487,10 @@ local function LoadConfig()
 		if data.stabEnabled ~= nil then stabEnabled = data.stabEnabled end
 		if data.stabRange ~= nil then stabRange = data.stabRange end
 		if data.stabMode ~= nil then stabMode = data.stabMode end
+		if data.slashEnabled ~= nil then Slash.Enabled = data.slashEnabled end
+		if data.slashRange ~= nil then Slash.Range = data.slashRange end
+		if data.slashDelay ~= nil then Slash.Delay = data.slashDelay end
 		if data.voidrushcontrol ~= nil then voidrushcontrol = data.voidrushcontrol end
-		if data.deleteFakeNoli ~= nil then deleteFakeNoli = data.deleteFakeNoli end
 		if data.autoGen ~= nil then autoGen = data.autoGen end
 		if data.autoGenSpeed ~= nil then autoGenSpeed = data.autoGenSpeed end
 		if data.antiStun ~= nil then antiStun = data.antiStun end
@@ -931,23 +946,6 @@ task.spawn(function()
 	end
 end)
 
-local fakeNoliRunning = true
-task.spawn(function()
-	while fakeNoliRunning do
-		task.wait(0.15)
-		if not deleteFakeNoli then continue end
-		pcall(function()
-			local killers = Workspace:FindFirstChild("Players") and Workspace.Players:FindFirstChild("Killers")
-			if not killers then return end
-			for _, model in pairs(killers:GetChildren()) do
-				if model:IsA("Model") and model:GetAttribute("IsFakeNoli") == true then
-					model:Destroy()
-				end
-			end
-		end)
-	end
-end)
-
 
 local paths = {"HideKillerWins", "HidePlaytime", "HideSurvivorWins"}
 local function saveOriginals(p)
@@ -1040,11 +1038,32 @@ local function clickDaggerButton()
 	pcall(function() btn:Activate() end)
 end
 
+local function clickSlashButton()
+	local gui = LP.PlayerGui:FindFirstChild("MainUI")
+	local btn = gui and gui:FindFirstChild("AbilityContainer") and gui.AbilityContainer:FindFirstChild("Slash")
+	if not btn or btn.BackgroundTransparency == 0 then return end
+	for _, c in ipairs(getconnections(btn.MouseButton1Click) or {}) do pcall(function() c:Fire() end) end
+	pcall(function() btn:Activate() end)
+end
+
 local function isBehind(hrp, targetHRP)
 	if (hrp.Position - targetHRP.Position).Magnitude > stabRange then return false end
 	if stabMode == "Around" then return true end
 	local dir = -targetHRP.CFrame.LookVector
 	return (hrp.Position - targetHRP.Position):Dot(dir) > 0.5
+end
+
+local function isSlashInRange(hrp, targetHRP)
+	return (hrp.Position - targetHRP.Position).Magnitude <= Slash.Range
+end
+
+local function isLocalKiller()
+	local char = LP.Character
+	if not char then return false end
+	local pf = Workspace:FindFirstChild("Players")
+	local kf = pf and pf:FindFirstChild("Killers")
+	if kf and char.Parent == kf then return true end
+	return false
 end
 
 local autoPunchRunning = true
@@ -1107,6 +1126,57 @@ stabConnection = RunService.Heartbeat:Connect(function()
 					return
 				end
 				hrp.CFrame = CFrame.new(kHRP.Position - offset, kHRP.Position)
+			end)
+			break
+		end
+	end
+end)
+
+Slash.Connection = RunService.Heartbeat:Connect(function()
+	if not Slash.Enabled or Slash.Busy then return end
+	if isLocalKiller() then return end
+	if tick() - Slash.LastTime < Slash.Cooldown then return end
+	local char = LP.Character
+	local hrp = char and char:FindFirstChild("HumanoidRootPart")
+	if not hrp then return end
+	local kFolder = Workspace:FindFirstChild("Players") and Workspace.Players:FindFirstChild("Killers")
+	if not kFolder then return end
+
+	for _, name in ipairs(killerNames) do
+		local killer = kFolder:FindFirstChild(name)
+		local kHRP = killer and killer:FindFirstChild("HumanoidRootPart")
+		if kHRP and isSlashInRange(hrp, kHRP) then
+			Slash.LastTime = tick()
+			Slash.Busy = true
+			task.spawn(function()
+				local start = tick()
+				local holdConn
+				holdConn = RunService.Heartbeat:Connect(function()
+					if not killer.Parent or not kHRP.Parent or not hrp.Parent then
+						holdConn:Disconnect()
+						return
+					end
+					if tick() - start > Slash.HoldTime then
+						holdConn:Disconnect()
+						return
+					end
+					local dir = hrp.Position - kHRP.Position
+					if dir.Magnitude < 0.1 then
+						dir = -kHRP.CFrame.LookVector
+					else
+						dir = dir.Unit
+					end
+					local nearPos = kHRP.Position + dir * Slash.Distance
+					hrp.CFrame = CFrame.lookAt(nearPos, kHRP.Position)
+				end)
+				task.wait(Slash.Delay)
+				if killer.Parent and kHRP.Parent then
+					clickSlashButton()
+				end
+				local remain = Slash.HoldTime - (tick() - start)
+				if remain > 0 then task.wait(remain) end
+				if holdConn then holdConn:Disconnect() end
+				Slash.Busy = false
 			end)
 			break
 		end
@@ -1307,7 +1377,7 @@ local vineESPBtn = Btn(page2, "Vine ESP " .. (ESPSettings.azureVineESP and "ON" 
 
 local page3 = Instance.new("ScrollingFrame")
 page3.Size = UDim2.new(1, 0, 1, 0)
-page3.CanvasSize = UDim2.new(0, 0, 0, 260)
+page3.CanvasSize = UDim2.new(0, 0, 0, 200)
 page3.ScrollBarThickness = 6
 page3.AutomaticCanvasSize = Enum.AutomaticSize.Y
 page3.BackgroundTransparency = 1
@@ -1318,11 +1388,9 @@ Lbl(page3, "Misc", 4)
 local keyButton = Btn(page3, "Hakari Key: " .. hakariKey.Name, 22)
 local solveButton = Btn(page3, "Solve Puzzle", 50)
 local solveKeyBtn = Btn(page3, "Solve Key: " .. solveKey.Name, 78)
-local voidrushBtn = Btn(page3, "Voidrush Control " .. (voidrushcontrol and "ON" or "OFF"), 106)
-local autoGenBtn = Btn(page3, "Auto Gen " .. (autoGen and "ON" or "OFF"), 134)
-Lbl(page3, "Gen Speed", 162)
-local genSpeedBox = Box(page3, autoGenSpeed, 180)
-local deleteNoliBtn = Btn(page3, "Delete Fake Noli " .. (deleteFakeNoli and "ON" or "OFF"), 208)
+local autoGenBtn = Btn(page3, "Auto Gen " .. (autoGen and "ON" or "OFF"), 106)
+Lbl(page3, "Gen Speed", 134)
+local genSpeedBox = Box(page3, autoGenSpeed, 152)
 
 local page4 = Instance.new("ScrollingFrame")
 page4.Size = UDim2.new(1, 0, 1, 0)
@@ -1354,30 +1422,47 @@ local stabModeBtn = Btn(page5, "Mode: " .. stabMode, 62)
 Lbl(page5, "Stab Range:", 96)
 local stabRangeBox = Box(page5, stabRange, 116)
 
-local page6 = Instance.new("Frame")
+local page6 = Instance.new("ScrollingFrame")
 page6.Size = UDim2.new(1, 0, 1, 0)
+page6.CanvasSize = UDim2.new(0, 0, 0, 260)
+page6.ScrollBarThickness = 6
+page6.AutomaticCanvasSize = Enum.AutomaticSize.Y
 page6.BackgroundTransparency = 1
+page6.BorderSizePixel = 0
 page6.Visible = false
 page6.Parent = content
-Lbl(page6, "Anti", 4)
-local antiStunBtn = Btn(page6, "Anti Stun " .. (antiStun and "ON" or "OFF"), 24)
-local antiSlowBtn = Btn(page6, "Anti Slow " .. (antiSlow and "ON" or "OFF"), 52)
-local antiBlindBtn = Btn(page6, "Anti Blindness " .. (antiBlindness and "ON" or "OFF"), 80)
-local antiSubBtn = Btn(page6, "Anti Subspace " .. (antiSubspace and "ON" or "OFF"), 108)
-local antiHiddenBtn = Btn(page6, "Anti Hidden Stats " .. (toggleState and "ON" or "OFF"), 136)
+Lbl(page6, "Role", 4)
+local voidrushBtn = Btn(page6, "Voidrush Control " .. (voidrushcontrol and "ON" or "OFF"), 22)
+local autoSlashBtn = Btn(page6, "Auto Slash " .. (Slash.Enabled and "ON" or "OFF"), 50)
+Lbl(page6, "Slash Range:", 78)
+local slashRangeBox = Box(page6, Slash.Range, 96)
+Lbl(page6, "Slash Delay (0-1):", 124)
+local slashDelayBox = Box(page6, Slash.Delay, 142)
 
 local page7 = Instance.new("Frame")
 page7.Size = UDim2.new(1, 0, 1, 0)
 page7.BackgroundTransparency = 1
 page7.Visible = false
 page7.Parent = content
-Lbl(page7, "Danger Zone", 6)
-local toggleKeyBtn = Btn(page7, "Toggle Key: " .. toggleKey.Name, 32)
-local destroyBtn = Btn(page7, "Destroy GUI", 76)
+Lbl(page7, "Anti", 4)
+local antiStunBtn = Btn(page7, "Anti Stun " .. (antiStun and "ON" or "OFF"), 24)
+local antiSlowBtn = Btn(page7, "Anti Slow " .. (antiSlow and "ON" or "OFF"), 52)
+local antiBlindBtn = Btn(page7, "Anti Blindness " .. (antiBlindness and "ON" or "OFF"), 80)
+local antiSubBtn = Btn(page7, "Anti Subspace " .. (antiSubspace and "ON" or "OFF"), 108)
+local antiHiddenBtn = Btn(page7, "Anti Hidden Stats " .. (toggleState and "ON" or "OFF"), 136)
+
+local page8 = Instance.new("Frame")
+page8.Size = UDim2.new(1, 0, 1, 0)
+page8.BackgroundTransparency = 1
+page8.Visible = false
+page8.Parent = content
+Lbl(page8, "Danger Zone", 6)
+local toggleKeyBtn = Btn(page8, "Toggle Key: " .. toggleKey.Name, 32)
+local destroyBtn = Btn(page8, "Destroy GUI", 76)
 destroyBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
 destroyBtn.BorderColor3 = Color3.fromRGB(255, 50, 50)
 
-local pages = { page1, page2, page3, page4, page5, page6, page7 }
+local pages = { page1, page2, page3, page4, page5, page6, page7, page8 }
 
 task.delay(1, function()
 	local info = TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
@@ -1520,11 +1605,14 @@ local function CleanUpAllFeatures()
 	
 	stabEnabled = false
 	if stabConnection then stabConnection:Disconnect() end
+
+	Slash.Enabled = false
+	Slash.Busy = false
+	if Slash.Connection then Slash.Connection:Disconnect() Slash.Connection = nil end
 	
 	voidrushcontrol = false
 	stopOverride()
 	
-	deleteFakeNoli = false
 	autoGen = false
 	antiStun = false
 	antiSlow = false
@@ -1534,7 +1622,6 @@ local function CleanUpAllFeatures()
 	toggleState = false
 	pcall(function() hiddenStatsFunc(false) end)
 	espLoopRunning = false
-	fakeNoliRunning = false
 	autoPunchRunning = false
 	autoBlockMonitor = false
 end
@@ -1923,12 +2010,6 @@ genSpeedBox.FocusLost:Connect(function()
 	end
 end)
 
-deleteNoliBtn.MouseButton1Click:Connect(function()
-	deleteFakeNoli = not deleteFakeNoli
-	deleteNoliBtn.Text = "Delete Fake Noli " .. (deleteFakeNoli and "ON" or "OFF")
-	SaveConfig()
-end)
-
 autoBlockBtn.MouseButton1Click:Connect(function()
 	_G.AutoBlockEnabled = not _G.AutoBlockEnabled
 	autoBlockBtn.Text = "Auto Block " .. (_G.AutoBlockEnabled and "ON" or "OFF")
@@ -1985,6 +2066,27 @@ end)
 stabRangeBox.FocusLost:Connect(function()
 	local n = tonumber(stabRangeBox.Text)
 	if n and n > 0 then stabRange = n SaveConfig() else stabRangeBox.Text = tostring(stabRange) end
+end)
+
+autoSlashBtn.MouseButton1Click:Connect(function()
+	Slash.Enabled = not Slash.Enabled
+	autoSlashBtn.Text = "Auto Slash " .. (Slash.Enabled and "ON" or "OFF")
+	SaveConfig()
+end)
+
+slashRangeBox.FocusLost:Connect(function()
+	local n = tonumber(slashRangeBox.Text)
+	if n and n > 0 then Slash.Range = n SaveConfig() else slashRangeBox.Text = tostring(Slash.Range) end
+end)
+
+slashDelayBox.FocusLost:Connect(function()
+	local n = tonumber(slashDelayBox.Text)
+	if n and n >= 0 and n <= 1 then
+		Slash.Delay = n
+		SaveConfig()
+	else
+		slashDelayBox.Text = tostring(Slash.Delay)
+	end
 end)
 
 if _G.AutoBlockEnabled then task.defer(EnableAutoBlock) end
