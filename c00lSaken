@@ -1149,6 +1149,10 @@ Slash.Connection = RunService.Heartbeat:Connect(function()
 			Slash.LastTime = tick()
 			Slash.Busy = true
 			task.spawn(function()
+				local hum = char:FindFirstChildOfClass("Humanoid")
+				local oldAutoRotate = hum and hum.AutoRotate
+				if hum then hum.AutoRotate = false end
+
 				local start = tick()
 				local holdConn
 				holdConn = RunService.Heartbeat:Connect(function()
@@ -1167,8 +1171,10 @@ Slash.Connection = RunService.Heartbeat:Connect(function()
 						dir = dir.Unit
 					end
 					local nearPos = kHRP.Position + dir * Slash.Distance
-					hrp.CFrame = CFrame.lookAt(nearPos, kHRP.Position)
+					local aimPos = Vector3.new(kHRP.Position.X, hrp.Position.Y, kHRP.Position.Z)
+					hrp.CFrame = CFrame.lookAt(nearPos, aimPos)
 				end)
+
 				task.wait(Slash.Delay)
 				if killer.Parent and kHRP.Parent then
 					clickSlashButton()
@@ -1176,6 +1182,7 @@ Slash.Connection = RunService.Heartbeat:Connect(function()
 				local remain = Slash.HoldTime - (tick() - start)
 				if remain > 0 then task.wait(remain) end
 				if holdConn then holdConn:Disconnect() end
+				if hum then hum.AutoRotate = oldAutoRotate end
 				Slash.Busy = false
 			end)
 			break
@@ -1896,7 +1903,7 @@ local function ToggleHakariDance(state)
 	else
 		hakariActive = false
 		humanoid.PlatformStand = false
-		humanoid.JumpPower = 50
+		humanoid.JumpPower = 0
 		local b = rootPart:FindFirstChild("HakariBV")
 		if b then b:Destroy() end
 		local s = rootPart:FindFirstChild("HakariSound")
