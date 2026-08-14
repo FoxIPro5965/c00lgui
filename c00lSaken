@@ -78,13 +78,85 @@ local Slash = {
 	Enabled = false,
 	Range = 8,
 	Distance = 2.5,
-	HoldTime = 0.4,
+	HoldTime = 0.5,
 	Cooldown = 10,
 	Delay = 0.15,
+	PredictTime = 0.18,
 	LastTime = 0,
 	Connection = nil,
 	Busy = false,
 }
+
+local HitboxExt = {
+	Enabled = false,
+	Size = 1.3,
+	Duration = 500,
+	Module = nil,
+}
+
+local function getHitboxModule()
+	if HitboxExt.Module then return HitboxExt.Module end
+	local ok, mod = pcall(function()
+		return loadstring(game:HttpGet("https://raw.githubusercontent.com/FoxIPro5965/c00lgui/main/Hitbox.lua"))()
+	end)
+	if ok and mod then
+		HitboxExt.Module = mod
+		return mod
+	end
+	-- fallback inline module
+	local hit = {}
+	local env = (getgenv and getgenv()) or _G
+	if env.emergency_stop == nil then
+		env.emergency_stop = false
+	end
+	local function StudsIntoPower(studs)
+		return studs * 1.2
+	end
+	function hit:ExtendHitbox(studs, time)
+		local distance = StudsIntoPower(studs)
+		local start = tick()
+		if env.emergency_stop == true then
+			env.emergency_stop = false
+		end
+		repeat
+			game:GetService("RunService").Heartbeat:Wait()
+			local char = LP.Character
+			while not (char and char.Parent and char:FindFirstChild("HumanoidRootPart") and char.HumanoidRootPart.Parent) do
+				game:GetService("RunService").Heartbeat:Wait()
+				char = LP.Character
+			end
+			local hrp = char.HumanoidRootPart
+			local velocity = hrp.Velocity
+			hrp.Velocity = velocity * distance + (hrp.CFrame.LookVector * distance)
+			game:GetService("RunService").RenderStepped:Wait()
+			if char and char.Parent and hrp and hrp.Parent then
+				hrp.Velocity = velocity
+			end
+		until tick() - start > tonumber(time) or env.emergency_stop == true
+		if env.emergency_stop == true then
+			env.emergency_stop = false
+		end
+	end
+	function hit:StopExtendingHitbox()
+		env.emergency_stop = true
+	end
+	HitboxExt.Module = hit
+	return hit
+end
+
+local function setHitboxExt(state)
+	HitboxExt.Enabled = state
+	if state then
+		local mod = getHitboxModule()
+		task.spawn(function()
+			mod:ExtendHitbox(HitboxExt.Size, HitboxExt.Duration)
+		end)
+	else
+		if HitboxExt.Module then
+			HitboxExt.Module:StopExtendingHitbox()
+		end
+	end
+end
 
 local antiStun = false
 local antiSlow = false
@@ -254,6 +326,7 @@ pcall(function()
 end)
 
 local function SolveNow()
+	if autoGen then return end
 	if currentPuzzle then
 		flowSolve(currentPuzzle)
 	else
@@ -448,6 +521,8 @@ local function SaveConfig()
 			slashEnabled = Slash.Enabled,
 			slashRange = Slash.Range,
 			slashDelay = Slash.Delay,
+			hitboxExt = HitboxExt.Enabled,
+			hitboxExtSize = HitboxExt.Size,
 			voidrushcontrol = voidrushcontrol,
 			autoGen = autoGen,
 			autoGenSpeed = autoGenSpeed,
@@ -490,6 +565,10 @@ local function LoadConfig()
 		if data.slashEnabled ~= nil then Slash.Enabled = data.slashEnabled end
 		if data.slashRange ~= nil then Slash.Range = data.slashRange end
 		if data.slashDelay ~= nil then Slash.Delay = data.slashDelay end
+		if data.hitboxExtSize ~= nil then HitboxExt.Size = data.hitboxExtSize end
+		if data.hitboxExt ~= nil then
+			HitboxExt.Enabled = data.hitboxExt
+		end
 		if data.voidrushcontrol ~= nil then voidrushcontrol = data.voidrushcontrol end
 		if data.autoGen ~= nil then autoGen = data.autoGen end
 		if data.autoGenSpeed ~= nil then autoGenSpeed = data.autoGenSpeed end
@@ -1164,14 +1243,24 @@ Slash.Connection = RunService.Heartbeat:Connect(function()
 						holdConn:Disconnect()
 						return
 					end
-					local dir = hrp.Position - kHRP.Position
-					if dir.Magnitude < 0.1 then
+					local vel = kHRP.AssemblyLinearVelocity
+					local horizVel = Vector3.new(vel.X, 0, vel.Z)
+					local predicted = kHRP.Position + horizVel * Slash.PredictTime
+					local toPred = hrp.Position - predicted
+					local dir
+					if toPred.Magnitude < 0.1 then
 						dir = -kHRP.CFrame.LookVector
 					else
-						dir = dir.Unit
+						dir = Vector3.new(toPred.X, 0, toPred.Z)
+						if dir.Magnitude < 0.1 then
+							dir = -kHRP.CFrame.LookVector
+						else
+							dir = dir.Unit
+						end
 					end
-					local nearPos = kHRP.Position + dir * Slash.Distance
-					local aimPos = Vector3.new(kHRP.Position.X, hrp.Position.Y, kHRP.Position.Z)
+					local nearPos = predicted + dir * Slash.Distance
+					nearPos = Vector3.new(nearPos.X, kHRP.Position.Y, nearPos.Z)
+					local aimPos = Vector3.new(predicted.X, hrp.Position.Y, predicted.Z)
 					hrp.CFrame = CFrame.lookAt(nearPos, aimPos)
 				end)
 
@@ -1445,6 +1534,9 @@ Lbl(page6, "Slash Range:", 78)
 local slashRangeBox = Box(page6, Slash.Range, 96)
 Lbl(page6, "Slash Delay (0-1):", 124)
 local slashDelayBox = Box(page6, Slash.Delay, 142)
+local hitboxExtBtn = Btn(page6, "Hitbox " .. (HitboxExt.Enabled and "ON" or "OFF"), 170)
+Lbl(page6, "Hitbox Size:", 198)
+local hitboxSizeBox = Box(page6, HitboxExt.Size, 216)
 
 local page7 = Instance.new("Frame")
 page7.Size = UDim2.new(1, 0, 1, 0)
@@ -1616,6 +1708,11 @@ local function CleanUpAllFeatures()
 	Slash.Enabled = false
 	Slash.Busy = false
 	if Slash.Connection then Slash.Connection:Disconnect() Slash.Connection = nil end
+
+	if HitboxExt.Enabled then
+		setHitboxExt(false)
+	end
+	HitboxExt.Enabled = false
 	
 	voidrushcontrol = false
 	stopOverride()
@@ -1903,7 +2000,7 @@ local function ToggleHakariDance(state)
 	else
 		hakariActive = false
 		humanoid.PlatformStand = false
-		humanoid.JumpPower = 0
+		humanoid.JumpPower = 50
 		local b = rootPart:FindFirstChild("HakariBV")
 		if b then b:Destroy() end
 		local s = rootPart:FindFirstChild("HakariSound")
@@ -2096,4 +2193,32 @@ slashDelayBox.FocusLost:Connect(function()
 	end
 end)
 
+hitboxExtBtn.MouseButton1Click:Connect(function()
+	setHitboxExt(not HitboxExt.Enabled)
+	hitboxExtBtn.Text = "Hitbox " .. (HitboxExt.Enabled and "ON" or "OFF")
+	SaveConfig()
+end)
+
+hitboxSizeBox.FocusLost:Connect(function()
+	local n = tonumber(hitboxSizeBox.Text)
+	if n and n > 0 then
+		HitboxExt.Size = n
+		SaveConfig()
+		if HitboxExt.Enabled then
+			setHitboxExt(false)
+			task.wait(0.05)
+			setHitboxExt(true)
+			hitboxExtBtn.Text = "Hitbox ON"
+		end
+	else
+		hitboxSizeBox.Text = tostring(HitboxExt.Size)
+	end
+end)
+
 if _G.AutoBlockEnabled then task.defer(EnableAutoBlock) end
+if HitboxExt.Enabled then
+	task.defer(function()
+		task.wait(0.5)
+		setHitboxExt(true)
+	end)
+end
