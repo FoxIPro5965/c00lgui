@@ -492,21 +492,32 @@ _G.AutoPunchEnabled = false
 _G.AimPunchEnabled = false
 
 local infEnabled = false
+local DEFAULT_SPRINT_SPEED = 28.6
+local sprintSpeedEnabled = false
+local sprintSpeedValue = 28.6
+local function applySprintSpeed()
+	if sprintSpeedEnabled then
+		stamina.SprintSpeed = sprintSpeedValue
+	else
+		stamina.SprintSpeed = DEFAULT_SPRINT_SPEED
+	end
+end
 local hidden = false
 local currentPage, totalPages = 1, 8
-local hakariKey, solveKey, toggleKey = Enum.KeyCode.B, Enum.KeyCode.H, Enum.KeyCode.K
-local waitingForKey, waitingForSolveKey, waitingForToggleKey = false, false, false
+local Keys = { Hakari = Enum.KeyCode.B, Solve = Enum.KeyCode.H, Toggle = Enum.KeyCode.K }
+local WaitingKey = { Hakari = false, Solve = false, Toggle = false }
 local hakariActive = false
 
 local function SaveConfig()
 	pcall(function()
 		local data = {
 			infEnabled = infEnabled,
+			sprintSpeedEnabled = sprintSpeedEnabled,
 			espSettings = ESPSettings,
-			sprintSpeed = stamina.SprintSpeed,
-			hakariKey = hakariKey.Name,
-			solveKey = solveKey.Name,
-			toggleKey = toggleKey.Name,
+			sprintSpeed = sprintSpeedValue,
+			hakariKey = Keys.Hakari.Name,
+			solveKey = Keys.Solve.Name,
+			toggleKey = Keys.Toggle.Name,
 			autoBlock = _G.AutoBlockEnabled,
 			dragEnabled = _G.DragEnabled,
 			showHitbox = _G.ShowHitboxVisual,
@@ -541,13 +552,15 @@ local function LoadConfig()
 		if not isfile(CONFIG_FILE) then return end
 		local data = HttpService:JSONDecode(readfile(CONFIG_FILE))
 		if data.infEnabled ~= nil then infEnabled = data.infEnabled end
+		if data.sprintSpeed then sprintSpeedValue = data.sprintSpeed end
+		if data.sprintSpeedEnabled ~= nil then sprintSpeedEnabled = data.sprintSpeedEnabled end
 		if data.espSettings then
 			for k, v in pairs(data.espSettings) do ESPSettings[k] = v end
 		end
-		if data.sprintSpeed then stamina.SprintSpeed = data.sprintSpeed end
-		if data.hakariKey then pcall(function() hakariKey = Enum.KeyCode[data.hakariKey] end) end
-		if data.solveKey then pcall(function() solveKey = Enum.KeyCode[data.solveKey] end) end
-		if data.toggleKey then pcall(function() toggleKey = Enum.KeyCode[data.toggleKey] end) end
+		applySprintSpeed()
+		if data.hakariKey then pcall(function() Keys.Hakari = Enum.KeyCode[data.hakariKey] end) end
+		if data.solveKey then pcall(function() Keys.Solve = Enum.KeyCode[data.solveKey] end) end
+		if data.toggleKey then pcall(function() Keys.Toggle = Enum.KeyCode[data.toggleKey] end) end
 		if data.autoBlock ~= nil then _G.AutoBlockEnabled = data.autoBlock end
 		if data.dragEnabled ~= nil then _G.DragEnabled = data.dragEnabled end
 		if data.showHitbox ~= nil then _G.ShowHitboxVisual = data.showHitbox end
@@ -1136,6 +1149,26 @@ local function isSlashInRange(hrp, targetHRP)
 	return (hrp.Position - targetHRP.Position).Magnitude <= Slash.Range
 end
 
+local slashRayParams = RaycastParams.new()
+slashRayParams.FilterType = Enum.RaycastFilterType.Exclude
+slashRayParams.IgnoreWater = true
+
+local function hasWallBetween(fromPos, toPos, ignoreModels)
+	if not fromPos or not toPos then return true end
+	local ignore = { LP.Character }
+	if ignoreModels then
+		for _, v in ipairs(ignoreModels) do table.insert(ignore, v) end
+	end
+	local pf = Workspace:FindFirstChild("Players")
+	if pf then table.insert(ignore, pf) end
+	slashRayParams.FilterDescendantsInstances = ignore
+	local delta = toPos - fromPos
+	if delta.Magnitude < 0.1 then return false end
+	local result = Workspace:Raycast(fromPos, delta, slashRayParams)
+	if not result then return false end
+	return (result.Position - fromPos).Magnitude < delta.Magnitude - 1.5
+end
+
 local function isLocalKiller()
 	local char = LP.Character
 	if not char then return false end
@@ -1224,7 +1257,7 @@ Slash.Connection = RunService.Heartbeat:Connect(function()
 	for _, name in ipairs(killerNames) do
 		local killer = kFolder:FindFirstChild(name)
 		local kHRP = killer and killer:FindFirstChild("HumanoidRootPart")
-		if kHRP and isSlashInRange(hrp, kHRP) then
+		if kHRP and isSlashInRange(hrp, kHRP) and not hasWallBetween(hrp.Position, kHRP.Position, { killer }) then
 			Slash.LastTime = tick()
 			Slash.Busy = true
 			task.spawn(function()
@@ -1243,6 +1276,7 @@ Slash.Connection = RunService.Heartbeat:Connect(function()
 						holdConn:Disconnect()
 						return
 					end
+					if hasWallBetween(hrp.Position, kHRP.Position, { killer }) then return end
 					local vel = kHRP.AssemblyLinearVelocity
 					local horizVel = Vector3.new(vel.X, 0, vel.Z)
 					local predicted = kHRP.Position + horizVel * Slash.PredictTime
@@ -1261,11 +1295,15 @@ Slash.Connection = RunService.Heartbeat:Connect(function()
 					local nearPos = predicted + dir * Slash.Distance
 					nearPos = Vector3.new(nearPos.X, kHRP.Position.Y, nearPos.Z)
 					local aimPos = Vector3.new(predicted.X, hrp.Position.Y, predicted.Z)
+					if hasWallBetween(hrp.Position, nearPos, { killer }) then
+						hrp.CFrame = CFrame.lookAt(hrp.Position, aimPos)
+						return
+					end
 					hrp.CFrame = CFrame.lookAt(nearPos, aimPos)
 				end)
 
 				task.wait(Slash.Delay)
-				if killer.Parent and kHRP.Parent then
+				if killer.Parent and kHRP.Parent and not hasWallBetween(hrp.Position, kHRP.Position, { killer }) then
 					clickSlashButton()
 				end
 				local remain = Slash.HoldTime - (tick() - start)
@@ -1437,14 +1475,16 @@ local function Box(parent, default, y)
 	return t
 end
 
+local UI = {}
 local page1 = Instance.new("Frame")
 page1.Size = UDim2.new(1, 0, 1, 0)
 page1.BackgroundTransparency = 1
 page1.Visible = true
 page1.Parent = content
 Lbl(page1, "Stamina", 6)
-local speedBox = Box(page1, stamina.SprintSpeed, 28)
-local infButton = Btn(page1, "Infinite Stamina " .. (infEnabled and "ON" or "OFF"), 60)
+UI.speedBox = Box(page1, sprintSpeedValue, 28)
+UI.sprintSpeedBtn = Btn(page1, "Sprint Speed " .. (sprintSpeedEnabled and "ON" or "OFF"), 60)
+UI.infButton = Btn(page1, "Infinite Stamina " .. (infEnabled and "ON" or "OFF"), 92)
 
 local page2 = Instance.new("ScrollingFrame")
 page2.Size = UDim2.new(1, 0, 1, 0)
@@ -1457,19 +1497,19 @@ page2.Parent = content
 page2.Visible = false
 
 Lbl(page2, "ESP", 2)
-local killerESPBtn = Btn(page2, "Killer ESP " .. (ESPSettings.killerESP and "ON" or "OFF"), 20)
-local survivorESPBtn = Btn(page2, "Survivor ESP " .. (ESPSettings.playerESP and "ON" or "OFF"), 48)
-local genESPBtn = Btn(page2, "Generator ESP " .. (ESPSettings.generatorESP and "ON" or "OFF"), 76)
-local itemESPBtn = Btn(page2, "Item ESP " .. (ESPSettings.itemESP and "ON" or "OFF"), 104)
-local pizzaESPBtn = Btn(page2, "Pizza ESP " .. (ESPSettings.pizzaEsp and "ON" or "OFF"), 132)
-local deliveryESPBtn = Btn(page2, "Pizza Delivery ESP " .. (ESPSettings.pizzaDeliveryEsp and "ON" or "OFF"), 160)
-local zombieESPBtn = Btn(page2, "Zombie ESP " .. (ESPSettings.zombieEsp and "ON" or "OFF"), 188)
-local tripwireESPBtn = Btn(page2, "Tripwire ESP " .. (ESPSettings.taphTripwireEsp and "ON" or "OFF"), 216)
-local mineESPBtn = Btn(page2, "Mine ESP " .. (ESPSettings.tripMineEsp and "ON" or "OFF"), 244)
-local respawnESPBtn = Btn(page2, "Respawn ESP " .. (ESPSettings.twoTimeRespawnEsp and "ON" or "OFF"), 272)
-local graffitiESPBtn = Btn(page2, "Graffiti ESP " .. (ESPSettings.graffitiEsp and "ON" or "OFF"), 300)
-local groundBulbESPBtn = Btn(page2, "GroundBulb ESP " .. (ESPSettings.azureGroundBulbESP and "ON" or "OFF"), 328)
-local vineESPBtn = Btn(page2, "Vine ESP " .. (ESPSettings.azureVineESP and "ON" or "OFF"), 356)
+UI.killerESPBtn = Btn(page2, "Killer ESP " .. (ESPSettings.killerESP and "ON" or "OFF"), 20)
+UI.survivorESPBtn = Btn(page2, "Survivor ESP " .. (ESPSettings.playerESP and "ON" or "OFF"), 48)
+UI.genESPBtn = Btn(page2, "Generator ESP " .. (ESPSettings.generatorESP and "ON" or "OFF"), 76)
+UI.itemESPBtn = Btn(page2, "Item ESP " .. (ESPSettings.itemESP and "ON" or "OFF"), 104)
+UI.pizzaESPBtn = Btn(page2, "Pizza ESP " .. (ESPSettings.pizzaEsp and "ON" or "OFF"), 132)
+UI.deliveryESPBtn = Btn(page2, "Pizza Delivery ESP " .. (ESPSettings.pizzaDeliveryEsp and "ON" or "OFF"), 160)
+UI.zombieESPBtn = Btn(page2, "Zombie ESP " .. (ESPSettings.zombieEsp and "ON" or "OFF"), 188)
+UI.tripwireESPBtn = Btn(page2, "Tripwire ESP " .. (ESPSettings.taphTripwireEsp and "ON" or "OFF"), 216)
+UI.mineESPBtn = Btn(page2, "Mine ESP " .. (ESPSettings.tripMineEsp and "ON" or "OFF"), 244)
+UI.respawnESPBtn = Btn(page2, "Respawn ESP " .. (ESPSettings.twoTimeRespawnEsp and "ON" or "OFF"), 272)
+UI.graffitiESPBtn = Btn(page2, "Graffiti ESP " .. (ESPSettings.graffitiEsp and "ON" or "OFF"), 300)
+UI.groundBulbESPBtn = Btn(page2, "GroundBulb ESP " .. (ESPSettings.azureGroundBulbESP and "ON" or "OFF"), 328)
+UI.vineESPBtn = Btn(page2, "Vine ESP " .. (ESPSettings.azureVineESP and "ON" or "OFF"), 356)
 
 local page3 = Instance.new("ScrollingFrame")
 page3.Size = UDim2.new(1, 0, 1, 0)
@@ -1481,12 +1521,12 @@ page3.BorderSizePixel = 0
 page3.Visible = false
 page3.Parent = content
 Lbl(page3, "Misc", 4)
-local keyButton = Btn(page3, "Hakari Key: " .. hakariKey.Name, 22)
-local solveButton = Btn(page3, "Solve Puzzle", 50)
-local solveKeyBtn = Btn(page3, "Solve Key: " .. solveKey.Name, 78)
-local autoGenBtn = Btn(page3, "Auto Gen " .. (autoGen and "ON" or "OFF"), 106)
+UI.keyButton = Btn(page3, "Hakari Key: " .. Keys.Hakari.Name, 22)
+UI.solveButton = Btn(page3, "Solve Puzzle", 50)
+UI.solveKeyBtn = Btn(page3, "Solve Key: " .. Keys.Solve.Name, 78)
+UI.autoGenBtn = Btn(page3, "Auto Gen " .. (autoGen and "ON" or "OFF"), 106)
 Lbl(page3, "Gen Speed", 134)
-local genSpeedBox = Box(page3, autoGenSpeed, 152)
+UI.genSpeedBox = Box(page3, autoGenSpeed, 152)
 
 local page4 = Instance.new("ScrollingFrame")
 page4.Size = UDim2.new(1, 0, 1, 0)
@@ -1498,14 +1538,14 @@ page4.BorderSizePixel = 0
 page4.Parent = content
 page4.Visible = false
 Lbl(page4, "Block & Punch", 2)
-local autoBlockBtn = Btn(page4, "Auto Block " .. (_G.AutoBlockEnabled and "ON" or "OFF"), 18)
-local showHitboxBtn = Btn(page4, "Show Hitbox " .. (_G.ShowHitboxVisual and "ON" or "OFF"), 46)
+UI.autoBlockBtn = Btn(page4, "Auto Block " .. (_G.AutoBlockEnabled and "ON" or "OFF"), 18)
+UI.showHitboxBtn = Btn(page4, "Show Hitbox " .. (_G.ShowHitboxVisual and "ON" or "OFF"), 46)
 Lbl(page4, "Scale | Offset Z | Duration", 74)
-local scaleBox = Box(page4, _G.HitboxScale, 90)
-local offsetBox = Box(page4, _G.HitboxOffset, 116)
-local durationBox = Box(page4, _G.HitboxDuration, 142)
-local autoPunchBtn = Btn(page4, "Auto Punch " .. (_G.AutoPunchEnabled and "ON" or "OFF"), 174)
-local aimPunchBtn = Btn(page4, "Aim Punch " .. (_G.AimPunchEnabled and "ON" or "OFF"), 202)
+UI.scaleBox = Box(page4, _G.HitboxScale, 90)
+UI.offsetBox = Box(page4, _G.HitboxOffset, 116)
+UI.durationBox = Box(page4, _G.HitboxDuration, 142)
+UI.autoPunchBtn = Btn(page4, "Auto Punch " .. (_G.AutoPunchEnabled and "ON" or "OFF"), 174)
+UI.aimPunchBtn = Btn(page4, "Aim Punch " .. (_G.AimPunchEnabled and "ON" or "OFF"), 202)
 
 local page5 = Instance.new("Frame")
 page5.Size = UDim2.new(1, 0, 1, 0)
@@ -1513,10 +1553,10 @@ page5.BackgroundTransparency = 1
 page5.Visible = false
 page5.Parent = content
 Lbl(page5, "Stab", 6)
-local autoStabBtn = Btn(page5, "Auto Stab " .. (stabEnabled and "ON" or "OFF"), 28)
-local stabModeBtn = Btn(page5, "Mode: " .. stabMode, 62)
+UI.autoStabBtn = Btn(page5, "Auto Stab " .. (stabEnabled and "ON" or "OFF"), 28)
+UI.stabModeBtn = Btn(page5, "Mode: " .. stabMode, 62)
 Lbl(page5, "Stab Range:", 96)
-local stabRangeBox = Box(page5, stabRange, 116)
+UI.stabRangeBox = Box(page5, stabRange, 116)
 
 local page6 = Instance.new("ScrollingFrame")
 page6.Size = UDim2.new(1, 0, 1, 0)
@@ -1528,15 +1568,15 @@ page6.BorderSizePixel = 0
 page6.Visible = false
 page6.Parent = content
 Lbl(page6, "Role", 4)
-local voidrushBtn = Btn(page6, "Voidrush Control " .. (voidrushcontrol and "ON" or "OFF"), 22)
-local autoSlashBtn = Btn(page6, "Auto Slash " .. (Slash.Enabled and "ON" or "OFF"), 50)
+UI.voidrushBtn = Btn(page6, "Voidrush Control " .. (voidrushcontrol and "ON" or "OFF"), 22)
+UI.autoSlashBtn = Btn(page6, "Auto Slash " .. (Slash.Enabled and "ON" or "OFF"), 50)
 Lbl(page6, "Slash Range:", 78)
-local slashRangeBox = Box(page6, Slash.Range, 96)
+UI.slashRangeBox = Box(page6, Slash.Range, 96)
 Lbl(page6, "Slash Delay (0-1):", 124)
-local slashDelayBox = Box(page6, Slash.Delay, 142)
-local hitboxExtBtn = Btn(page6, "Hitbox " .. (HitboxExt.Enabled and "ON" or "OFF"), 170)
+UI.slashDelayBox = Box(page6, Slash.Delay, 142)
+UI.hitboxExtBtn = Btn(page6, "Hitbox " .. (HitboxExt.Enabled and "ON" or "OFF"), 170)
 Lbl(page6, "Hitbox Size:", 198)
-local hitboxSizeBox = Box(page6, HitboxExt.Size, 216)
+UI.hitboxSizeBox = Box(page6, HitboxExt.Size, 216)
 
 local page7 = Instance.new("Frame")
 page7.Size = UDim2.new(1, 0, 1, 0)
@@ -1544,11 +1584,11 @@ page7.BackgroundTransparency = 1
 page7.Visible = false
 page7.Parent = content
 Lbl(page7, "Anti", 4)
-local antiStunBtn = Btn(page7, "Anti Stun " .. (antiStun and "ON" or "OFF"), 24)
-local antiSlowBtn = Btn(page7, "Anti Slow " .. (antiSlow and "ON" or "OFF"), 52)
-local antiBlindBtn = Btn(page7, "Anti Blindness " .. (antiBlindness and "ON" or "OFF"), 80)
-local antiSubBtn = Btn(page7, "Anti Subspace " .. (antiSubspace and "ON" or "OFF"), 108)
-local antiHiddenBtn = Btn(page7, "Anti Hidden Stats " .. (toggleState and "ON" or "OFF"), 136)
+UI.antiStunBtn = Btn(page7, "Anti Stun " .. (antiStun and "ON" or "OFF"), 24)
+UI.antiSlowBtn = Btn(page7, "Anti Slow " .. (antiSlow and "ON" or "OFF"), 52)
+UI.antiBlindBtn = Btn(page7, "Anti Blindness " .. (antiBlindness and "ON" or "OFF"), 80)
+UI.antiSubBtn = Btn(page7, "Anti Subspace " .. (antiSubspace and "ON" or "OFF"), 108)
+UI.antiHiddenBtn = Btn(page7, "Anti Hidden Stats " .. (toggleState and "ON" or "OFF"), 136)
 
 local page8 = Instance.new("Frame")
 page8.Size = UDim2.new(1, 0, 1, 0)
@@ -1556,10 +1596,10 @@ page8.BackgroundTransparency = 1
 page8.Visible = false
 page8.Parent = content
 Lbl(page8, "Danger Zone", 6)
-local toggleKeyBtn = Btn(page8, "Toggle Key: " .. toggleKey.Name, 32)
-local destroyBtn = Btn(page8, "Destroy GUI", 76)
-destroyBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
-destroyBtn.BorderColor3 = Color3.fromRGB(255, 50, 50)
+UI.toggleKeyBtn = Btn(page8, "Toggle Key: " .. Keys.Toggle.Name, 32)
+UI.destroyBtn = Btn(page8, "Destroy GUI", 76)
+UI.destroyBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
+UI.destroyBtn.BorderColor3 = Color3.fromRGB(255, 50, 50)
 
 local pages = { page1, page2, page3, page4, page5, page6, page7, page8 }
 
@@ -1689,6 +1729,8 @@ confirmCancel.Parent = confirmFrame
 local function CleanUpAllFeatures()
 	infEnabled = false
 	stamina.StaminaLossDisabled = false
+	sprintSpeedEnabled = false
+	applySprintSpeed()
 	
 	for k in pairs(ESPSettings) do
 		if type(ESPSettings[k]) == "boolean" then ESPSettings[k] = false end
@@ -1739,7 +1781,7 @@ confirmCancel.MouseButton1Click:Connect(function()
 	confirmFrame.Visible = false
 end)
 
-destroyBtn.MouseButton1Click:Connect(function()
+UI.destroyBtn.MouseButton1Click:Connect(function()
 	confirmFrame.Visible = true
 end)
 
@@ -1753,7 +1795,7 @@ local function ToggleGUI_PC()
 		pcall(function()
 			StarterGui:SetCore("SendNotification", {
 				Title = "c00lSaken",
-				Text = "Press [ " .. toggleKey.Name .. " ] to open the GUI again!",
+				Text = "Press [ " .. Keys.Toggle.Name .. " ] to open the GUI again!",
 				Duration = 4
 			})
 		end)
@@ -1792,10 +1834,7 @@ local function onCharacterAdded(newChar)
 			stamina.StaminaLossDisabled = true
 			stamina.Stamina = stamina.MaxStamina
 		end
-		local speedVal = tonumber(speedBox.Text)
-		if speedVal then
-			stamina.SprintSpeed = speedVal
-		end
+		applySprintSpeed()
 	end)
 
 	if _G.AutoBlockEnabled then
@@ -1832,123 +1871,113 @@ task.spawn(function()
 	end
 end)
 
-speedBox.FocusLost:Connect(function()
-	local n = tonumber(speedBox.Text)
-	if n then
-		stamina.SprintSpeed = n
-		SaveConfig()
-	else
-		speedBox.Text = tostring(stamina.SprintSpeed)
-	end
-end)
-
-killerESPBtn.MouseButton1Click:Connect(function()
+UI.killerESPBtn.MouseButton1Click:Connect(function()
 	ESPSettings.killerESP = not ESPSettings.killerESP
-	killerESPBtn.Text = "Killer ESP " .. (ESPSettings.killerESP and "ON" or "OFF")
+	UI.killerESPBtn.Text = "Killer ESP " .. (ESPSettings.killerESP and "ON" or "OFF")
 	SaveConfig()
 end)
 
-survivorESPBtn.MouseButton1Click:Connect(function()
+UI.survivorESPBtn.MouseButton1Click:Connect(function()
 	ESPSettings.playerESP = not ESPSettings.playerESP
-	survivorESPBtn.Text = "Survivor ESP " .. (ESPSettings.playerESP and "ON" or "OFF")
+	UI.survivorESPBtn.Text = "Survivor ESP " .. (ESPSettings.playerESP and "ON" or "OFF")
 	SaveConfig()
 end)
 
-genESPBtn.MouseButton1Click:Connect(function()
+UI.genESPBtn.MouseButton1Click:Connect(function()
 	ESPSettings.generatorESP = not ESPSettings.generatorESP
-	genESPBtn.Text = "Generator ESP " .. (ESPSettings.generatorESP and "ON" or "OFF")
+	UI.genESPBtn.Text = "Generator ESP " .. (ESPSettings.generatorESP and "ON" or "OFF")
 	SaveConfig()
 end)
 
-itemESPBtn.MouseButton1Click:Connect(function()
+UI.itemESPBtn.MouseButton1Click:Connect(function()
 	ESPSettings.itemESP = not ESPSettings.itemESP
-	itemESPBtn.Text = "Item ESP " .. (ESPSettings.itemESP and "ON" or "OFF")
+	UI.itemESPBtn.Text = "Item ESP " .. (ESPSettings.itemESP and "ON" or "OFF")
 	SaveConfig()
 end)
 
-pizzaESPBtn.MouseButton1Click:Connect(function()
+UI.pizzaESPBtn.MouseButton1Click:Connect(function()
 	ESPSettings.pizzaEsp = not ESPSettings.pizzaEsp
-	pizzaESPBtn.Text = "Pizza ESP " .. (ESPSettings.pizzaEsp and "ON" or "OFF")
+	UI.pizzaESPBtn.Text = "Pizza ESP " .. (ESPSettings.pizzaEsp and "ON" or "OFF")
 	SaveConfig()
 end)
 
-deliveryESPBtn.MouseButton1Click:Connect(function()
+UI.deliveryESPBtn.MouseButton1Click:Connect(function()
 	ESPSettings.pizzaDeliveryEsp = not ESPSettings.pizzaDeliveryEsp
-	deliveryESPBtn.Text = "Pizza Delivery ESP " .. (ESPSettings.pizzaDeliveryEsp and "ON" or "OFF")
+	UI.deliveryESPBtn.Text = "Pizza Delivery ESP " .. (ESPSettings.pizzaDeliveryEsp and "ON" or "OFF")
 	SaveConfig()
 end)
 
-zombieESPBtn.MouseButton1Click:Connect(function()
+UI.zombieESPBtn.MouseButton1Click:Connect(function()
 	ESPSettings.zombieEsp = not ESPSettings.zombieEsp
-	zombieESPBtn.Text = "Zombie ESP " .. (ESPSettings.zombieEsp and "ON" or "OFF")
+	UI.zombieESPBtn.Text = "Zombie ESP " .. (ESPSettings.zombieEsp and "ON" or "OFF")
 	SaveConfig()
 end)
 
-tripwireESPBtn.MouseButton1Click:Connect(function()
+UI.tripwireESPBtn.MouseButton1Click:Connect(function()
 	ESPSettings.taphTripwireEsp = not ESPSettings.taphTripwireEsp
-	tripwireESPBtn.Text = "Tripwire ESP " .. (ESPSettings.taphTripwireEsp and "ON" or "OFF")
+	UI.tripwireESPBtn.Text = "Tripwire ESP " .. (ESPSettings.taphTripwireEsp and "ON" or "OFF")
 	SaveConfig()
 end)
 
-mineESPBtn.MouseButton1Click:Connect(function()
+UI.mineESPBtn.MouseButton1Click:Connect(function()
 	ESPSettings.tripMineEsp = not ESPSettings.tripMineEsp
-	mineESPBtn.Text = "Mine ESP " .. (ESPSettings.tripMineEsp and "ON" or "OFF")
+	UI.mineESPBtn.Text = "Mine ESP " .. (ESPSettings.tripMineEsp and "ON" or "OFF")
 	SaveConfig()
 end)
 
-respawnESPBtn.MouseButton1Click:Connect(function()
+UI.respawnESPBtn.MouseButton1Click:Connect(function()
 	ESPSettings.twoTimeRespawnEsp = not ESPSettings.twoTimeRespawnEsp
-	respawnESPBtn.Text = "Respawn ESP " .. (ESPSettings.twoTimeRespawnEsp and "ON" or "OFF")
+	UI.respawnESPBtn.Text = "Respawn ESP " .. (ESPSettings.twoTimeRespawnEsp and "ON" or "OFF")
 	SaveConfig()
 end)
 
-graffitiESPBtn.MouseButton1Click:Connect(function()
+UI.graffitiESPBtn.MouseButton1Click:Connect(function()
 	ESPSettings.graffitiEsp = not ESPSettings.graffitiEsp
-	graffitiESPBtn.Text = "Graffiti ESP " .. (ESPSettings.graffitiEsp and "ON" or "OFF")
+	UI.graffitiESPBtn.Text = "Graffiti ESP " .. (ESPSettings.graffitiEsp and "ON" or "OFF")
 	SaveConfig()
 end)
 
-groundBulbESPBtn.MouseButton1Click:Connect(function()
+UI.groundBulbESPBtn.MouseButton1Click:Connect(function()
 	ESPSettings.azureGroundBulbESP = not ESPSettings.azureGroundBulbESP
-	groundBulbESPBtn.Text = "GroundBulb ESP " .. (ESPSettings.azureGroundBulbESP and "ON" or "OFF")
+	UI.groundBulbESPBtn.Text = "GroundBulb ESP " .. (ESPSettings.azureGroundBulbESP and "ON" or "OFF")
 	SaveConfig()
 end)
 
-vineESPBtn.MouseButton1Click:Connect(function()
+UI.vineESPBtn.MouseButton1Click:Connect(function()
 	ESPSettings.azureVineESP = not ESPSettings.azureVineESP
-	vineESPBtn.Text = "Vine ESP " .. (ESPSettings.azureVineESP and "ON" or "OFF")
+	UI.vineESPBtn.Text = "Vine ESP " .. (ESPSettings.azureVineESP and "ON" or "OFF")
 	SaveConfig()
 end)
 
-antiStunBtn.MouseButton1Click:Connect(function()
+UI.antiStunBtn.MouseButton1Click:Connect(function()
 	antiStun = not antiStun
-	antiStunBtn.Text = "Anti Stun " .. (antiStun and "ON" or "OFF")
+	UI.antiStunBtn.Text = "Anti Stun " .. (antiStun and "ON" or "OFF")
 	SaveConfig()
 end)
 
-antiSlowBtn.MouseButton1Click:Connect(function()
+UI.antiSlowBtn.MouseButton1Click:Connect(function()
 	antiSlow = not antiSlow
-	antiSlowBtn.Text = "Anti Slow " .. (antiSlow and "ON" or "OFF")
+	UI.antiSlowBtn.Text = "Anti Slow " .. (antiSlow and "ON" or "OFF")
 	SaveConfig()
 end)
 
-antiBlindBtn.MouseButton1Click:Connect(function()
+UI.antiBlindBtn.MouseButton1Click:Connect(function()
 	antiBlindness = not antiBlindness
-	antiBlindBtn.Text = "Anti Blindness " .. (antiBlindness and "ON" or "OFF")
+	UI.antiBlindBtn.Text = "Anti Blindness " .. (antiBlindness and "ON" or "OFF")
 	SaveConfig()
 end)
 
-antiSubBtn.MouseButton1Click:Connect(function()
+UI.antiSubBtn.MouseButton1Click:Connect(function()
 	antiSubspace = not antiSubspace
-	antiSubBtn.Text = "Anti Subspace " .. (antiSubspace and "ON" or "OFF")
+	UI.antiSubBtn.Text = "Anti Subspace " .. (antiSubspace and "ON" or "OFF")
 	SaveConfig()
 end)
 
-antiHiddenBtn.MouseButton1Click:Connect(function()
+UI.antiHiddenBtn.MouseButton1Click:Connect(function()
 	toggleState = not toggleState
 	antiHiddenStats = toggleState
 	hiddenStatsFunc(toggleState)
-	antiHiddenBtn.Text = "Anti Hidden Stats " .. (toggleState and "ON" or "OFF")
+	UI.antiHiddenBtn.Text = "Anti Hidden Stats " .. (toggleState and "ON" or "OFF")
 	SaveConfig()
 end)
 
@@ -2013,41 +2042,41 @@ local function ToggleHakariDance(state)
 	end
 end
 
-toggleKeyBtn.MouseButton1Click:Connect(function()
-	waitingForToggleKey = true
-	toggleKeyBtn.Text = "Press any key..."
+UI.toggleKeyBtn.MouseButton1Click:Connect(function()
+	WaitingKey.Toggle = true
+	UI.toggleKeyBtn.Text = "Press any key..."
 end)
 
 UIS.InputBegan:Connect(function(input, gp)
 	if gp then return end
-	if waitingForKey then
+	if WaitingKey.Hakari then
 		if input.UserInputType == Enum.UserInputType.Keyboard then
-			hakariKey = input.KeyCode
-			keyButton.Text = "Hakari Key: " .. input.KeyCode.Name
-			waitingForKey = false
+			Keys.Hakari = input.KeyCode
+			UI.keyButton.Text = "Hakari Key: " .. input.KeyCode.Name
+			WaitingKey.Hakari = false
 			SaveConfig()
 		end
 		return
 	end
-	if waitingForSolveKey then
+	if WaitingKey.Solve then
 		if input.UserInputType == Enum.UserInputType.Keyboard then
-			solveKey = input.KeyCode
-			solveKeyBtn.Text = "Solve Key: " .. input.KeyCode.Name
-			waitingForSolveKey = false
+			Keys.Solve = input.KeyCode
+			UI.solveKeyBtn.Text = "Solve Key: " .. input.KeyCode.Name
+			WaitingKey.Solve = false
 			SaveConfig()
 		end
 		return
 	end
-	if waitingForToggleKey then
+	if WaitingKey.Toggle then
 		if input.UserInputType == Enum.UserInputType.Keyboard then
-			toggleKey = input.KeyCode
-			toggleKeyBtn.Text = "Toggle Key: " .. input.KeyCode.Name
-			waitingForToggleKey = false
+			Keys.Toggle = input.KeyCode
+			UI.toggleKeyBtn.Text = "Toggle Key: " .. input.KeyCode.Name
+			WaitingKey.Toggle = false
 			SaveConfig()
 		end
 		return
 	end
-	if input.KeyCode == toggleKey then 
+	if input.KeyCode == Keys.Toggle then 
 		if isMobile then
 			ToggleGUI_Mobile()
 		else
@@ -2055,8 +2084,8 @@ UIS.InputBegan:Connect(function(input, gp)
 		end
 	elseif input.KeyCode == Enum.KeyCode.KeypadFour then PrevPage()
 	elseif input.KeyCode == Enum.KeyCode.KeypadSix then NextPage()
-	elseif input.KeyCode == hakariKey then ToggleHakariDance(not hakariActive)
-	elseif input.KeyCode == solveKey then SolveNow() end
+	elseif input.KeyCode == Keys.Hakari then ToggleHakariDance(not hakariActive)
+	elseif input.KeyCode == Keys.Solve then SolveNow() end
 end)
 
 local function MakeDrag(frame)
@@ -2080,127 +2109,145 @@ MakeDrag(main)
 MakeDrag(mini)
 MakeDrag(confirmFrame)
 
-infButton.MouseButton1Click:Connect(function()
+UI.infButton.MouseButton1Click:Connect(function()
 	infEnabled = not infEnabled
 	stamina.StaminaLossDisabled = infEnabled
-	infButton.Text = "Infinite Stamina " .. (infEnabled and "ON" or "OFF")
+	UI.infButton.Text = "Infinite Stamina " .. (infEnabled and "ON" or "OFF")
 	SaveConfig()
 end)
 
-keyButton.MouseButton1Click:Connect(function() waitingForKey = true keyButton.Text = "Press any key..." end)
-solveButton.MouseButton1Click:Connect(SolveNow)
-solveKeyBtn.MouseButton1Click:Connect(function() waitingForSolveKey = true solveKeyBtn.Text = "Press any key..." end)
+UI.sprintSpeedBtn.MouseButton1Click:Connect(function()
+	sprintSpeedEnabled = not sprintSpeedEnabled
+	applySprintSpeed()
+	UI.sprintSpeedBtn.Text = "Sprint Speed " .. (sprintSpeedEnabled and "ON" or "OFF")
+	SaveConfig()
+end)
 
-voidrushBtn.MouseButton1Click:Connect(function()
+UI.speedBox.FocusLost:Connect(function()
+	local n = tonumber(UI.speedBox.Text)
+	if n and n > 0 then
+		sprintSpeedValue = n
+		applySprintSpeed()
+		SaveConfig()
+	else
+		UI.speedBox.Text = tostring(sprintSpeedValue)
+	end
+end)
+
+UI.keyButton.MouseButton1Click:Connect(function() WaitingKey.Hakari = true UI.keyButton.Text = "Press any key..." end)
+UI.solveButton.MouseButton1Click:Connect(SolveNow)
+UI.solveKeyBtn.MouseButton1Click:Connect(function() WaitingKey.Solve = true UI.solveKeyBtn.Text = "Press any key..." end)
+
+UI.voidrushBtn.MouseButton1Click:Connect(function()
 	voidrushcontrol = not voidrushcontrol
 	if not voidrushcontrol then stopOverride() end
-	voidrushBtn.Text = "Voidrush Control " .. (voidrushcontrol and "ON" or "OFF")
+	UI.voidrushBtn.Text = "Voidrush Control " .. (voidrushcontrol and "ON" or "OFF")
 	SaveConfig()
 end)
 
-autoGenBtn.MouseButton1Click:Connect(function()
+UI.autoGenBtn.MouseButton1Click:Connect(function()
 	autoGen = not autoGen
-	autoGenBtn.Text = "Auto Gen " .. (autoGen and "ON" or "OFF")
+	UI.autoGenBtn.Text = "Auto Gen " .. (autoGen and "ON" or "OFF")
 	SaveConfig()
 end)
 
-genSpeedBox.FocusLost:Connect(function()
-	local n = tonumber(genSpeedBox.Text)
+UI.genSpeedBox.FocusLost:Connect(function()
+	local n = tonumber(UI.genSpeedBox.Text)
 	if n and n >= 0.01 and n <= 1 then
 		autoGenSpeed = n
 		SaveConfig()
 	else
-		genSpeedBox.Text = tostring(autoGenSpeed)
+		UI.genSpeedBox.Text = tostring(autoGenSpeed)
 	end
 end)
 
-autoBlockBtn.MouseButton1Click:Connect(function()
+UI.autoBlockBtn.MouseButton1Click:Connect(function()
 	_G.AutoBlockEnabled = not _G.AutoBlockEnabled
-	autoBlockBtn.Text = "Auto Block " .. (_G.AutoBlockEnabled and "ON" or "OFF")
+	UI.autoBlockBtn.Text = "Auto Block " .. (_G.AutoBlockEnabled and "ON" or "OFF")
 	if _G.AutoBlockEnabled then EnableAutoBlock() else DisableAutoBlock() end
 	SaveConfig()
 end)
 
-showHitboxBtn.MouseButton1Click:Connect(function()
+UI.showHitboxBtn.MouseButton1Click:Connect(function()
 	_G.ShowHitboxVisual = not _G.ShowHitboxVisual
-	showHitboxBtn.Text = "Show Hitbox " .. (_G.ShowHitboxVisual and "ON" or "OFF")
+	UI.showHitboxBtn.Text = "Show Hitbox " .. (_G.ShowHitboxVisual and "ON" or "OFF")
 	SaveConfig()
 end)
 
-scaleBox.FocusLost:Connect(function()
-	local n = tonumber(scaleBox.Text)
-	if n and n > 0 then _G.HitboxScale = n SaveConfig() else scaleBox.Text = tostring(_G.HitboxScale) end
+UI.scaleBox.FocusLost:Connect(function()
+	local n = tonumber(UI.scaleBox.Text)
+	if n and n > 0 then _G.HitboxScale = n SaveConfig() else UI.scaleBox.Text = tostring(_G.HitboxScale) end
 end)
 
-offsetBox.FocusLost:Connect(function()
-	local n = tonumber(offsetBox.Text)
-	if n then _G.HitboxOffset = n SaveConfig() else offsetBox.Text = tostring(_G.HitboxOffset) end
+UI.offsetBox.FocusLost:Connect(function()
+	local n = tonumber(UI.offsetBox.Text)
+	if n then _G.HitboxOffset = n SaveConfig() else UI.offsetBox.Text = tostring(_G.HitboxOffset) end
 end)
 
-durationBox.FocusLost:Connect(function()
-	local n = tonumber(durationBox.Text)
-	if n and n > 0 then _G.HitboxDuration = n SaveConfig() else durationBox.Text = tostring(_G.HitboxDuration) end
+UI.durationBox.FocusLost:Connect(function()
+	local n = tonumber(UI.durationBox.Text)
+	if n and n > 0 then _G.HitboxDuration = n SaveConfig() else UI.durationBox.Text = tostring(_G.HitboxDuration) end
 end)
 
-autoPunchBtn.MouseButton1Click:Connect(function()
+UI.autoPunchBtn.MouseButton1Click:Connect(function()
 	_G.AutoPunchEnabled = not _G.AutoPunchEnabled
-	autoPunchBtn.Text = "Auto Punch " .. (_G.AutoPunchEnabled and "ON" or "OFF")
+	UI.autoPunchBtn.Text = "Auto Punch " .. (_G.AutoPunchEnabled and "ON" or "OFF")
 	SaveConfig()
 end)
 
-aimPunchBtn.MouseButton1Click:Connect(function()
+UI.aimPunchBtn.MouseButton1Click:Connect(function()
 	_G.AimPunchEnabled = not _G.AimPunchEnabled
-	aimPunchBtn.Text = "Aim Punch " .. (_G.AimPunchEnabled and "ON" or "OFF")
+	UI.aimPunchBtn.Text = "Aim Punch " .. (_G.AimPunchEnabled and "ON" or "OFF")
 	toggleModule("Punch", _G.AimPunchEnabled)
 	SaveConfig()
 end)
 
-autoStabBtn.MouseButton1Click:Connect(function()
+UI.autoStabBtn.MouseButton1Click:Connect(function()
 	stabEnabled = not stabEnabled
-	autoStabBtn.Text = "Auto Stab " .. (stabEnabled and "ON" or "OFF")
+	UI.autoStabBtn.Text = "Auto Stab " .. (stabEnabled and "ON" or "OFF")
 	SaveConfig()
 end)
 
-stabModeBtn.MouseButton1Click:Connect(function()
+UI.stabModeBtn.MouseButton1Click:Connect(function()
 	stabMode = (stabMode == "Behind" and "Around" or "Behind")
-	stabModeBtn.Text = "Mode: " .. stabMode
+	UI.stabModeBtn.Text = "Mode: " .. stabMode
 	SaveConfig()
 end)
 
-stabRangeBox.FocusLost:Connect(function()
-	local n = tonumber(stabRangeBox.Text)
-	if n and n > 0 then stabRange = n SaveConfig() else stabRangeBox.Text = tostring(stabRange) end
+UI.stabRangeBox.FocusLost:Connect(function()
+	local n = tonumber(UI.stabRangeBox.Text)
+	if n and n > 0 then stabRange = n SaveConfig() else UI.stabRangeBox.Text = tostring(stabRange) end
 end)
 
-autoSlashBtn.MouseButton1Click:Connect(function()
+UI.autoSlashBtn.MouseButton1Click:Connect(function()
 	Slash.Enabled = not Slash.Enabled
-	autoSlashBtn.Text = "Auto Slash " .. (Slash.Enabled and "ON" or "OFF")
+	UI.autoSlashBtn.Text = "Auto Slash " .. (Slash.Enabled and "ON" or "OFF")
 	SaveConfig()
 end)
 
-slashRangeBox.FocusLost:Connect(function()
-	local n = tonumber(slashRangeBox.Text)
-	if n and n > 0 then Slash.Range = n SaveConfig() else slashRangeBox.Text = tostring(Slash.Range) end
+UI.slashRangeBox.FocusLost:Connect(function()
+	local n = tonumber(UI.slashRangeBox.Text)
+	if n and n > 0 then Slash.Range = n SaveConfig() else UI.slashRangeBox.Text = tostring(Slash.Range) end
 end)
 
-slashDelayBox.FocusLost:Connect(function()
-	local n = tonumber(slashDelayBox.Text)
+UI.slashDelayBox.FocusLost:Connect(function()
+	local n = tonumber(UI.slashDelayBox.Text)
 	if n and n >= 0 and n <= 1 then
 		Slash.Delay = n
 		SaveConfig()
 	else
-		slashDelayBox.Text = tostring(Slash.Delay)
+		UI.slashDelayBox.Text = tostring(Slash.Delay)
 	end
 end)
 
-hitboxExtBtn.MouseButton1Click:Connect(function()
+UI.hitboxExtBtn.MouseButton1Click:Connect(function()
 	setHitboxExt(not HitboxExt.Enabled)
-	hitboxExtBtn.Text = "Hitbox " .. (HitboxExt.Enabled and "ON" or "OFF")
+	UI.hitboxExtBtn.Text = "Hitbox " .. (HitboxExt.Enabled and "ON" or "OFF")
 	SaveConfig()
 end)
 
-hitboxSizeBox.FocusLost:Connect(function()
-	local n = tonumber(hitboxSizeBox.Text)
+UI.hitboxSizeBox.FocusLost:Connect(function()
+	local n = tonumber(UI.hitboxSizeBox.Text)
 	if n and n > 0 then
 		HitboxExt.Size = n
 		SaveConfig()
@@ -2208,10 +2255,10 @@ hitboxSizeBox.FocusLost:Connect(function()
 			setHitboxExt(false)
 			task.wait(0.05)
 			setHitboxExt(true)
-			hitboxExtBtn.Text = "Hitbox ON"
+			UI.hitboxExtBtn.Text = "Hitbox ON"
 		end
 	else
-		hitboxSizeBox.Text = tostring(HitboxExt.Size)
+		UI.hitboxSizeBox.Text = tostring(HitboxExt.Size)
 	end
 end)
 
@@ -2221,4 +2268,7 @@ if HitboxExt.Enabled then
 		task.wait(0.5)
 		setHitboxExt(true)
 	end)
+end
+if sprintSpeedEnabled then
+	task.defer(applySprintSpeed)
 end
