@@ -81,7 +81,6 @@ local Slash = {
 	HoldTime = 0.5,
 	Cooldown = 10,
 	Delay = 0.15,
-	PredictTime = 0.18,
 	LastTime = 0,
 	Connection = nil,
 	Busy = false,
@@ -339,7 +338,13 @@ local function SolveNow()
 	end
 end
 
-local aimPunchSettings = { distance = 100 }
+local AimPunch = {
+	Distance = 100,
+	Duration = 0.6,
+	Mode = "CamChar", -- "CamChar" | "Character"
+	Connection = nil,
+	Aiming = false,
+}
 local triggerModules = {}
 
 local function registerTriggerModule(name, enableFunc, disableFunc)
@@ -371,9 +376,13 @@ local PUNCH_ANIM_IDS = {
 	["138040001965654"] = true
 }
 
-local PREDICT_TIME = 0.18
-local aimPunchConnection = nil
-local isAiming = false
+-- dynamic predict: slow target = small lead, fast target = bigger lead
+local function getPredictLead(velocity)
+	local horiz = Vector3.new(velocity.X, 0, velocity.Z)
+	local speed = horiz.Magnitude
+	local t = math.clamp(0.08 + speed * 0.014, 0.08, 0.42)
+	return horiz * t
+end
 
 local function getClosestTarget(maxDist)
 	local char = LP.Character
@@ -401,70 +410,75 @@ local function getClosestTarget(maxDist)
 end
 
 local function aimAtTargetWithPrediction(targetHRP, duration)
-	if isAiming then return end
-	isAiming = true
+	if AimPunch.Aiming then return end
+	AimPunch.Aiming = true
 
 	local char = LP.Character
 	local hrp = char and char:FindFirstChild("HumanoidRootPart")
 	local hum = char and char:FindFirstChildOfClass("Humanoid")
-	if not hrp or not hum then isAiming = false return end
+	if not hrp or not hum then AimPunch.Aiming = false return end
 
-	local oldAutoRotate = hum.AutoRotate
 	hum.AutoRotate = false
-
+	local cam = Workspace.CurrentCamera
 	local startTime = tick()
 	local connection
 	connection = RunService.RenderStepped:Connect(function()
 		local elapsed = tick() - startTime
 		if elapsed >= duration or not targetHRP or not targetHRP.Parent or not hrp.Parent then
-			hum.AutoRotate = oldAutoRotate
-			isAiming = false
+			if hum and hum.Parent then hum.AutoRotate = true end
+			AimPunch.Aiming = false
 			connection:Disconnect()
 			return
 		end
 
-		local targetVelocity = targetHRP.AssemblyLinearVelocity
-		local horizontalVelocity = Vector3.new(targetVelocity.X, 0, targetVelocity.Z)
-		local predictedPos = targetHRP.Position + (horizontalVelocity * PREDICT_TIME)
-		local aimPosition = Vector3.new(predictedPos.X, hrp.Position.Y, predictedPos.Z)
-		local targetCFrame = CFrame.lookAt(hrp.Position, aimPosition)
-		
-		hrp.CFrame = hrp.CFrame:Lerp(targetCFrame, 0.45)
+		local lead = getPredictLead(targetHRP.AssemblyLinearVelocity)
+		local predictedPos = targetHRP.Position + lead
+		-- aim toward body (slightly upper torso)
+		local bodyPos = predictedPos + Vector3.new(0, 1.2, 0)
+		local aimFlat = Vector3.new(bodyPos.X, hrp.Position.Y, bodyPos.Z)
+		local charCF = CFrame.lookAt(hrp.Position, aimFlat)
+		hrp.CFrame = hrp.CFrame:Lerp(charCF, 0.55)
+
+		if AimPunch.Mode == "CamChar" and cam then
+			local camPos = cam.CFrame.Position
+			local camLook = CFrame.lookAt(camPos, bodyPos)
+			cam.CFrame = cam.CFrame:Lerp(camLook, 0.4)
+		end
 	end)
 end
 
 local function setupAimPunchListener(character)
-	if aimPunchConnection then
-		aimPunchConnection:Disconnect()
-		aimPunchConnection = nil
+	if AimPunch.Connection then
+		AimPunch.Connection:Disconnect()
+		AimPunch.Connection = nil
 	end
 
 	local hum = character:WaitForChild("Humanoid", 5)
 	local animator = hum and hum:WaitForChild("Animator", 5)
 	if not animator then return end
 
-	aimPunchConnection = animator.AnimationPlayed:Connect(function(track)
+	AimPunch.Connection = animator.AnimationPlayed:Connect(function(track)
 		if not _G.AimPunchEnabled then return end
-		
 		local animId = track.Animation and track.Animation.AnimationId:match("%d+")
 		if animId and PUNCH_ANIM_IDS[animId] then
-			local targetHRP = getClosestTarget(aimPunchSettings.distance or 15)
+			local targetHRP = getClosestTarget(AimPunch.Distance)
 			if targetHRP then
-				aimAtTargetWithPrediction(targetHRP, 0.25)
+				aimAtTargetWithPrediction(targetHRP, AimPunch.Duration)
 			end
 		end
 	end)
 end
 
-registerTriggerModule("Punch", 
+registerTriggerModule("Punch",
 	function()
 		if LP.Character then setupAimPunchListener(LP.Character) end
-	end, 
+	end,
 	function()
-		if aimPunchConnection then
-			aimPunchConnection:Disconnect()
-			aimPunchConnection = nil
+		if AimPunch.Connection then
+			AimPunch.Connection:Disconnect()
+			AimPunch.Connection = nil
 		end
+		AimPunch.Aiming = false
 	end
 )
 
@@ -526,6 +540,7 @@ local function SaveConfig()
 			hitboxDuration = _G.HitboxDuration,
 			autoPunch = _G.AutoPunchEnabled,
 			aimPunch = _G.AimPunchEnabled,
+			aimPunchMode = AimPunch.Mode,
 			stabEnabled = stabEnabled,
 			stabRange = stabRange,
 			stabMode = stabMode,
@@ -572,6 +587,7 @@ local function LoadConfig()
 			_G.AimPunchEnabled = data.aimPunch
 			toggleModule("Punch", _G.AimPunchEnabled)
 		end
+		if data.aimPunchMode ~= nil then AimPunch.Mode = data.aimPunchMode end
 		if data.stabEnabled ~= nil then stabEnabled = data.stabEnabled end
 		if data.stabRange ~= nil then stabRange = data.stabRange end
 		if data.stabMode ~= nil then stabMode = data.stabMode end
@@ -1262,24 +1278,31 @@ Slash.Connection = RunService.Heartbeat:Connect(function()
 			Slash.Busy = true
 			task.spawn(function()
 				local hum = char:FindFirstChildOfClass("Humanoid")
-				local oldAutoRotate = hum and hum.AutoRotate
 				if hum then hum.AutoRotate = false end
 
 				local start = tick()
 				local holdConn
+				local function stopAim()
+					if holdConn then
+						holdConn:Disconnect()
+						holdConn = nil
+					end
+					local h = (LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")) or hum
+					if h then h.AutoRotate = true end
+					Slash.Busy = false
+				end
+
 				holdConn = RunService.Heartbeat:Connect(function()
 					if not killer.Parent or not kHRP.Parent or not hrp.Parent then
-						holdConn:Disconnect()
+						stopAim()
 						return
 					end
 					if tick() - start > Slash.HoldTime then
-						holdConn:Disconnect()
+						stopAim()
 						return
 					end
 					if hasWallBetween(hrp.Position, kHRP.Position, { killer }) then return end
-					local vel = kHRP.AssemblyLinearVelocity
-					local horizVel = Vector3.new(vel.X, 0, vel.Z)
-					local predicted = kHRP.Position + horizVel * Slash.PredictTime
+					local predicted = kHRP.Position + getPredictLead(kHRP.AssemblyLinearVelocity)
 					local toPred = hrp.Position - predicted
 					local dir
 					if toPred.Magnitude < 0.1 then
@@ -1303,14 +1326,12 @@ Slash.Connection = RunService.Heartbeat:Connect(function()
 				end)
 
 				task.wait(Slash.Delay)
-				if killer.Parent and kHRP.Parent and not hasWallBetween(hrp.Position, kHRP.Position, { killer }) then
+				if killer.Parent and kHRP.Parent and hrp.Parent and not hasWallBetween(hrp.Position, kHRP.Position, { killer }) then
 					clickSlashButton()
 				end
 				local remain = Slash.HoldTime - (tick() - start)
 				if remain > 0 then task.wait(remain) end
-				if holdConn then holdConn:Disconnect() end
-				if hum then hum.AutoRotate = oldAutoRotate end
-				Slash.Busy = false
+				stopAim()
 			end)
 			break
 		end
@@ -1546,6 +1567,8 @@ UI.offsetBox = Box(page4, _G.HitboxOffset, 116)
 UI.durationBox = Box(page4, _G.HitboxDuration, 142)
 UI.autoPunchBtn = Btn(page4, "Auto Punch " .. (_G.AutoPunchEnabled and "ON" or "OFF"), 174)
 UI.aimPunchBtn = Btn(page4, "Aim Punch " .. (_G.AimPunchEnabled and "ON" or "OFF"), 202)
+UI.aimPunchModeBtn = Btn(page4, "Aim Mode: " .. (AimPunch.Mode == "CamChar" and "Cam+Char" or "Character"), 230)
+page4.CanvasSize = UDim2.new(0, 0, 0, 280)
 
 local page5 = Instance.new("Frame")
 page5.Size = UDim2.new(1, 0, 1, 0)
@@ -2029,7 +2052,7 @@ local function ToggleHakariDance(state)
 	else
 		hakariActive = false
 		humanoid.PlatformStand = false
-		humanoid.JumpPower = 50
+		humanoid.JumpPower = 0
 		local b = rootPart:FindFirstChild("HakariBV")
 		if b then b:Destroy() end
 		local s = rootPart:FindFirstChild("HakariSound")
@@ -2199,6 +2222,12 @@ UI.aimPunchBtn.MouseButton1Click:Connect(function()
 	_G.AimPunchEnabled = not _G.AimPunchEnabled
 	UI.aimPunchBtn.Text = "Aim Punch " .. (_G.AimPunchEnabled and "ON" or "OFF")
 	toggleModule("Punch", _G.AimPunchEnabled)
+	SaveConfig()
+end)
+
+UI.aimPunchModeBtn.MouseButton1Click:Connect(function()
+	AimPunch.Mode = (AimPunch.Mode == "CamChar") and "Character" or "CamChar"
+	UI.aimPunchModeBtn.Text = "Aim Mode: " .. (AimPunch.Mode == "CamChar" and "Cam+Char" or "Character")
 	SaveConfig()
 end)
 
